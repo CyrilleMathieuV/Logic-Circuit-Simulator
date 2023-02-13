@@ -591,6 +591,12 @@ const Strings_fr = {
                 desc: "Stocke 16 fois huit bits.",
             },
         },
+        RAM12: {
+            tooltip: {
+                title: "RAM (mémoire vive)",
+                desc: "Stocke 32 fois huit bits.",
+            },
+        },
         Register: {
             tooltip: {
                 title: "Registre",
@@ -743,6 +749,7 @@ const Strings_en: Strings = {
             Register: ["4-Bit Register", "Register"],
             RAM: ["RAM, 16 × 4 Bits", "RAM 16×4"],
             RAM8: ["RAM, 16 × 8 Bits", "RAM 16×8"],
+            RAM12: ["RAM, 32 × 8 Bits", "RAM 32×8"],
 
             Counter: ["4-Bit Counter", "Counter"],
             Decoder7Seg: ["7-Segment Decoder", "7-Seg. Dec."],
@@ -1221,6 +1228,12 @@ const Strings_en: Strings = {
             tooltip: {
                 title: "RAM (mémoire vive)",
                 desc: "Stores 16 times eight bits.",
+            },
+        },
+        RAM12: {
+            tooltip: {
+                title: "RAM (mémoire vive élargie)",
+                desc: "Stores 32 times eight bits.",
             },
         },
         Register: {
