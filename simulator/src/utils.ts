@@ -131,6 +131,10 @@ export type Plus1<N extends number> =
     N extends 6 ? 7 :
     N extends 7 ? 8 :
     N extends 8 ? 9 :
+    N extends 9 ? 10 :
+    N extends 10 ? 11 :
+    N extends 11 ? 12 :
+    N extends 11 ? 13 :
     never
 
 export type Plus2<N extends number> =
@@ -143,6 +147,10 @@ export type Plus2<N extends number> =
     N extends 6 ? 8 :
     N extends 7 ? 9 :
     N extends 8 ? 10 :
+    N extends 9 ? 11 :
+    N extends 10 ? 12 :
+    N extends 11 ? 13 :
+    N extends 12 ? 14 :
     never
 
 export type Plus3<N extends number> =
@@ -155,6 +163,10 @@ export type Plus3<N extends number> =
     N extends 6 ? 9 :
     N extends 7 ? 10 :
     N extends 8 ? 11 :
+    N extends 9 ? 12 :
+    N extends 10 ? 13 :
+    N extends 11 ? 14 :
+    N extends 12 ? 15 :
     never
 
 
@@ -208,7 +220,7 @@ import * as t from "io-ts"
 
 // Fixed-size arrays up to 8 to model inputs statically
 
-export type FixedArraySize = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19
+export type FixedArraySize = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31
 export type FixedArraySizeNonZero = Exclude<FixedArraySize, 0>
 export type FixedArraySizeSeveral = Exclude<FixedArraySizeNonZero, 1>
 
@@ -233,7 +245,19 @@ export type FixedArray<T, N extends FixedArraySize> =
     : N extends 17 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
     : N extends 18 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
     : N extends 19 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    :/*N >= 20 12*/ Array<T>
+    : N extends 20 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 21 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 22 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 23 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 24 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 25 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 26 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 27 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 28 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 29 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 30 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 31 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    :/*N >= 32 12*/ Array<T>
 
 export type FixedReadonlyArray<T, N extends FixedArraySize> =
     N extends 0 ? readonly []
@@ -256,7 +280,19 @@ export type FixedReadonlyArray<T, N extends FixedArraySize> =
     : N extends 17 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
     : N extends 18 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
     : N extends 19 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    :/*N >= 20 12*/ ReadonlyArray<T>
+    : N extends 20 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 21 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 22 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 23 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 24 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 25 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 26 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 27 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 28 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 29 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 30 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    : N extends 31 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+    :/*N >= 32 12*/ ReadonlyArray<T>
 
 // type HashSize1 = { readonly HasSize1: unique symbol }
 // type H<N extends number, T> = { [K in `HasSize${N}`]: T }

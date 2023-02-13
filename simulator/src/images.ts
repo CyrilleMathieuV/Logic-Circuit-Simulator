@@ -96,6 +96,7 @@ import QuadGate from '../img/QuadGate.svg'; // @ts-ignore
 import QuadTriState from '../img/QuadTriState.svg'; // @ts-ignore
 import RAM from '../img/RAM.svg'; // @ts-ignore
 import RAM8 from '../img/RAM8.svg'; // @ts-ignore
+import RAM12 from '../img/RAM12.svg' // @ts-ignore
 import Register from '../img/Register.svg'; // @ts-ignore
 import SwitchedInverter from '../img/SwitchedInverter.svg'; // @ts-ignore
 import TRI from '../img/TRI.svg'; // @ts-ignore
@@ -203,6 +204,7 @@ const images = {
     QuadTriState,
     RAM,
     RAM8,
+    RAM12,
     Register,
     SwitchedInverter,
     TRI,

@@ -378,6 +378,11 @@ const componentsMenu: Array<Section> = [
                 normallyHidden: true,
             },
             {
+                type: "component", subtype: "ram-32x12",
+                strings: "RAM12", img: "RAM12", width: 50,
+                normallyHidden: true,
+            },
+            {
                 type: "component", subtype: "counter",
                 strings: "Counter", img: "Counter", width: 50,
             },
