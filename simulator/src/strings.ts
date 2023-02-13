@@ -110,6 +110,7 @@ const Strings_fr = {
             Register: ["Registre à 4 bits", "Registre"],
             RAM: ["RAM, 16 × 4 bits", "RAM 16×4"],
             RAM8: ["RAM, 16 × 8 bits", "RAM 16×8"],
+            RAM12: ["RAM, 32 × 8 bits", "RAM 32×8"],
 
             Counter: ["Compteur 4 bits", "Compteur"],
             Decoder7Seg: ["Décodeur 7 segments", "Déc. 7 seg."],
