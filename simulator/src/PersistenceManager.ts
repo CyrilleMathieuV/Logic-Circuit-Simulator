@@ -110,7 +110,7 @@ class _PersistenceManager {
             make: (editor: LogicEditor, savedDataOrType: T) => Component | undefined
         }
 
-        function loadComponentField<T>(fieldName: MainJsonFieldName, repr: t.Type<T, any> | { repr: Type<T, any> }, factory: Factory<T>) {
+        function loadComponentField<T>(fieldName: MainJsonFieldName, repr: t.Type<T, any> | { repr: t.Type<T, any> }, factory: Factory<T>) {
             loadField(fieldName, repr, (d) => {
                 const comp = factory.make(editor, d)
                 if (isDefined(comp)) {
