@@ -1,12 +1,12 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_EMPTY, COLOR_MOUSE_OVER, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP, strokeSingleLine } from "../../../../../Desktop/GymInf/__Projet/Logic-Circuit-Simulator-master/simulator/src/drawutils"
-import { div, mods, tooltipContent } from "../../../../../Desktop/GymInf/__Projet/Logic-Circuit-Simulator-master/simulator/src/htmlgen"
-import { LogicEditor } from "../../../../../Desktop/GymInf/__Projet/Logic-Circuit-Simulator-master/simulator/src/LogicEditor"
-import { S } from "../../../../../Desktop/GymInf/__Projet/Logic-Circuit-Simulator-master/simulator/src/strings"
-import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, isDefined, isNotNull, isNull, isUndefined, isUnknown, LogicValue, toLogicValueFromChar, toLogicValueRepr, typeOrUndefined, Unknown } from "../../../../../Desktop/GymInf/__Projet/Logic-Circuit-Simulator-master/simulator/src/utils"
-import { ComponentBase, defineComponent } from "../../../../../Desktop/GymInf/__Projet/Logic-Circuit-Simulator-master/simulator/src/components/Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "../../../../../Desktop/GymInf/__Projet/Logic-Circuit-Simulator-master/simulator/src/components/Drawable"
-import { EdgeTrigger, Flipflop, makeTriggerItems } from "../../../../../Desktop/GymInf/__Projet/Logic-Circuit-Simulator-master/simulator/src/components/FlipflopOrLatch"
+import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_EMPTY, COLOR_MOUSE_OVER, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP, strokeSingleLine } from "../drawutils"
+import { div, mods, tooltipContent } from "../htmlgen"
+import { LogicEditor } from "../LogicEditor"
+import { S } from "../strings"
+import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, isDefined, isNotNull, isNull, isUndefined, isUnknown, LogicValue, toLogicValueFromChar, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBase, defineComponent } from "./Component"
+import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { EdgeTrigger, Flipflop, makeTriggerItems } from "./FlipflopOrLatch"
 
 const GRID_WIDTH = 11
 const GRID_HEIGHT = 25
