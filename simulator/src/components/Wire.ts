@@ -1,6 +1,6 @@
 import { Bezier, Offset } from "bezier-js"
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE, dist, drawStraightWireLine, drawWaypoint, isOverWaypoint, strokeAsWireLine, WAYPOINT_DIAMETER, WIRE_WIDTH } from "../drawutils"
+import { colorForBoolean, COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE, dist, drawStraightWireLine, drawWaypoint, isOverWaypoint, NodeStyle, strokeAsWireLine, WAYPOINT_DIAMETER, WIRE_WIDTH } from "../drawutils"
 import { span, style, title } from "../htmlgen"
 import { DrawParams, LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
@@ -83,7 +83,7 @@ export class Waypoint extends DrawableWithDraggablePosition {
         }
 
         const neutral = this.editor.options.hideWireColors
-        drawWaypoint(g, ctx, this.posX, this.posY, this.parent.startNode.value, ctx.isMouseOver, neutral, false, false, false)
+        drawWaypoint(g, ctx, this.posX, this.posY, NodeStyle.WAYPOINT, this.parent.startNode.value, ctx.isMouseOver, neutral, false, false, false)
     }
 
     public override mouseDown(e: MouseEvent | TouchEvent) {

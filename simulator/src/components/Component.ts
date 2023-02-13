@@ -611,6 +611,7 @@ export abstract class ComponentBase<
                 this.autoConnected(newLinks)
             }
             this.editor.setDirty("moved component")
+            this.editor.undoMgr.takeSnapshot()
         }
     }
 

@@ -12,6 +12,8 @@ import { LogicEditor } from "./LogicEditor"
 import { stringifySmart } from "./stringifySmart"
 import { isArray, isDefined, isString, isUndefined, keysOf } from "./utils"
 
+export type Workspace = Record<string, unknown>
+
 class _PersistenceManager {
 
     public loadFile(editor: LogicEditor, e: Event) {
@@ -33,12 +35,12 @@ class _PersistenceManager {
         reader.readAsText(file)
     }
 
-    public doLoadFromJson(editor: LogicEditor, content: string | Record<string, unknown>): undefined | string { // string is an error
+    public doLoadFromJson(editor: LogicEditor, content: string | Workspace, isUndoRedoAction = false): undefined | string { // string is an error
         const nodeMgr = editor.nodeMgr
         const wireMgr = editor.wireMgr
         const components = editor.components
 
-        let parsedContents: Record<string, unknown>
+        let parsedContents: Workspace
         if (!isString(content)) {
             parsedContents = content
         } else {
@@ -178,11 +180,15 @@ class _PersistenceManager {
             console.log("Unloaded data fields: " + unhandledData.join(", "))
         }
 
+        if (!isUndoRedoAction) {
+            editor.undoMgr.takeSnapshot()
+        }
+
         return undefined // meaning no error
     }
 
-    public buildWorkspace(editor: LogicEditor): Record<string, unknown> {
-        const workspace: Record<string, unknown> = {
+    public buildWorkspace(editor: LogicEditor): Workspace {
+        const workspace: Workspace = {
             "v": 4,
             "opts": editor.nonDefaultOptions(),
         }
@@ -209,14 +215,14 @@ class _PersistenceManager {
         return workspace
     }
 
-    public removeShowOnlyFrom(workspace: Record<string, unknown>): void {
+    public removeShowOnlyFrom(workspace: Workspace): void {
         const opts = workspace.opts as any
         if (typeof opts === "object" && opts !== null && Object.prototype.hasOwnProperty.call(opts, "showOnly")) {
             delete opts.showOnly
         }
     }
 
-    public stringifyWorkspace(_workspace: Record<string, unknown>, compact: boolean): string {
+    public stringifyWorkspace(_workspace: Workspace, compact: boolean): string {
         if (compact) {
             return JSON.stringify(_workspace)
         }
@@ -410,7 +416,7 @@ function migrate2To3(parsedContents: any) {
 }
 
 function migrate3To4(parsedContents: any) {
-    let nextNewId = findFirstFreeId(parsedContents) 
+    let nextNewId = findFirstFreeId(parsedContents)
 
     if ("out" in parsedContents) {
         const outs = parsedContents.out

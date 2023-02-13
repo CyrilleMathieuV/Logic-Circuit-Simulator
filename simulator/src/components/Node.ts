@@ -1,4 +1,4 @@
-import { drawWaypoint, GRID_STEP, isOverWaypoint, WAYPOINT_DIAMETER } from "../drawutils"
+import { drawWaypoint, GRID_STEP, isOverWaypoint, NodeStyle, WAYPOINT_DIAMETER } from "../drawutils"
 import { LogicEditor } from "../LogicEditor"
 import { HighImpedance, isDefined, isNull, isUnknown, LogicValue, Mode, toLogicValue, Unknown } from "../utils"
 import { ComponentState, InputNodeRepr, NodeGroup, OutputNodeRepr } from "./Component"
@@ -122,8 +122,10 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
         const showForcedWarning = mode >= Mode.FULL && !isUnknown(this._value) && !isUnknown(this.value) && this._value !== this.value
         const parentOrientIsVertical = Orientation.isVertical(this.parent.orient)
         const neutral = this.editor.options.hideWireColors
-        drawWaypoint(g, ctx, this.posX, this.posY, this.value, ctx.isMouseOver, neutral, showForced, showForcedWarning, parentOrientIsVertical)
+        drawWaypoint(g, ctx, this.posX, this.posY, this.nodeDisplayStyle, this.value, ctx.isMouseOver, neutral, showForced, showForcedWarning, parentOrientIsVertical)
     }
+
+    protected abstract get nodeDisplayStyle(): NodeStyle
 
     public get isAlive() {
         return this._isAlive
@@ -290,6 +292,11 @@ export class NodeIn extends NodeBase<NodeIn> {
         this.parent.setNeedsRecalc()
     }
 
+    protected get nodeDisplayStyle() {
+        const disconnected = this._incomingWire === null
+        return disconnected ? NodeStyle.IN_DISCONNECTED : NodeStyle.IN_CONNECTED
+    }
+
 }
 
 
@@ -367,6 +374,11 @@ export class NodeOut extends NodeBase<NodeOut> {
 
     protected override forceDraw() {
         return this._outgoingWires.length > 1 && this.parent.alwaysDrawMultiOutNodes
+    }
+
+    protected get nodeDisplayStyle() {
+        const disconnected = this._outgoingWires.length === 0
+        return disconnected ? NodeStyle.OUT_DISCONNECTED : NodeStyle.OUT_CONNECTED
     }
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {

@@ -9,7 +9,7 @@ import { a, applyModifierTo, attr, attrBuilder, button, cls, div, emptyMod, href
 import { makeComponentMenuInto } from "./menuutils"
 import { MoveManager } from "./MoveManager"
 import { NodeManager } from "./NodeManager"
-import { PersistenceManager } from "./PersistenceManager"
+import { PersistenceManager, Workspace } from "./PersistenceManager"
 import { RecalcManager, RedrawManager } from "./RedrawRecalcManager"
 import { Timeline, TimelineState } from "./Timeline"
 import { copyToClipboard, downloadBlob as downloadDataUrl, formatString, getURLParameter, isDefined, isEmbeddedInIframe, isFalsyString, isNotNull, isNull, isNullOrUndefined, isString, isTruthyString, isUndefined, KeysOfByType, RichStringEnum, setVisible, showModal, targetIsFieldOrOtherInput } from "./utils"
@@ -36,6 +36,7 @@ import { LabelRect } from "./components/LabelRect"
 import { IconName, inlineSvgFor, isIconName, makeIcon } from "./images"
 import { DefaultLang, isLang, S, setLang } from "./strings"
 import { Tests } from "./Tests"
+import { UndoManager } from './UndoManager'
 
 
 enum Mode {
@@ -126,7 +127,8 @@ export class LogicEditor extends HTMLElement {
     public readonly recalcMgr = new RecalcManager()
     public readonly moveMgr = new MoveManager(this)
     public readonly cursorMovementMgr = new CursorMovementManager(this)
- 
+    public readonly undoMgr = new UndoManager(this)
+
     public readonly components = new ComponentList()
 
     private _isEmbedded = false
@@ -595,16 +597,16 @@ export class LogicEditor extends HTMLElement {
                     case "z":
                         if (ctrlOrCommand && !targetIsFieldOrOtherInput(e)) {
                             if (shift) {
-                                this.redo()
+                                this.undoMgr.redo()
                             } else {
-                                this.undo()
+                                this.undoMgr.undo()
                             }
                             e.preventDefault()
                         }
                         return
                     case "y":
                         if (ctrlOrCommand && !targetIsFieldOrOtherInput(e)) {
-                            this.redo()
+                            this.undoMgr.redo()
                             e.preventDefault()
                         }
                         return
@@ -1538,7 +1540,7 @@ export class LogicEditor extends HTMLElement {
         this.saveToUrl(compressedUriSafeJson)
     }
 
-    public save(): Record<string, unknown> {
+    public save(): Workspace {
         return PersistenceManager.buildWorkspace(this)
     }
 
@@ -1882,17 +1884,6 @@ export class LogicEditor extends HTMLElement {
 
     }
 
-
-    public undo() {
-        // TODO stubs
-        console.log("undo")
-    }
-
-    public redo() {
-        // TODO stubs
-        console.log("redo")
-    }
-
     public cut() {
         // TODO stubs
         console.log("cut")
@@ -1943,6 +1934,10 @@ export class LogicStatic {
             }
             diagram.highlight(componentRefs)
         }
+    }
+
+    public printUndoStack() {
+        this.singleton?.undoMgr.dump()
     }
 
     public tests = new Tests()

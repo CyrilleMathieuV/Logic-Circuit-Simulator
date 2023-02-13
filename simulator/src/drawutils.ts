@@ -401,8 +401,16 @@ export function isOverWaypoint(x: number, y: number, waypointX: number, waypoint
     return dist(x, y, waypointX, waypointY) < WAYPOINT_HIT_RANGE / 2
 }
 
-export function drawWaypoint(g: CanvasRenderingContext2D, ctx: DrawContext, x: number, y: number, value: LogicValue, isMouseOver: boolean, neutral: boolean, showForced: boolean, showForcedWarning: boolean, parentOrientIsVertical: boolean) {
-    g.fillStyle = neutral ? COLOR_UNKNOWN : colorForBoolean(value)
+export enum NodeStyle {
+    IN_CONNECTED,
+    IN_DISCONNECTED,
+    OUT_CONNECTED,
+    OUT_DISCONNECTED,
+    IN_OUT,
+    WAYPOINT,
+}
+
+export function drawWaypoint(g: CanvasRenderingContext2D, ctx: DrawContext, x: number, y: number, style: NodeStyle, value: LogicValue, isMouseOver: boolean, neutral: boolean, showForced: boolean, showForcedWarning: boolean, parentOrientIsVertical: boolean) {
 
     const [circleColor, thickness] =
         showForced
@@ -411,6 +419,8 @@ export function drawWaypoint(g: CanvasRenderingContext2D, ctx: DrawContext, x: n
 
     g.strokeStyle = circleColor
     g.lineWidth = thickness
+    g.fillStyle = style === NodeStyle.IN_DISCONNECTED ? "white" : (neutral ? COLOR_UNKNOWN : colorForBoolean(value))
+
     g.beginPath()
     circle(g, x, y, WAYPOINT_DIAMETER)
     g.fill()
