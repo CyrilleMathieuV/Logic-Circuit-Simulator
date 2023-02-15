@@ -589,7 +589,7 @@ export abstract class ComponentBase<
         if (this.editor.mode >= Mode.CONNECT) {
             this.tryStartMoving(e)
         }
-        return { lockMouseOver: true }
+        return { wantsDragEvents: true }
     }
 
     public override mouseDragged(e: MouseEvent | TouchEvent) {
@@ -611,8 +611,9 @@ export abstract class ComponentBase<
                 this.autoConnected(newLinks)
             }
             this.editor.setDirty("moved component")
-            this.editor.undoMgr.takeSnapshot()
+            return true
         }
+        return false
     }
 
     protected autoConnected(__newLinks: [Node, Component, Node][]) {

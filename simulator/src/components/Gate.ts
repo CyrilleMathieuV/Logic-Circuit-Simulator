@@ -12,7 +12,7 @@ import { TriStateBuffer, TriStateBufferDef } from "./TriStateBuffer"
 export type GateProps = {
     includeInContextMenu: boolean
     includeInPoseAs: boolean
-    fullShortDesc: [string, string | undefined, string]
+    fullShortDesc: () => [string, string | undefined, string]
 }
 
 
@@ -22,12 +22,12 @@ const Gate1Types_ = {
     NOT: {
         out: (in1: boolean) => !in1,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.NOT,
+        fullShortDesc: () => S.Components.Gate.NOT,
     },
     BUF: {
         out: (in1: boolean) => in1,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.BUF,
+        fullShortDesc: () => S.Components.Gate.BUF,
     },
 } as const
 
@@ -50,76 +50,76 @@ export const Gate2Types_ = {
     AND: {
         out: (in1: boolean, in2: boolean) => in1 && in2,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.AND,
+        fullShortDesc: () => S.Components.Gate.AND,
     },
     OR: {
         out: (in1: boolean, in2: boolean) => in1 || in2,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.OR,
+        fullShortDesc: () => S.Components.Gate.OR,
     },
     XOR: {
         out: (in1: boolean, in2: boolean) => in1 !== in2,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.XOR,
+        fullShortDesc: () => S.Components.Gate.XOR,
     },
     NAND: {
         out: (in1: boolean, in2: boolean) => !(in1 && in2),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.NAND,
+        fullShortDesc: () => S.Components.Gate.NAND,
     },
     NOR: {
         out: (in1: boolean, in2: boolean) => !(in1 || in2),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.NOR,
+        fullShortDesc: () => S.Components.Gate.NOR,
     },
     XNOR: {
         out: (in1: boolean, in2: boolean) => in1 === in2,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.XNOR,
+        fullShortDesc: () => S.Components.Gate.XNOR,
     },
 
     // less common gates
     IMPLY: {
         out: (in1: boolean, in2: boolean) => !in1 || in2,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.IMPLY,
+        fullShortDesc: () => S.Components.Gate.IMPLY,
     },
     RIMPLY: {
         out: (in1: boolean, in2: boolean) => in1 || !in2,
         includeInContextMenu: false, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.RIMPLY,
+        fullShortDesc: () => S.Components.Gate.RIMPLY,
     },
     NIMPLY: {
         out: (in1: boolean, in2: boolean) => in1 && !in2,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.NIMPLY,
+        fullShortDesc: () => S.Components.Gate.NIMPLY,
     },
     RNIMPLY: {
         out: (in1: boolean, in2: boolean) => !in1 && in2,
         includeInContextMenu: false, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.RNIMPLY,
+        fullShortDesc: () => S.Components.Gate.RNIMPLY,
     },
 
     // observing only one input
     TXA: {
         out: (in1: boolean, __: boolean) => in1,
         includeInContextMenu: true, includeInPoseAs: false,
-        fullShortDesc: S.Components.Gate.TXA,
+        fullShortDesc: () => S.Components.Gate.TXA,
     },
     TXB: {
         out: (__: boolean, in2: boolean) => in2,
         includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: S.Components.Gate.TXB,
+        fullShortDesc: () => S.Components.Gate.TXB,
     },
     TXNA: {
         out: (in1: boolean, __: boolean) => !in1,
         includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: S.Components.Gate.TXNA,
+        fullShortDesc: () => S.Components.Gate.TXNA,
     },
     TXNB: {
         out: (__: boolean, in2: boolean) => !in2,
         includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: S.Components.Gate.TXNB,
+        fullShortDesc: () => S.Components.Gate.TXNB,
     },
 } as const
 
@@ -144,32 +144,32 @@ const Gate3Types_ = {
     AND3: {
         out: (in1: boolean, in2: boolean, in3: boolean) => in1 && in2 && in3,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.AND3,
+        fullShortDesc: () => S.Components.Gate.AND3,
     },
     OR3: {
         out: (in1: boolean, in2: boolean, in3: boolean) => in1 || in2 || in3,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.OR3,
+        fullShortDesc: () => S.Components.Gate.OR3,
     },
     XOR3: {
         out: (in1: boolean, in2: boolean, in3: boolean) => (Number(in1) + Number(in2) + Number(in3)) % 2 === 1,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.XOR3,
+        fullShortDesc: () => S.Components.Gate.XOR3,
     },
     NAND3: {
         out: (in1: boolean, in2: boolean, in3: boolean) => !(in1 && in2 && in3),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.NAND3,
+        fullShortDesc: () => S.Components.Gate.NAND3,
     },
     NOR3: {
         out: (in1: boolean, in2: boolean, in3: boolean) => !(in1 || in2 || in3),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.NOR3,
+        fullShortDesc: () => S.Components.Gate.NOR3,
     },
     XNOR3: {
         out: (in1: boolean, in2: boolean, in3: boolean) => (Number(in1) + Number(in2) + Number(in3)) % 2 === 0,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.XNOR3,
+        fullShortDesc: () => S.Components.Gate.XNOR3,
     },
 } as const
 
@@ -192,32 +192,32 @@ const Gate4Types_ = {
     AND4: {
         out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => in1 && in2 && in3 && in4,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.AND4,
+        fullShortDesc: () => S.Components.Gate.AND4,
     },
     OR4: {
         out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => in1 || in2 || in3 || in4,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.OR4,
+        fullShortDesc: () => S.Components.Gate.OR4,
     },
     XOR4: {
         out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => (Number(in1) + Number(in2) + Number(in3) + Number(in4)) % 2 === 1,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.XOR4,
+        fullShortDesc: () => S.Components.Gate.XOR4,
     },
     NAND4: {
         out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => !(in1 && in2 && in3 && in4),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.NAND4,
+        fullShortDesc: () => S.Components.Gate.NAND4,
     },
     NOR4: {
         out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => !(in1 || in2 || in3 || in4),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.NOR4,
+        fullShortDesc: () => S.Components.Gate.NOR4,
     },
     XNOR4: {
         out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => (Number(in1) + Number(in2) + Number(in3) + Number(in4)) % 2 === 0,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: S.Components.Gate.XNOR4,
+        fullShortDesc: () => S.Components.Gate.XNOR4,
     },
 } as const
 
@@ -621,7 +621,7 @@ export abstract class GateBase<
         }
 
         if (this.editor.options.showGateTypes && !isUnknown(type)) {
-            const gateShortName = this.gateTypeEnum.propsOf(type).fullShortDesc[1]
+            const gateShortName = this.gateTypeEnum.propsOf(type).fullShortDesc()[1]
             if (isDefined(gateShortName)) {
                 g.fillStyle = COLOR_GATE_NAMES
                 g.textAlign = "center"
@@ -662,7 +662,7 @@ export abstract class GateBase<
         return ContextMenuData.submenu("replace", s.ReplaceBy, [
             ...otherTypes.map(newType => {
                 const gateProps = enumDef.propsOf(newType)
-                return ContextMenuData.item(undefined, s.GateTempl.expand({ type: gateProps.fullShortDesc[0] }), () => {
+                return ContextMenuData.item(undefined, s.GateTempl.expand({ type: gateProps.fullShortDesc()[0] }), () => {
                     this.doSetType(newType)
                 })
             }),
@@ -679,7 +679,7 @@ export abstract class GateBase<
         const currentPoseAs = this.poseAs
         return ContextMenuData.submenu("questioncircled", s.ShowAs, [
             ContextMenuData.item(!currentShowAsUnknown && isUndefined(currentPoseAs) ? "check" : "none",
-                s.NormalGateTempl.expand({ type: enumDef.propsOf(this._type).fullShortDesc[0] }), () => {
+                s.NormalGateTempl.expand({ type: enumDef.propsOf(this._type).fullShortDesc()[0] }), () => {
                     this.poseAs = undefined
                     this.doSetShowAsUnknown(false)
                 }),
@@ -692,7 +692,7 @@ export abstract class GateBase<
             ...otherTypes.map(newType => {
                 const gateProps = enumDef.propsOf(newType)
                 return ContextMenuData.item(!currentShowAsUnknown && newType === currentPoseAs ? "check" : "none",
-                    s.GateTempl.expand({ type: gateProps.fullShortDesc[0] }), () => {
+                    s.GateTempl.expand({ type: gateProps.fullShortDesc()[0] }), () => {
                         this.doSetShowAsUnknown(false)
                         this.poseAs = newType
                     })
@@ -771,7 +771,7 @@ export class Gate1 extends GateBase<Gate1Type, 1, Gate1Repr> {
 
         return makeGateTooltip(1,
             header,
-            Gate1Types.propsOf(this.type).fullShortDesc[2],
+            Gate1Types.propsOf(this.type).fullShortDesc()[2],
             explanation,
             makeTruthTable(genTruthTableData())
         )
@@ -845,9 +845,10 @@ export class Gate2 extends GateBase<Gate2Type, 2, Gate2Repr> {
             ? mods(desc + " " + s.UndeterminedOutputBecauseInputsUnknown)
             : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.AccordingToTruthTable)
 
+        const fullShortDesc = gateProps.fullShortDesc()
         return makeGateTooltip(2,
-            s.GateTitle(b(gateProps.fullShortDesc[0])),
-            gateProps.fullShortDesc[2],
+            s.GateTitle(b(fullShortDesc[0])),
+            fullShortDesc[2],
             explanation,
             makeTruthTable(genTruthTableData())
         )
@@ -966,9 +967,10 @@ export class Gate3 extends GateBase<Gate3Type, 3, Gate3Repr> {
             ? mods(desc + " " + s.UndeterminedOutputBecauseInputsUnknown)
             : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.AccordingToTruthTable)
 
+        const fullShortDesc = gateProps.fullShortDesc()
         return makeGateTooltip(3,
-            s.GateTitle(b(gateProps.fullShortDesc[0])),
-            gateProps.fullShortDesc[2],
+            s.GateTitle(b(fullShortDesc[0])),
+            fullShortDesc[2],
             explanation,
             makeTruthTable(genTruthTableData())
         )
@@ -1061,9 +1063,10 @@ export class Gate4 extends GateBase<Gate4Type, 4, Gate4Repr> {
             ? mods(desc + " " + s.UndeterminedOutputBecauseInputsUnknown)
             : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.AccordingToTruthTable)
 
+        const fullShortDesc = gateProps.fullShortDesc()
         return makeGateTooltip(4,
-            s.GateTitle(b(gateProps.fullShortDesc[0])),
-            gateProps.fullShortDesc[2],
+            s.GateTitle(b(fullShortDesc[0])),
+            fullShortDesc[2],
             explanation,
             makeTruthTable(genTruthTableData())
         )

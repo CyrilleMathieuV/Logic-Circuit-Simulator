@@ -11,16 +11,6 @@ export class MoveManager {
         this.editor = editor
     }
 
-    private changeMovingDrawables(change: () => void) {
-        const emptyBefore = this._movingDrawables.size === 0
-        change()
-        const emptyAfter = this._movingDrawables.size === 0
-        if (emptyBefore !== emptyAfter) {
-            this.editor.updateCursor()
-            this.editor.redrawMgr.addReason("started or stopped moving drawables", null)
-        }
-    }
-
     public areDrawablesMoving() {
         return this._movingDrawables.size > 0
     }
@@ -45,6 +35,16 @@ export class MoveManager {
         this.changeMovingDrawables(() => {
             this._movingDrawables.delete(comp)
         })
+    }
+
+    private changeMovingDrawables(change: () => void) {
+        const emptyBefore = this._movingDrawables.size === 0
+        change()
+        const emptyAfter = this._movingDrawables.size === 0
+        if (emptyBefore !== emptyAfter) {
+            this.editor.updateCursor()
+            this.editor.redrawMgr.addReason("started or stopped moving drawables", null)
+        }
     }
 
 }

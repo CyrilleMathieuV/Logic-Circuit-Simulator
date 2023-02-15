@@ -154,20 +154,23 @@ export abstract class Drawable {
         })
     }
 
-    // Return { lockMouseOver: true } (default) to signal the component
+    // Return { wantsDragEvents: true } (default) to signal the component
     // wants to get all mouseDragged and the final mouseUp event. Useful to
     // return false to allow drag destinations to get a mouseUp
-    public mouseDown(__: MouseEvent | TouchEvent): { lockMouseOver: boolean } {
+    public mouseDown(__: MouseEvent | TouchEvent): { wantsDragEvents: boolean } {
         // empty default implementation
-        return { lockMouseOver: true }
+        return { wantsDragEvents: true }
     }
 
     public mouseDragged(__: MouseEvent | TouchEvent) {
         // empty default implementation
     }
 
-    public mouseUp(__: MouseEvent | TouchEvent) {
+    // Return true to indicate it was handled and had an effect, in which
+    // case a snapshot should be taken for undo/redo
+    public mouseUp(__: MouseEvent | TouchEvent): boolean {
         // empty default implementation
+        return false
     }
 
     // Return true to indicate it was handled and had an effect

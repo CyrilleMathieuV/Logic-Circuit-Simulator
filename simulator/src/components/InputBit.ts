@@ -262,7 +262,7 @@ export class InputBit extends InputBitBase<InputBitRepr> {
         return true
     }
 
-    public override mouseDown(e: MouseEvent | TouchEvent): { lockMouseOver: boolean } {
+    public override mouseDown(e: MouseEvent | TouchEvent) {
         if (this.editor.mode !== Mode.STATIC && this._isPushButton && !this._isConstant) {
             this.doSetValue(true)
         }

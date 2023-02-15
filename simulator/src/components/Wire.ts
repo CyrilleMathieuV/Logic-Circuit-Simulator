@@ -90,7 +90,7 @@ export class Waypoint extends DrawableWithDraggablePosition {
         if (this.editor.mode >= Mode.CONNECT) {
             this.tryStartMoving(e)
         }
-        return { lockMouseOver: true }
+        return { wantsDragEvents: true }
     }
 
     public override mouseDragged(e: MouseEvent | TouchEvent) {
@@ -100,7 +100,7 @@ export class Waypoint extends DrawableWithDraggablePosition {
     }
 
     public override mouseUp(__: MouseEvent | TouchEvent) {
-        this.tryStopMoving()
+        return this.tryStopMoving()
     }
 
     public override makeContextMenu(): ContextMenuData {
@@ -127,24 +127,25 @@ export type WireRepr = t.TypeOf<typeof Wire.Repr>
 export class Wire extends Drawable {
 
     public static get Repr() {
-        return t.union([
-            t.tuple([
-                NodeID, NodeID,
-                t.type({
-                    ref: typeOrUndefined(t.string),
-                    via: typeOrUndefined(t.array(Waypoint.Repr)),
-                    propagationDelay: typeOrUndefined(t.number),
-                    style: typeOrUndefined(t.keyof(WireStyles)),
-                }),
-            ]), // alternative with more fields first
-            t.tuple([NodeID, NodeID]),
-        ], "Wire")
+        const simpleRepr = t.tuple([NodeID, NodeID])
+        const fullRepr = t.tuple([
+            NodeID, NodeID,
+            // include an object specifying additional properties
+            t.type({
+                ref: typeOrUndefined(t.string),
+                via: typeOrUndefined(t.array(Waypoint.Repr)),
+                propagationDelay: typeOrUndefined(t.number),
+                style: typeOrUndefined(t.keyof(WireStyles)),
+            }),
+        ])
+        return t.union([fullRepr, simpleRepr], "Wire")
     }
 
     private _endNode: NodeIn | null = null
     private _waypoints: Waypoint[] = []
-    private _propagatingValues: [LogicValue, Timestamp][] = []
     private _style: WireStyle | undefined = undefined
+    private _propagatingValues: [LogicValue, Timestamp][] = []
+    private _waypointBeingDragged: Waypoint | undefined = undefined
     public customPropagationDelay: number | undefined = undefined
     public ribbon: Ribbon | undefined = undefined
 
@@ -271,18 +272,18 @@ export class Wire extends Drawable {
             (isNull(this.endNode) || this.endNode.isAlive)
     }
 
-    public addPassthroughFrom(e: MouseEvent | TouchEvent) {
+    public addPassthroughFrom(e: MouseEvent | TouchEvent): Passthrough1 | undefined {
         const editor = this.editor
         const [x, y] = editor.offsetXYForContextMenu(e, true)
         const endNode = this.endNode
         if (isNull(endNode)) {
-            return
+            return undefined
         }
 
         const passthrough = new Passthrough1(editor, null)
         editor.components.add(passthrough)
-        const newPos = passthrough.setPosition(x, y)
-        console.log("new pos", newPos)
+        passthrough.setPosition(x, y)
+        editor.moveMgr.setDrawableStoppedMoving(passthrough)
 
         // modify this wire to go to the passthrough
         this.setSecondNode(passthrough.inputs[0])
@@ -296,14 +297,15 @@ export class Wire extends Drawable {
             return
         }
         newWire.doSetStyle(this.style)
+        return passthrough
     }
 
-    public addWaypointFrom(e: MouseEvent | TouchEvent) {
+    public addWaypointFrom(e: MouseEvent | TouchEvent): Waypoint {
         const [x, y] = this.editor.offsetXYForContextMenu(e, true)
-        this.addWaypointWith(x, y)
+        return this.addWaypointWith(x, y)
     }
 
-    public addWaypointWith(x: number, y: number) {
+    public addWaypointWith(x: number, y: number): Waypoint {
         let coordData = this.indexOfNextWaypointIfMouseover(x, y)
         if (isUndefined(coordData)) {
             // shouldn't happen since we're calling this form a context menu
@@ -315,7 +317,7 @@ export class Wire extends Drawable {
             ]
         }
 
-        // determine inial direction
+        // determine initial direction
         const [i, [startX, startY], [endX, endY]] = coordData
         const deltaX = endX - startX
         const deltaY = endY - startY
@@ -339,6 +341,7 @@ export class Wire extends Drawable {
 
         const waypoint = new Waypoint(this.editor, [x, y, orient], this)
         this._waypoints.splice(i, 0, waypoint)
+        return waypoint
     }
 
     public removeWaypoint(waypoint: Waypoint) {
@@ -486,6 +489,39 @@ export class Wire extends Drawable {
             }
         }
         return undefined
+    }
+
+    public override mouseDown(e: MouseEvent | TouchEvent) {
+        if (e.altKey && this.editor.mode >= Mode.DESIGN) {
+            const passthrough = this.addPassthroughFrom(e)
+            if (isDefined(passthrough)) {
+                return passthrough.outputs[0].mouseDown(e)
+            }
+        }
+        return super.mouseDown(e)
+    }
+
+    public override mouseDragged(e: MouseEvent | TouchEvent) {
+        if (isDefined(this._waypointBeingDragged)) {
+            this._waypointBeingDragged.mouseDragged(e)
+        } else {
+            const selectionSize = this.editor.cursorMovementMgr.currentSelection?.previouslySelectedElements.size ?? 0
+            if (selectionSize === 0) {
+                const waypoint = this.addWaypointFrom(e)
+                this._waypointBeingDragged = waypoint
+                waypoint.mouseDown(e)
+                waypoint.mouseDragged(e)
+            }
+        }
+    }
+
+    public override mouseUp(e: MouseEvent | TouchEvent) {
+        if (isDefined(this._waypointBeingDragged)) {
+            this._waypointBeingDragged.mouseUp(e)
+            this._waypointBeingDragged = undefined
+            return true
+        }
+        return false
     }
 
     public override makeContextMenu(): ContextMenuData {
