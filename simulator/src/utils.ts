@@ -134,7 +134,15 @@ export type Plus1<N extends number> =
     N extends 9 ? 10 :
     N extends 10 ? 11 :
     N extends 11 ? 12 :
-    N extends 11 ? 13 :
+    N extends 12 ? 13 :
+    N extends 13 ? 14 :
+    N extends 14 ? 15 :
+    N extends 15 ? 16 :
+    N extends 16 ? 17 :
+    N extends 17 ? 18 :
+    N extends 18 ? 19 :
+    N extends 19 ? 20 :
+    N extends 20 ? 21 :
     never
 
 export type Plus2<N extends number> =
@@ -151,6 +159,14 @@ export type Plus2<N extends number> =
     N extends 10 ? 12 :
     N extends 11 ? 13 :
     N extends 12 ? 14 :
+    N extends 13 ? 15 :
+    N extends 14 ? 16 :
+    N extends 15 ? 17 :
+    N extends 16 ? 18 :
+    N extends 17 ? 19 :
+    N extends 18 ? 20 :
+    N extends 19 ? 21 :
+    N extends 20 ? 22 :
     never
 
 export type Plus3<N extends number> =
@@ -167,6 +183,14 @@ export type Plus3<N extends number> =
     N extends 10 ? 13 :
     N extends 11 ? 14 :
     N extends 12 ? 15 :
+    N extends 13 ? 16 :
+    N extends 14 ? 17 :
+    N extends 15 ? 18 :
+    N extends 16 ? 19 :
+    N extends 17 ? 20 :
+    N extends 18 ? 21 :
+    N extends 19 ? 22 :
+    N extends 20 ? 23 :
     never
 
 

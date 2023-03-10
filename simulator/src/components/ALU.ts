@@ -420,4 +420,3 @@ export function doALUOp(op: string, a: FixedReadonlyArray<LogicValue, 4>, b: Fix
     const z = allZeros(y)
     return [y as any as FixedArray<LogicValue, 4>, v, z, cout]
 }
-

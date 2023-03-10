@@ -394,7 +394,7 @@ const componentsMenu: Array<Section> = [
             },
             {
                 type: "component", subtype: "ram-32x12",
-                strings: "RAM12", img: "RAM12", width: 50,
+                strings: "RAM32x12", img: "RAM32x12", width: 50,
                 normallyHidden: true,
             },
             {

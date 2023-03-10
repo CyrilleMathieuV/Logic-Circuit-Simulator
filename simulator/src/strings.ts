@@ -110,7 +110,7 @@ const Strings_fr = {
             FlipflopT: ["Bascule T", "Basc. T"],
             FlipflopD: ["Bascule D", "Basc. D"],
             Register: ["Registre à 4 bits", "Registre"],
-            RAM12: ["RAM, 32 × 12 bits", "RAM 32×12"],
+            RAM32x12: ["RAM, 32 × 12 bits", "RAM 32×12"],
             RAM16x4: ["RAM, 16 × 4 bits", "RAM 16×4"],
             RAM16x8: ["RAM, 16 × 8 bits", "RAM 16×8"],
             RAM64x8: ["RAM, 64 × 8 bits", "RAM 64×8"],
@@ -595,12 +595,6 @@ const Strings_fr = {
             tooltip: {
                 title: "RAM (mémoire vive)",
                 desc: template("Stocke ${numWords} lignes de ${wordWidth} bits.", "numWords", "wordWidth"),
-            },
-        },
-        RAM12: {
-            tooltip: {
-                title: "RAM (mémoire vive)",
-                desc: "Stocke 32 fois douze bits.",
             },
         },
         Register: {
@@ -1240,12 +1234,6 @@ const Strings_en: Strings = {
             tooltip: {
                 title: "RAM",
                 desc: template("Stores ${numWords} rows of ${wordWidth} bits.", "numWords", "wordWidth"),
-            },
-        },
-        RAM12: {
-            tooltip: {
-                title: "RAM (random access memory)",
-                desc: "Stores 32 times twelve bits.",
             },
         },
         Register: {

@@ -19,10 +19,10 @@ function defineRAM<NumInputs extends FixedArraySize, NumOutputs extends FixedArr
 
 type RAMRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
     ComponentRepr<NumInputs, NumOutputs> & {
-        showContent: boolean | undefined,
-        trigger: EdgeTrigger | undefined,
-        content: string | string[] | undefined,
-    }
+    showContent: boolean | undefined,
+    trigger: EdgeTrigger | undefined,
+    content: string | string[] | undefined,
+}
 
 
 const RAMDefaults = {
@@ -51,11 +51,11 @@ abstract class RAM<NumInputs extends FixedArraySize,
     NumOutputs extends FixedArraySize,
     NumAddressBits extends FixedArraySize,
     Repr extends RAMRepr<NumInputs, NumOutputs>
-    >
+>
     extends ComponentBaseWithSubclassDefinedNodes<
-    RAMInputIndices<NumOutputs, NumAddressBits>,
-    RAMOutputIndices<NumOutputs>,
-    NumInputs, NumOutputs, Repr, RAMValue<NumOutputs>
+        RAMInputIndices<NumOutputs, NumAddressBits>,
+        RAMOutputIndices<NumOutputs>,
+        NumInputs, NumOutputs, Repr, RAMValue<NumOutputs>
     > {
 
     private static generateInOffsets(numWords: number, wordWidth: number, numAddressBits: number): NodeVisual[] {
@@ -450,8 +450,6 @@ export class RAM16x8 extends RAM<15, 8, 4, RAM16x8Repr> {
 
 }
 
-
-
 export const RAM64x8Def =
     defineRAM(17, 8, "ram-64x8", "RAM64x8")
 
@@ -476,6 +474,29 @@ export class RAM64x8 extends RAM<17, 8, 6, RAM64x8Repr> {
 
 }
 
+export const RAM32x12Def =
+    defineRAM(20, 12, "ram-32x12", "RAM32x12")
+
+export type RAM32x12Repr = typeof RAM32x12Def.reprType
+
+export class RAM32x12 extends RAM<20, 12, 5, RAM32x12Repr> {
+
+    protected static INPUT = RAM.generateInputIndices(12, 5)
+    protected static OUTPUT = RAM.generateOutputIndices(12)
+
+
+    public constructor(editor: LogicEditor, savedData: RAM32x12Repr | null) {
+        super(editor, savedData, 32, 12, 5)
+    }
+
+    public toJSON() {
+        return {
+            type: "ram-32x12" as const,
+            ...this.toJSONBase(),
+        }
+    }
+
+}
 
 function isAllZeros(s: string) {
     for (let i = 0; i < s.length; i++) {

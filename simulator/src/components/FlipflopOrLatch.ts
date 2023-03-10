@@ -21,9 +21,9 @@ export function defineFlipflopOrLatch<NumInputs extends FixedArraySize, N extend
 
 export type FlipflopOrLatchRepr<NumInputs extends FixedArraySize> =
     ComponentRepr<NumInputs, 2> & {
-        state: LogicValueRepr | undefined
-        showContent: boolean | undefined
-    }
+    state: LogicValueRepr | undefined
+    showContent: boolean | undefined
+}
 
 const FlipflorOrLatchDefaults = {
     showContent: true,
@@ -172,8 +172,8 @@ export function defineFlipflop<NumInputs extends FixedArraySize, N extends strin
 
 export type FlipflopRepr<NumInputs extends FixedArraySize> =
     FlipflopOrLatchRepr<NumInputs> & {
-        trigger: keyof typeof EdgeTrigger | undefined
-    }
+    trigger: keyof typeof EdgeTrigger | undefined
+}
 
 const FlipflopDefaults = {
     trigger: EdgeTrigger.rising,

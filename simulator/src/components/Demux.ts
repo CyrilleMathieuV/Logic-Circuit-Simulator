@@ -29,9 +29,9 @@ export function defineDemux<NumInputs extends FixedArraySize, NumOutputs extends
 
 type DemuxRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
     ComponentRepr<NumInputs, NumOutputs> & {
-        showWiring: boolean | undefined,
-        disconnectedAsHighZ: boolean | undefined,
-    }
+    showWiring: boolean | undefined,
+    disconnectedAsHighZ: boolean | undefined,
+}
 
 const DemuxDefaults = {
     showWiring: true,
@@ -147,9 +147,9 @@ export abstract class Demux<
     private _disconnectedAsHighZ = DemuxDefaults.disconnectedAsHighZ
 
     protected constructor(editor: LogicEditor, savedData: Repr | null,
-        public readonly numFrom: number,
-        public readonly numSel: number,
-        public readonly numTo: NumOutputs,
+                          public readonly numFrom: number,
+                          public readonly numSel: number,
+                          public readonly numTo: NumOutputs,
     ) {
         super(editor, FixedArrayFill(false as LogicValue, numTo), savedData, {
             ins: Demux.generateInOffsets(numFrom, numSel, numTo),
