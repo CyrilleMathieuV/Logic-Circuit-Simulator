@@ -59,7 +59,7 @@ abstract class RAM<NumInputs extends FixedArraySize,
     > {
 
     private static generateInOffsets(numWords: number, wordWidth: number, numAddressBits: number): NodeVisual[] {
-        const gridHeight = RAM.gridHeight(wordWidth)
+        const gridHeight = RAM.gridHeight(numWords)
         const bottomOffset = Math.floor((gridHeight + 1) / 2)
         const topOffset = -bottomOffset
         const clockYOffset = bottomOffset - 2
@@ -349,11 +349,12 @@ abstract class RAM<NumInputs extends FixedArraySize,
                     ? Orientation.isVertical(this.orient) ? 4.5 : 6
                     : 2.5
 
+                // Modification CMN for bigger wordWith
                 if (showSingleVerticalBlock) {
-                    const cellWidth = wordWidth <= 4 ? 10 : 8
+                    const cellWidth = wordWidth <= 4 ? 10 : wordWidth <= 8 ? 8 : 6
                     drawMemoryCells(g, mem, wordWidth, addr, 0, numWords, this.posX + 2, this.posY, cellWidth, cellHeight)
                 } else {
-                    const cellWidth = 6.5
+                    const cellWidth = wordWidth <= 8 ? 6.5 : 4
                     drawMemoryCells(g, mem, wordWidth, addr, 0, numWords / 2, this.posX + 2 - 38, this.posY, cellWidth, cellHeight)
                     drawMemoryCells(g, mem, wordWidth, addr, numWords / 2, numWords, this.posX + 2 + 38, this.posY, cellWidth, cellHeight)
                 }
