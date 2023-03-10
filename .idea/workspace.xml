@@ -6,29 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMD Z by JPP">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/RAM12.svg" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/RAM32x12.svg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/ALU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/ALU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Adder.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Adder.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Clock.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Clock.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Counter.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Counter.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Decoder16Seg.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Decoder16Seg.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Decoder7Seg.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Decoder7Seg.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/DecoderBCD4.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/DecoderBCD4.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Demux.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Demux.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Drawable.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Drawable.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/FlipflopD.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/FlipflopD.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/FlipflopJK.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/FlipflopJK.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/FlipflopOrLatch.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/FlipflopOrLatch.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/FlipflopT.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/FlipflopT.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/IC.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/IC.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/RAM.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/RAM.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/RAM12.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/images.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/images.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/menuutils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/menuutils.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/strings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/strings.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/utils.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -121,7 +99,7 @@
       <workItem from="1677343866277" duration="614000" />
       <workItem from="1677859590838" duration="128000" />
       <workItem from="1677864017981" duration="600000" />
-      <workItem from="1678452840152" duration="4076000" />
+      <workItem from="1678452840152" duration="6775000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -207,7 +185,14 @@
       <option name="project" value="LOCAL" />
       <updated>1676481649892</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="CMD Z by JPP">
+      <created>1678457097529</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1678457097529</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
