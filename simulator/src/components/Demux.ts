@@ -48,15 +48,17 @@ export abstract class Demux<
         const offsets: NodeVisual[] = []
 
         // left inputs
+        const compact = numTo >= 7
+        const spacing = compact ? 1 : 2
         const numGroups = numTo / numFrom
         const addByGroupSep = numFrom > 1 ? 1 : 0
         const numLeftSlots = numTo + (numGroups - 1) * addByGroupSep
-        const from = -(numFrom - 1)
+        const topOffset = spacing === 1 ? -Math.round(numFrom / 2) : -(numFrom - 1) / 2 * spacing
         let x = -2 - numSel
         const y = -(numLeftSlots - 1)
         const selY = y - 2
         for (let i = 0; i < numFrom; i++) {
-            offsets.push([`A${i}`, x, from + 2 * i, "w", "A"])
+            offsets.push([`A${i}`, x, topOffset + spacing * i, "w", "A"])
         }
 
         // top input selectors
@@ -70,9 +72,11 @@ export abstract class Demux<
     private static generateOutOffsets<NumOutputs extends FixedArraySize>(numFrom: number, numSel: number, numTo: NumOutputs): FixedArray<NodeVisual, NumOutputs> {
         const offsets: NodeVisual[] = []
 
+        const compact = numTo >= 7
+        const spacing = compact ? 1 : 2
         const numGroups = numTo / numFrom
         const addByGroupSep = numFrom > 1 ? 1 : 0
-        const numLeftSlots = numTo + (numGroups - 1) * addByGroupSep
+        const numLeftSlots = (numTo * spacing) / 2 + (numGroups - 1) * addByGroupSep
 
         const x = 2 + numSel
         let y = -(numLeftSlots - 1)
@@ -81,11 +85,11 @@ export abstract class Demux<
         let groupLetter = "B"
         for (let i = 0; i < numTo; i++) {
             if (i !== 0 && i % numFrom === 0) {
-                y += addByGroupSep * 2
+                y += addByGroupSep * spacing
                 groupLetter = String.fromCharCode(groupLetter.charCodeAt(0) + 1)
             }
             offsets.push([groupLetter + (i % numFrom), x, y, "e", groupLetter])
-            y += 2
+            y += spacing
         }
         return offsets as FixedArray<NodeVisual, NumOutputs>
     }
@@ -125,10 +129,12 @@ export abstract class Demux<
     }
 
     private static gridHeight(numFrom: number, numTo: number): number {
+        const compact = numTo >= 7
+        const spacing = compact ? 1 : 2
         const numGroups = numTo / numFrom
         const addByGroupSep = numFrom > 1 ? 1 : 0
         const numLeftSlots = numTo + (numGroups - 1) * addByGroupSep
-        return 1 + 2 * numLeftSlots
+        return 1 + spacing * numLeftSlots
     }
 
     public readonly numGroups: number
@@ -158,7 +164,7 @@ export abstract class Demux<
         }
     }
 
-    public override toJSONBase() {
+    protected override toJSONBase() {
         return {
             ...super.toJSONBase(),
             showWiring: (this._showWiring !== DemuxDefaults.showWiring) ? this._showWiring : undefined,
@@ -480,6 +486,25 @@ export class Demux4To8 extends Demux<5, 8, Demux4To8Repr> {
     public toJSON() {
         return {
             type: "demux-4to8" as const,
+            ...this.toJSONBase(),
+        }
+    }
+}
+
+export const Demux8To16Def = defineDemux(9, 16, "demux-8to16", "Demux8To16")
+export type Demux8To16Repr = typeof Demux8To16Def.reprType
+export class Demux8To16 extends Demux<9, 16, Demux8To16Repr> {
+
+    protected static INPUT = Demux.generateInputIndices(8, 1)
+    protected static OUTPUT = Demux.generateOutputIndices(8, 16)
+
+    public constructor(editor: LogicEditor, savedData: Demux8To16Repr | null) {
+        super(editor, savedData, 8, 1, 16)
+    }
+
+    public toJSON() {
+        return {
+            type: "demux-8to16" as const,
             ...this.toJSONBase(),
         }
     }

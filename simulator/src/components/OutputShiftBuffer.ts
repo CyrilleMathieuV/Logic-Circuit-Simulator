@@ -97,7 +97,7 @@ export class OutputShiftBuffer extends ComponentBase<3, 0, OutputShiftBufferRepr
             ins: [
                 [S.Components.Generic.InputClockDesc, -14, +1, "w"], // Clock
                 [S.Components.Generic.InputClearDesc, -10, +3, "s"], // Clear
-                [S.Components.Generic.InputData, -14, -1, "w"], // Data in
+                [S.Components.Generic.InputDataDesc, -14, -1, "w"], // Data in
             ],
         })
         if (isNotNull(savedData)) {

@@ -1,4 +1,5 @@
 import * as t from "io-ts"
+import { GRID_STEP } from "../drawutils"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { asArray, deepEquals, Expand, FixedArray, FixedArraySize, FixedArraySizeNonZero, FixedReadonlyArray, forceTypeOf, HighImpedance, isArray, isDefined, isNotNull, isNumber, isString, isUndefined, LogicValue, LogicValueRepr, Mode, RichStringEnum, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
@@ -110,8 +111,8 @@ export function ExtendComponentRepr<NumInputs extends FixedArraySize, NumOutputs
     return t.intersection([ComponentRepr(n, m), savedData], savedData.name)
 }
 
-export type NodeVisualNoGroup = readonly [string | undefined, number, number, Orientation]
-export type NodeVisualWithGroup = readonly [string | undefined, number, number, Orientation, string]
+export type NodeVisualNoGroup = readonly [name: string | undefined, xShift: number, yShift: number, orient: Orientation]
+export type NodeVisualWithGroup = readonly [name: string | undefined, xShift: number, yShift: number, orient: Orientation, groupName: string]
 export type NodeVisual = NodeVisualNoGroup | NodeVisualWithGroup
 
 function hasGroup(nodeVisual: NodeVisual): nodeVisual is NodeVisualWithGroup {
@@ -731,7 +732,7 @@ export abstract class ComponentBase<
 
     protected makeDeleteContextMenuItem(): ContextMenuItem {
         return ContextMenuData.item("trash", S.Components.Generic.contextMenu.Delete, () => {
-            this.editor.tryDeleteComponentsWhere(c => c === this)
+            this.editor.tryDeleteDrawable(this)
         }, true)
     }
 
@@ -830,6 +831,68 @@ export abstract class ComponentBase<
             const newFont = promptReturnValue.length === 0 ? defaultIfEmpty : promptReturnValue
             callback(newFont)
         }
+    }
+
+}
+
+
+export abstract class ComponentBaseWithSubclassDefinedNodes<
+    InputIndices,
+    OutputIndices,
+    NumInputs extends FixedArraySize,
+    NumOutputs extends FixedArraySize,
+    Repr extends ComponentRepr<NumInputs, NumOutputs>,
+    Value,
+    > extends ComponentBase<NumInputs, NumOutputs, Repr, Value> {
+
+    protected constructor(
+        editor: LogicEditor,
+        protected readonly gridWidth: number,
+        protected readonly gridHeight: number,
+        _value: Value,
+        savedData: Repr | null,
+        nodeOffsets: NodeVisuals<NumInputs, NumOutputs>) {
+        super(editor, _value, savedData, nodeOffsets)
+    }
+
+    private __INPUT: InputIndices | undefined
+    private __OUTPUT: OutputIndices | undefined
+
+    // lazy loading from subclass because accessed by superclass constructor
+    protected get INPUT(): InputIndices {
+        let INPUT = this.__INPUT
+        if (isUndefined(INPUT)) {
+            INPUT = Object.getPrototypeOf(this).constructor.INPUT
+            if (isUndefined(INPUT)) {
+                console.log("ERROR: Undefined INPUT indices in Mux subclass")
+                throw new Error("INPUT is undefined")
+            }
+            this.__INPUT = INPUT
+        }
+        return INPUT
+    }
+
+    // lazy loading from subclass because accessed by superclass constructor
+    protected get OUTPUT(): OutputIndices {
+        let OUTPUT = this.__OUTPUT
+        if (isUndefined(OUTPUT)) {
+            OUTPUT = Object.getPrototypeOf(this).constructor.OUTPUT
+            if (isUndefined(OUTPUT)) {
+                console.log("ERROR: Undefined OUTPUT indices in Mux subclass")
+                throw new Error("OUTPUT is undefined")
+            }
+            this.__OUTPUT = OUTPUT
+        }
+        return OUTPUT
+    }
+
+
+    public get unrotatedWidth() {
+        return this.gridWidth * GRID_STEP
+    }
+
+    public get unrotatedHeight() {
+        return this.gridHeight * GRID_STEP
     }
 
 }

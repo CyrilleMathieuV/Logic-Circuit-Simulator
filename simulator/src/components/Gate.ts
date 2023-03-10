@@ -297,7 +297,7 @@ export abstract class GateBase<
         }
     }
 
-    public override toJSONBase() {
+    protected override toJSONBase() {
         return {
             type: this._type,
             ...super.toJSONBase(),

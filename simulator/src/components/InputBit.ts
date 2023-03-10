@@ -26,7 +26,7 @@ export abstract class InputBitBase<Repr extends InputBitBaseRepr> extends Compon
         }
     }
 
-    public override toJSONBase() {
+    protected override toJSONBase() {
         return {
             ...super.toJSONBase(),
             name: this._name,

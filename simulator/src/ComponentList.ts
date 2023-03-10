@@ -1,11 +1,13 @@
 import { Component } from "./components/Component"
 import { FixedArrayFillFactory } from "./utils"
 
-export const ZIndexBackground = 0
-export const ZIndexNormal = 1
-export const ZIndexOverlay = 2
+export const DrawZIndex = {
+    Background: 0,
+    Normal: 1,
+    Overlay: 2,
+} as const
 
-export type DrawZIndex = typeof ZIndexBackground | typeof ZIndexNormal | typeof ZIndexOverlay
+export type DrawZIndex = typeof DrawZIndex[keyof typeof DrawZIndex]
 
 export class ComponentList {
 
@@ -40,19 +42,24 @@ export class ComponentList {
         this._componentsByZIndex[z].push(comp)
     }
 
-    public tryDeleteWhere(cond: (e: Component) => boolean) {
-        let compDeleted = false
+    public tryDeleteWhere(cond: (e: Component) => boolean, onlyOne: boolean) {
+        let numDeleted = 0
+        
+        outer:
         for (const compList of this._componentsByZIndex) {
             for (let i = 0; i < compList.length; i++) {
                 const comp = compList[i]
                 if (cond(comp)) {
                     comp.destroy()
                     compList.splice(i, 1)
-                    compDeleted = true
+                    numDeleted++
+                    if (onlyOne) {
+                        break outer
+                    }
                 }
             }
         }
-        return compDeleted
+        return numDeleted
     }
 
     public clearAll() {

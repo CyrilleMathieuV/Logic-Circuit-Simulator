@@ -21,6 +21,10 @@ export function pxToGrid(x: number) {
     return Math.round(x / GRID_STEP)
 }
 
+export function clampZoom(zoom: number) {
+    return Math.max(0.1, Math.min(10, zoom / 100))
+}
+
 export function dist(x0: number, y0: number, x1: number, y1: number): number {
     const dx = x1 - x0
     const dy = y1 - y0

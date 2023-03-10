@@ -314,6 +314,11 @@ const componentsMenu: Array<Section> = [
                 strings: "Mux8to4", img: "Mux", width: 50,
                 normallyHidden: true,
             },
+            {
+                type: "component", subtype: "mux-16to8",
+                strings: "Mux16to8", img: "Mux", width: 50,
+                normallyHidden: true,
+            },
 
             {
                 type: "component", subtype: "demux-1to2",
@@ -345,6 +350,11 @@ const componentsMenu: Array<Section> = [
                 strings: "Demux4to8", img: "Demux", width: 50,
                 normallyHidden: true,
             },
+            {
+                type: "component", subtype: "demux-8to16",
+                strings: "Demux8to16", img: "Demux", width: 50,
+                normallyHidden: true,
+            },
 
             {
                 type: "component", subtype: "latch-sr",
@@ -370,11 +380,16 @@ const componentsMenu: Array<Section> = [
             },
             {
                 type: "component", subtype: "ram-16x4",
-                strings: "RAM", img: "RAM", width: 50,
+                strings: "RAM16x4", img: "RAM16x4", width: 50,
             },
             {
                 type: "component", subtype: "ram-16x8",
-                strings: "RAM8", img: "RAM8", width: 50,
+                strings: "RAM16x8", img: "RAM16x8", width: 50,
+                normallyHidden: true,
+            },
+            {
+                type: "component", subtype: "ram-64x8",
+                strings: "RAM64x8", img: "RAM64x8", width: 50,
                 normallyHidden: true,
             },
             {

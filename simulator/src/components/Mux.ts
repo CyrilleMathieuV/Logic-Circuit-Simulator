@@ -3,22 +3,13 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, displayValu
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, isDefined, isNotNull, isUndefined, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentRepr, defineComponent, NodeVisual, NodeVisuals } from "./Component"
+import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, isDefined, isNotNull, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, defineComponent, NodeVisual, NodeVisuals } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { WireStyles } from "./Wire"
 
 
-type MuxInputIndices<NumInputs extends FixedArraySize> = {
-    I: ReadonlyArray<FixedReadonlyArray<number, NumInputs>>, // array of arrays of input indices
-    S: ReadonlyArray<number>, // array of indices of selectors
-}
-
-type MuxOutputIndices<NumOutputs extends FixedArraySize> = {
-    Z: FixedReadonlyArray<number, NumOutputs>, // array of output indices
-}
-
-export function defineMux<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, N extends string>(numInputs: NumInputs, numOutputs: NumOutputs, jsonName: N, className: string) {
+function defineMux<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, N extends string>(numInputs: NumInputs, numOutputs: NumOutputs, jsonName: N, className: string) {
     return defineComponent(numInputs, numOutputs, t.type({
         type: t.literal(jsonName),
         showWiring: typeOrUndefined(t.boolean),
@@ -34,30 +25,47 @@ const MuxDefaults = {
     showWiring: true,
 }
 
-export abstract class Mux<
+type MuxInputIndices<NumInputs extends FixedArraySize> = {
+    I: ReadonlyArray<FixedReadonlyArray<number, NumInputs>>, // array of arrays of input indices
+    S: ReadonlyArray<number>, // array of indices of selectors
+}
+
+type MuxOutputIndices<NumOutputs extends FixedArraySize> = {
+    Z: FixedReadonlyArray<number, NumOutputs>, // array of output indices
+}
+
+abstract class Mux<
     NumInputs extends FixedArraySize,
     NumOutputs extends FixedArraySize,
-    Repr extends MuxRepr<NumInputs, NumOutputs>>
-    extends ComponentBase<NumInputs, NumOutputs, Repr, FixedArray<LogicValue, NumOutputs>>{
+    Repr extends MuxRepr<NumInputs, NumOutputs>
+    >
+    extends ComponentBaseWithSubclassDefinedNodes<
+    MuxInputIndices<NumOutputs>,
+    MuxOutputIndices<NumOutputs>,
+    NumInputs, NumOutputs, Repr, FixedArray<LogicValue, NumOutputs>
+    > {
 
     private static generateInOffsets(numFrom: number, numSel: number, numTo: number): NodeVisual[] {
         const offsets: NodeVisual[] = []
 
+        const compact = numTo >= 7
+        const spacing = compact ? 1 : 2
+
         // left inputs
         const numGroups = numFrom / numTo
         const addByGroupSep = numTo > 1 ? 1 : 0
-        const numLeftSlots = numFrom + (numGroups - 1) * addByGroupSep
+        const numLeftSlots = (numFrom * spacing) / 2 + (numGroups - 1) * addByGroupSep
         let x = -2 - numSel
         let y = -(numLeftSlots - 1)
         const selY = y - 2
         let groupLetter = "A"
         for (let i = 0; i < numFrom; i++) {
             if (i !== 0 && i % numTo === 0) {
-                y += addByGroupSep * 2
+                y += addByGroupSep * spacing
                 groupLetter = String.fromCharCode(groupLetter.charCodeAt(0) + 1)
             }
             offsets.push([groupLetter + (i % numTo), x, y, "w", groupLetter])
-            y += 2
+            y += spacing
         }
 
         // top input selectors
@@ -72,10 +80,12 @@ export abstract class Mux<
         const offsets: NodeVisual[] = []
 
         // right outputs
-        const from = -(numTo - 1)
+        const compact = numTo >= 7
+        const spacing = compact ? 1 : 2
+        const topOffset = spacing === 1 ? -Math.round(numTo / 2) : -(numTo - 1) / 2 * spacing
         const x = 2 + numSel
         for (let i = 0; i < numTo; i++) {
-            offsets.push([`Z${i}`, x, from + 2 * i, "e", "Z"])
+            offsets.push([`Z${i}`, x, topOffset + spacing * i, "e", "Z"])
         }
         return offsets as FixedArray<NodeVisual, NumOutputs>
     }
@@ -112,16 +122,13 @@ export abstract class Mux<
     }
 
     private static gridHeight(numFrom: number, numTo: number): number {
+        const compact = numTo >= 7
+        const spacing = compact ? 1 : 2
         const numGroups = numFrom / numTo
         const addByGroupSep = numTo > 1 ? 1 : 0
         const numLeftSlots = numFrom + (numGroups - 1) * addByGroupSep
-        return 1 + 2 * numLeftSlots
+        return 1 + spacing * numLeftSlots
     }
-
-    private readonly gridWidth: number
-    private readonly gridHeight: number
-    private __INPUT: MuxInputIndices<NumOutputs> | undefined
-    private __OUTPUT: MuxOutputIndices<NumOutputs> | undefined
 
     private _showWiring = MuxDefaults.showWiring
 
@@ -130,62 +137,24 @@ export abstract class Mux<
         public readonly numSel: number,
         public readonly numTo: NumOutputs,
     ) {
-        super(editor, FixedArrayFill(false as LogicValue, numTo), savedData, {
+        super(editor, Mux.gridWidth(numSel), Mux.gridHeight(numFrom, numTo), FixedArrayFill(false as LogicValue, numTo), savedData, {
             ins: Mux.generateInOffsets(numFrom, numSel, numTo),
             outs: Mux.generateOutOffsets(numSel, numTo),
         } as unknown as NodeVisuals<NumInputs, NumOutputs>)
-        this.gridWidth = Mux.gridWidth(numSel)
-        this.gridHeight = Mux.gridHeight(numFrom, numTo)
         if (isNotNull(savedData)) {
             this._showWiring = savedData.showWiring ?? MuxDefaults.showWiring
         }
     }
 
-    public override toJSONBase() {
+    protected override toJSONBase() {
         return {
             ...super.toJSONBase(),
             showWiring: (this._showWiring !== MuxDefaults.showWiring) ? this._showWiring : undefined,
         }
     }
 
-    // lazy loading from subclass because accessed by superclass constructor
-    private get INPUT(): MuxInputIndices<NumOutputs> {
-        let INPUT = this.__INPUT
-        if (isUndefined(INPUT)) {
-            INPUT = Object.getPrototypeOf(this).constructor.INPUT
-            if (isUndefined(INPUT)) {
-                console.log("ERROR: Undefined INPUT indices in Mux subclass")
-                throw new Error("INPUT is undefined")
-            }
-            this.__INPUT = INPUT
-        }
-        return INPUT
-    }
-
-    // lazy loading from subclass because accessed by superclass constructor
-    private get OUTPUT(): MuxOutputIndices<NumOutputs> {
-        let OUTPUT = this.__OUTPUT
-        if (isUndefined(OUTPUT)) {
-            OUTPUT = Object.getPrototypeOf(this).constructor.OUTPUT
-            if (isUndefined(OUTPUT)) {
-                console.log("ERROR: Undefined OUTPUT indices in Mux subclass")
-                throw new Error("OUTPUT is undefined")
-            }
-            this.__OUTPUT = OUTPUT
-        }
-        return OUTPUT
-    }
-
     public get componentType() {
         return "ic" as const
-    }
-
-    public get unrotatedWidth() {
-        return this.gridWidth * GRID_STEP
-    }
-
-    public get unrotatedHeight() {
-        return this.gridHeight * GRID_STEP
     }
 
     public override makeTooltip() {
@@ -433,6 +402,26 @@ export class Mux8To4 extends Mux<9, 4, Mux8To4Repr> {
     public toJSON() {
         return {
             type: "mux-8to4" as const,
+            ...this.toJSONBase(),
+        }
+    }
+}
+
+
+export const Mux16To8Def = defineMux(17, 8, "mux-16to8", "Mux16To8")
+export type Mux16To8Repr = typeof Mux16To8Def.reprType
+export class Mux16To8 extends Mux<17, 8, Mux16To8Repr> {
+
+    protected static INPUT = Mux.generateInputIndices(16, 1, 8)
+    protected static OUTPUT = Mux.generateOutputIndices(8)
+
+    public constructor(editor: LogicEditor, savedData: Mux16To8Repr | null) {
+        super(editor, savedData, 16, 1, 8)
+    }
+
+    public toJSON() {
+        return {
+            type: "mux-16to8" as const,
             ...this.toJSONBase(),
         }
     }

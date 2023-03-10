@@ -10,3 +10,5 @@ Downloaded as svg and run through svgo with the sibling config:
 $ svgo --config=_svgo.config.js *.icon.svg
 
 (Also see comments in config.)
+
+Careful: these settings work well with the downloaded glyphs from Google font, but manual work my be needed to strip additional useless SVG markup when editing files manually.

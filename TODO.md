@@ -3,9 +3,10 @@
 
 ## High priority
 
+ * Correct register display when horizontal
+ * 8-bit register
  * Copy-paste
  * Hide mouseover when mouse leaves web component boundaries
- * Undo/redo
  * High-Z bus logic
  * prevent clock "backlog" from running like crazy
  * Adder orientation
@@ -24,10 +25,24 @@
  * Edge detector
  * Component creation
  * (Address) decoder: 2, 3, 4 bit versions
+ * Save/restore using browser's storage
+    * standalone
+      * no long term storage
+      * sessionstorage pour recharger la page et restaurer le contenu
+      * localstorage pour reproposer le contenu si rechargé plus tard, 1 seule entrée
+      * avec un bouton
+    * embedded
+      * with manually-defined id
+      * only with sessionstorage
+
 
 
 ## Low priority
 
+ * Mux/Demux 16:8, 8:16
+ * Highlight only nodes when dragging
+ * Get key events also when multiple editors are on the same pagex
+ * Don't store Z in memory cells, but unknown instead
  * Add rich HTML annotation
  * Disable/hide input of component (e.g., to make exercise to prevent alu from knowing how to do a subtraction)
  * Add mouseovers to new components
@@ -41,6 +56,8 @@
 
 ### DONE
 
+ * Zoom
+ * Undo/redo
  * 4-bit and 8-bit display without interpretation
  * Separate V and Cout output for ALU
  * 8-bit input, 8-bit RAM

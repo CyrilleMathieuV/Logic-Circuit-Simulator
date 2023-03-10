@@ -3,7 +3,7 @@ import { Component, ComponentBase, ComponentState } from "./components/Component
 import { Drawable, DrawableWithPosition, Orientation } from "./components/Drawable"
 import { Waypoint, Wire, WireManager, WireStyle, WireStyles } from "./components/Wire"
 import { CursorMovementManager, EditorSelection } from "./CursorMovementManager"
-import { COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, setColors, strokeSingleLine } from "./drawutils"
+import { clampZoom, COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, setColors, strokeSingleLine } from "./drawutils"
 import { gallery } from "./gallery"
 import { a, applyModifierTo, attr, attrBuilder, button, cls, div, emptyMod, href, input, label, mods, option, raw, select, span, style, target, title, type } from "./htmlgen"
 import { makeComponentMenuInto } from "./menuutils"
@@ -31,7 +31,7 @@ import LogicEditorCSS from "../css/LogicEditor.css"
 // @ts-ignore
 import DialogPolyfillCSS from "../../node_modules/dialog-polyfill/dist/dialog-polyfill.css"
 import { ComponentFactory } from "./ComponentFactory"
-import { ComponentList, ZIndexBackground, ZIndexNormal, ZIndexOverlay } from "./ComponentList"
+import { ComponentList, DrawZIndex } from "./ComponentList"
 import { LabelRect } from "./components/LabelRect"
 import { IconName, inlineSvgFor, isIconName, makeIcon } from "./images"
 import { DefaultLang, isLang, S, setLang } from "./strings"
@@ -86,6 +86,7 @@ const DEFAULT_EDITOR_OPTIONS = {
     hideTooltips: false,
     groupParallelWires: false,
     propagationDelay: 100,
+    zoom: 100,
 }
 
 export type EditorOptions = typeof DEFAULT_EDITOR_OPTIONS
@@ -176,12 +177,13 @@ export class LogicEditor extends HTMLElement {
         hideTooltipsCheckbox: HTMLInputElement,
         groupParallelWiresCheckbox: HTMLInputElement,
         propagationDelayField: HTMLInputElement,
+        zoomLevelField: HTMLInputElement,
         showUserDataLinkContainer: HTMLDivElement,
     } | undefined = undefined
     public userdata: any = undefined
 
-    private _baseTransform: DOMMatrix
     private _baseDrawingScale = 1
+    private _actualZoomFactor = 1
     public mouseX = -1000 // offscreen at start
     public mouseY = -1000
 
@@ -211,8 +213,6 @@ export class LogicEditor extends HTMLElement {
         }
         this.html = html
         dialogPolyfill.registerDialog(html.embedDialog)
-
-        this._baseTransform = new DOMMatrix()
     }
 
     private elemWithId<E extends Element>(id: string) {
@@ -237,6 +237,10 @@ export class LogicEditor extends HTMLElement {
 
     public get mode() {
         return this._mode
+    }
+
+    public get actualZoomFactor() {
+        return this._actualZoomFactor
     }
 
     public get options(): Readonly<EditorOptions> {
@@ -265,9 +269,12 @@ export class LogicEditor extends HTMLElement {
             optionsHtml.hideTooltipsCheckbox.checked = newOptions.hideTooltips
             optionsHtml.groupParallelWiresCheckbox.checked = newOptions.groupParallelWires
             optionsHtml.propagationDelayField.valueAsNumber = newOptions.propagationDelay
+            optionsHtml.zoomLevelField.valueAsNumber = newOptions.zoom
 
             optionsHtml.showUserDataLinkContainer.style.display = isDefined(this.userdata) ? "initial" : "none"
         }
+
+        this._actualZoomFactor = clampZoom(newOptions.zoom)
 
         this.redrawMgr.addReason("options changed", null)
     }
@@ -351,7 +358,6 @@ export class LogicEditor extends HTMLElement {
         mainCanvas.style.setProperty("width", w + "px")
         mainCanvas.style.setProperty("height", h + "px")
         this._baseDrawingScale = f
-        this._baseTransform = new DOMMatrix(`scale(${f})`)
     }
 
     public connectedCallback() {
@@ -522,7 +528,7 @@ export class LogicEditor extends HTMLElement {
                 }
                 switch (e.key) {
                     case "Escape":
-                        this.tryDeleteComponentsWhere(comp => comp.state === ComponentState.SPAWNING)
+                        this.tryDeleteComponentsWhere(comp => comp.state === ComponentState.SPAWNING, false)
                         this.wireMgr.tryCancelWire()
                         e.preventDefault()
                         return
@@ -660,7 +666,7 @@ export class LogicEditor extends HTMLElement {
                     ),
                     ", ",
                     a(style("color: inherit"),
-                        href("https://www.hepl.ch"), target("_blank"),
+                        href("https://www.hepl.ch/accueil/formation/unites-enseignement-et-recherche/medias-usages-numeriques-et-didactique-de-linformatique.html"), target("_blank"),
                         "HEP Vaud"
                     ),
                 ).render()
@@ -1004,6 +1010,25 @@ export class LogicEditor extends HTMLElement {
             ).render()
         )
 
+        const zoomLevelField = input(type("number"),
+            style("margin: 0 2px 0 5px; width: 4em"),
+            attr("min", "0"), attr("step", "10"),
+            attr("value", String(this.options.zoom)),
+            attr("title", S.Settings.zoomLevel),
+        ).render()
+        zoomLevelField.addEventListener("change", this.wrapHandler(() => {
+            const zoom = zoomLevelField.valueAsNumber
+            this._options.zoom = zoom
+            this._actualZoomFactor = clampZoom(zoom)
+            this.redrawMgr.addReason("zoom level changed", null)
+        }))
+        optionsZone.appendChild(
+            div(
+                style("height: 20px"),
+                S.Settings.zoomLevelField[0], zoomLevelField, S.Settings.zoomLevelField[1]
+            ).render()
+        )
+
         const showUserdataLink = a(S.Settings.showUserDataLink[1], style("text-decoration: underline; cursor: pointer")).render()
         showUserdataLink.addEventListener("click", () => {
             alert(S.Settings.userDataHeader + "\n\n" + JSON.stringify(this.userdata, undefined, 4))
@@ -1026,6 +1051,7 @@ export class LogicEditor extends HTMLElement {
             hideTooltipsCheckbox,
             groupParallelWiresCheckbox,
             propagationDelayField,
+            zoomLevelField,
             showUserDataLinkContainer,
         }
 
@@ -1312,7 +1338,7 @@ export class LogicEditor extends HTMLElement {
 
     public tryDeleteDrawable(comp: Drawable): boolean {
         if (comp instanceof ComponentBase) {
-            return this.tryDeleteComponentsWhere(c => c === comp)
+            return this.tryDeleteComponentsWhere(c => c === comp, true) !== 0
         } else if (comp instanceof Wire) {
             this.wireMgr.deleteWire(comp)
             return true
@@ -1332,12 +1358,12 @@ export class LogicEditor extends HTMLElement {
         }
     }
 
-    public tryDeleteComponentsWhere(cond: (e: Component) => boolean) {
-        const compDeleted = this.components.tryDeleteWhere(cond)
-        if (compDeleted) {
+    public tryDeleteComponentsWhere(cond: (e: Component) => boolean, onlyOne: boolean) {
+        const numDeleted = this.components.tryDeleteWhere(cond, onlyOne)
+        if (numDeleted > 0) {
             this.redrawMgr.addReason("component(s) deleted", null)
         }
-        return compDeleted
+        return numDeleted
     }
 
     public setCurrentMouseAction(action: MouseAction) {
@@ -1446,7 +1472,7 @@ export class LogicEditor extends HTMLElement {
                 }
             }
         })()
-        const currentScale = 1 //this._currentScale
+        const currentScale = this._actualZoomFactor
         return [unscaledX / currentScale, unscaledY / currentScale]
     }
 
@@ -1466,34 +1492,44 @@ export class LogicEditor extends HTMLElement {
         }
     }
 
-    private guessAdequateCanvasSize(): [number, number] {
+    private guessAdequateCanvasSize(applyZoom: boolean): [number, number] {
         let rightmostX = Number.NEGATIVE_INFINITY, leftmostX = Number.POSITIVE_INFINITY
         let lowestY = Number.NEGATIVE_INFINITY, highestY = Number.POSITIVE_INFINITY
         for (const comp of this.components.all()) {
-            const x = comp.posX
-            if (x > rightmostX) {
-                rightmostX = x
+            const cx = comp.posX
+            const width = comp.width
+            const left = cx - width / 2
+            const right = left + width
+            if (right > rightmostX) {
+                rightmostX = right
             }
-            if (x < leftmostX) {
-                leftmostX = x
+            if (left < leftmostX) {
+                leftmostX = left
             }
-            const y = comp.posY
-            if (y > lowestY) {
-                lowestY = y
+
+            const cy = comp.posY
+            const height = comp.height
+            const top = cy - height / 2
+            const bottom = top + height
+            if (bottom > lowestY) {
+                lowestY = bottom
             }
-            if (y < highestY) {
-                highestY = y
+            if (top < highestY) {
+                highestY = top
             }
         }
+        leftmostX = Math.max(0, leftmostX)
         let w = rightmostX + leftmostX // add right margin equal to left margin
         if (isNaN(w)) {
             w = 300
         }
+        highestY = Math.max(0, highestY)
         let h = highestY + lowestY // add lower margin equal to top margin
         if (isNaN(h)) {
             h = 150
         }
-        return [w, h]
+        const f = applyZoom ? this._actualZoomFactor : 1
+        return [f * w, f * h]
     }
 
     public async shareSheetForMode(mode: Mode) {
@@ -1509,7 +1545,7 @@ export class LogicEditor extends HTMLElement {
         this.html.embedUrl.value = fullUrl
 
         const modeParam = mode === MAX_MODE_WHEN_EMBEDDED ? "" : `:mode: ${modeStr}\n`
-        const embedHeight = this.guessAdequateCanvasSize()[1]
+        const embedHeight = this.guessAdequateCanvasSize(true)[1]
 
         const markdownBlock = `\`\`\`{logic}\n:height: ${embedHeight}\n${modeParam}\n${fullJson}\n\`\`\``
         this.html.embedMarkdown.value = markdownBlock
@@ -1580,7 +1616,7 @@ export class LogicEditor extends HTMLElement {
     private async toPNG(heightHint?: number) {
         return new Promise<Blob | null>((resolve) => {
             const drawingScale = 3 // super retina
-            let [width, height] = this.guessAdequateCanvasSize()
+            let [width, height] = this.guessAdequateCanvasSize(false)
             if (isDefined(heightHint)) {
                 height = heightHint
             }
@@ -1594,7 +1630,7 @@ export class LogicEditor extends HTMLElement {
             tmpCanvas.height = height
 
             const g = tmpCanvas.getContext('2d')!
-            this.doDrawWithContext(g, width, height, transform, true, true)
+            this.doDrawWithContext(g, width, height, transform, transform, true, true)
             tmpCanvas.toBlob(resolve, 'image/png')
             tmpCanvas.remove()
 
@@ -1722,10 +1758,12 @@ export class LogicEditor extends HTMLElement {
 
         const width = mainCanvas.width / baseDrawingScale
         const height = mainCanvas.height / baseDrawingScale
-        this.doDrawWithContext(g, width, height, this._baseTransform, false, false)
+        const baseTransform = new DOMMatrix(`scale(${this._baseDrawingScale})`)
+        const contentTransform = baseTransform.scale(this._actualZoomFactor)
+        this.doDrawWithContext(g, width, height, baseTransform, contentTransform, false, false)
     }
 
-    private doDrawWithContext(g: CanvasRenderingContext2D, width: number, height: number, baseTransform: DOMMatrix, skipBorder: boolean, transparentBackground: boolean) {
+    private doDrawWithContext(g: CanvasRenderingContext2D, width: number, height: number, baseTransform: DOMMatrixReadOnly, contentTransform: DOMMatrixReadOnly, skipBorder: boolean, transparentBackground: boolean) {
         g.setTransform(baseTransform)
         g.lineCap = "square"
         g.textBaseline = "middle"
@@ -1737,6 +1775,7 @@ export class LogicEditor extends HTMLElement {
         } else {
             g.fillRect(0, 0, width, height)
         }
+        g.setTransform(contentTransform)
 
         // draw highlight
         const highlightRectFor = (comp: Component) => {
@@ -1791,14 +1830,16 @@ export class LogicEditor extends HTMLElement {
         // draw grid if moving comps
         const isMovingComponent = this.moveMgr.areDrawablesMoving()
         if (isMovingComponent) {
+            const widthAdjusted = width / this._actualZoomFactor
+            const heightAdjusted = height / this._actualZoomFactor
             g.strokeStyle = COLOR_GRID_LINES
             g.lineWidth = 1
             g.beginPath()
-            for (let x = GRID_STEP; x < width; x += GRID_STEP) {
+            for (let x = GRID_STEP; x < widthAdjusted; x += GRID_STEP) {
                 g.moveTo(x, 0)
                 g.lineTo(x, height)
             }
-            for (let y = GRID_STEP; y < height; y += GRID_STEP) {
+            for (let y = GRID_STEP; y < heightAdjusted; y += GRID_STEP) {
                 g.moveTo(0, y)
                 g.lineTo(width, y)
             }
@@ -1823,16 +1864,18 @@ export class LogicEditor extends HTMLElement {
 
         // draw border according to mode
         if (!skipBorder && (this._mode >= Mode.CONNECT || this._maxInstanceMode === MAX_MODE_WHEN_SINGLETON)) {
+            g.setTransform(baseTransform)
             g.strokeStyle = COLOR_BORDER
             g.lineWidth = 2
             g.strokeRect(0, 0, width, height)
             if (this._maxInstanceMode === MAX_MODE_WHEN_SINGLETON && this._mode < this._maxInstanceMode) {
-                const h = this.guessAdequateCanvasSize()[1]
+                const h = this.guessAdequateCanvasSize(true)[1]
                 strokeSingleLine(g, 0, h, width, h)
 
                 g.fillStyle = COLOR_BACKGROUND_UNUSED_REGION
                 g.fillRect(0, h, width, height - h)
             }
+            g.setTransform(contentTransform)
         }
 
         // const currentScale = this._currentScale
@@ -1859,7 +1902,7 @@ export class LogicEditor extends HTMLElement {
         }
 
         // draw background components
-        for (const comp of this.components.withZIndex(ZIndexBackground)) {
+        for (const comp of this.components.withZIndex(DrawZIndex.Background)) {
             drawComp(comp)
         }
 
@@ -1867,12 +1910,12 @@ export class LogicEditor extends HTMLElement {
         this.wireMgr.draw(g, drawParams) // never show wires as selected
 
         // draw normal components
-        for (const comp of this.components.withZIndex(ZIndexNormal)) {
+        for (const comp of this.components.withZIndex(DrawZIndex.Normal)) {
             drawComp(comp)
         }
 
         // draw overlays
-        for (const comp of this.components.withZIndex(ZIndexOverlay)) {
+        for (const comp of this.components.withZIndex(DrawZIndex.Overlay)) {
             drawComp(comp)
         }
 

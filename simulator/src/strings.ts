@@ -96,21 +96,24 @@ const Strings_fr = {
             Mux4to2: ["Multiplexer 4-vers-2 (1 bit de contrôle)", "Mux 4-2"],
             Mux8to2: ["Multiplexer 8-vers-2 (2 bits de contrôle)", "Mux 8-2"],
             Mux8to4: ["Multiplexer 8-vers-4 (1 bit de contrôle)", "Mux 8-4"],
+            Mux16to8: ["Multiplexer 16-vers-8 (1 bit de contrôle)", "Mux 16-8"],
             Demux1to2: ["Démultiplexer 1-vers-2 (1 bit de contrôle)", "Demux 1-2"],
             Demux1to4: ["Démultiplexer 1-vers-4 (2 bits de contrôle)", "Demux 1-4"],
             Demux1to8: ["Démultiplexer 1-vers-8 (3 bits de contrôle)", "Demux 1-8"],
             Demux2to4: ["Démultiplexer 2-vers-4 (1 bit de contrôle)", "Demux 2-4"],
             Demux2to8: ["Démultiplexer 2-vers-8 (2 bits de contrôle)", "Demux 2-8"],
             Demux4to8: ["Démultiplexer 4-vers-8 (1 bit de contrôle)", "Demux 4-8"],
+            Demux8to16: ["Démultiplexer 8-vers-16 (1 bit de contrôle)", "Demux 8-16"],
 
             LatchSR: ["Verrou SR", "Verrou SR"],
             FlipflopJK: ["Bascule JK", "Basc. JK"],
             FlipflopT: ["Bascule T", "Basc. T"],
             FlipflopD: ["Bascule D", "Basc. D"],
             Register: ["Registre à 4 bits", "Registre"],
-            RAM: ["RAM, 16 × 4 bits", "RAM 16×4"],
-            RAM8: ["RAM, 16 × 8 bits", "RAM 16×8"],
             RAM12: ["RAM, 32 × 12 bits", "RAM 32×12"],
+            RAM16x4: ["RAM, 16 × 4 bits", "RAM 16×4"],
+            RAM16x8: ["RAM, 16 × 8 bits", "RAM 16×8"],
+            RAM64x8: ["RAM, 64 × 8 bits", "RAM 64×8"],
 
             Counter: ["Compteur 4 bits", "Compteur"],
             Decoder7Seg: ["Décodeur 7 segments", "Déc. 7 seg."],
@@ -147,6 +150,8 @@ const Strings_fr = {
         groupParallelWires: tuple("Grouper les fils parallèles", "Si coché, les fils parralèles allant d'un composant à un autre seront regroupés en un seul fil plus épais."),
         propagationDelay: "Un 1 ou un 0 imposé sur une connexion sera répercuté à l’autre bout de la connexion après ce délai de propagation.",
         propagationDelayField: tuple("Propagation en", "ms"),
+        zoomLevel: "Le niveau de zoom sur les composants du circuit.",
+        zoomLevelField: tuple("Zoom:", "%"),
         showUserDataLink: tuple("Voir les", "données liées"),
         userDataHeader: "Les données suivantes sont exportées avec le circuit:",
 
@@ -205,7 +210,8 @@ const Strings_fr = {
             InputPresetDesc: "P (Preset, mise à 1)",
             InputSetDesc: "S (Set, mise à 1)",
             InputResetDesc: "R (Reset, mise à 0)",
-            InputData: "D (Données)",
+            InputDataDesc: "D (Données)",
+            InputWriteEnableDesc: "WE (écriture activée)",
 
             OutputSumDesc: "S (somme)",
             OutputCarryDesc: "C (retenue)",
@@ -566,7 +572,7 @@ const Strings_fr = {
                 Slant: "Inclinaison",
                 SlantNone: "Aucune",
                 SlantRight: "De 45° vers la droite",
-                SlantLeft: "De 45° vers la gauche haut",
+                SlantLeft: "De 45° vers la gauche",
             },
         },
         QuadGate: {
@@ -588,13 +594,7 @@ const Strings_fr = {
         RAM: {
             tooltip: {
                 title: "RAM (mémoire vive)",
-                desc: "Stocke 16 fois quatre bits.",
-            },
-        },
-        RAM8: {
-            tooltip: {
-                title: "RAM (mémoire vive)",
-                desc: "Stocke 16 fois huit bits.",
+                desc: template("Stocke ${numWords} lignes de ${wordWidth} bits.", "numWords", "wordWidth"),
             },
         },
         RAM12: {
@@ -741,21 +741,24 @@ const Strings_en: Strings = {
             Mux4to2: ["4-to-2 Multiplexer (1 Control Bit)", "Mux 4-2"],
             Mux8to2: ["8-to-2 Multiplexer (2 Control Bit)", "Mux 8-2"],
             Mux8to4: ["8-to-4 Multiplexer (1 Control Bit)", "Mux 8-4"],
+            Mux16to8: ["16-to-8 Multiplexer (1 Control Bit)", "Mux 16-8"],
             Demux1to2: ["1-to-2 Demultiplexer (1 Control Bit)", "Demux 1-2"],
             Demux1to4: ["1-to-4 Demultiplexer (2 Control Bit)", "Demux 1-4"],
             Demux1to8: ["1-to-8 Demultiplexer (3 Control Bit)", "Demux 1-8"],
             Demux2to4: ["2-to-4 Demultiplexer (1 Control Bit)", "Demux 2-4"],
             Demux2to8: ["2-to-8 Demultiplexer (2 Control Bit)", "Demux 2-8"],
             Demux4to8: ["4-to-8 Demultiplexer (1 Control Bit)", "Demux 4-8"],
+            Demux8to16: ["8-to-16 Demultiplexer (1 Control Bit)", "Demux 8-16"],
 
             LatchSR: ["SR Latch", "SR Latch"],
             FlipflopJK: ["JK Flip-Flop", "FF-JK"],
             FlipflopT: ["T Flip-Flop", "FF-T"],
             FlipflopD: ["D Flip-Flop", "FF-D"],
             Register: ["4-Bit Register", "Register"],
-            RAM: ["RAM, 16 × 4 Bits", "RAM 16×4"],
-            RAM8: ["RAM, 16 × 8 Bits", "RAM 16×8"],
-            RAM12: ["RAM, 32 × 12 Bits", "RAM 32×12"],
+            RAM16x4: ["RAM, 16 × 4 Bits", "RAM 16×4"],
+            RAM16x8: ["RAM, 16 × 8 Bits", "RAM 16×8"],
+            RAM64x8: ["RAM, 64 × 8 Bits", "RAM 64×8"],
+            RAM32x12: ["RAM, 32 × 12 Bits", "RAM 32×12"],
 
             Counter: ["4-Bit Counter", "Counter"],
             Decoder7Seg: ["7-Segment Decoder", "7-Seg. Dec."],
@@ -792,7 +795,9 @@ const Strings_en: Strings = {
         groupParallelWires: tuple("Group parallel wires", "If checked, parallel wires from one component to another will be grouped together as a thicker wire."),
         propagationDelay: "A 1 or 0 output on some wire will propagate to the other end of the wire after this propagation delay.",
         propagationDelayField: tuple("Propagation in", "ms"),
-        showUserDataLink: tuple("See", "linked data"),
+        zoomLevel: "The zoom level on the circuit components.",
+        zoomLevelField: tuple("Zoom:", "%"),
+        showUserDataLink: tuple("See ", "linked data"),
         userDataHeader: "This data is exported with the circuit:",
 
         wireStyle: "Wire style:",
@@ -850,7 +855,8 @@ const Strings_en: Strings = {
             InputPresetDesc: "P (Preset, set to 1)",
             InputSetDesc: "S (Set, set to 1)",
             InputResetDesc: "R (Reset, set to 0)",
-            InputData: "D (Data)",
+            InputDataDesc: "D (Data)",
+            InputWriteEnableDesc: "WE (Write Enable)",
 
             OutputSumDesc: "S (Sum)",
             OutputCarryDesc: "C (Carry)",
@@ -1232,14 +1238,8 @@ const Strings_en: Strings = {
         },
         RAM: {
             tooltip: {
-                title: "RAM (random access memory)",
-                desc: "Stores 16 times four bits.",
-            },
-        },
-        RAM8: {
-            tooltip: {
-                title: "RAM (random access memory)",
-                desc: "Stores 16 times eight bits.",
+                title: "RAM",
+                desc: template("Stores ${numWords} rows of ${wordWidth} bits.", "numWords", "wordWidth"),
             },
         },
         RAM12: {
@@ -1267,7 +1267,7 @@ const Strings_en: Strings = {
             contextMenu: {
                 AddMiddlePoint: "Add Middle Point",
                 AddPassthrough: "Add Passthrough",
-                
+
                 CustomPropagationDelay: template("Specific Propagation Delay${current}…", "current"),
                 CustomPropagationDelayDesc: template("Specific propagation delay in milliseconds for this connection (leave empty to use the default value for the circuit, which currently is ${current} ms):", "current"),
 

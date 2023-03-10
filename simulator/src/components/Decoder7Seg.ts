@@ -30,10 +30,10 @@ export class Decoder7Seg extends ComponentBase<4, 7, Decoder7SegRepr, FixedReado
     public constructor(editor: LogicEditor, savedData: Decoder7SegRepr | null) {
         super(editor, FixedArrayFill(false, 7), savedData, {
             ins: [
-                ["D", -3, -3, "w", "In"],
-                ["C", -3, -1, "w", "In"],
-                ["B", -3, +1, "w", "In"],
-                ["A", -3, +3, "w", "In"],
+                ["A", -3, -3, "w", "In"],
+                ["B", -3, -1, "w", "In"],
+                ["C", -3, +1, "w", "In"],
+                ["D", -3, +3, "w", "In"],
             ],
             outs: [
                 ["a", +3, -3, "e", "Out"],

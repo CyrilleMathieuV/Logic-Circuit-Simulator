@@ -1,40 +1,29 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_EMPTY, COLOR_MOUSE_OVER, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP, strokeSingleLine } from "../drawutils"
+import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_EMPTY, COLOR_MOUSE_OVER, displayValuesFromArray, drawLabel, drawWireLineToComponent, strokeSingleLine } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, isDefined, isNotNull, isNull, isUndefined, isUnknown, LogicValue, toLogicValueFromChar, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { FixedArray, FixedArrayFill, FixedArrayFillFactory, FixedArraySize, FixedReadonlyArray, isDefined, isNotNull, isNull, isUndefined, isUnknown, LogicValue, toLogicValueFromChar, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, defineComponent, NodeVisual, NodeVisuals } from "./Component"
+import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 import { EdgeTrigger, Flipflop, makeTriggerItems } from "./FlipflopOrLatch"
 
-const GRID_WIDTH = 11
-const GRID_HEIGHT = 15
-
-const INPUT = {
-    Clock: 0,
-    WriteEnable: 1,
-    Clear: 2,
-    Data: [3, 4, 5, 6],
-    Address: [7, 8, 9, 10],
-} as const
-
-const OUTPUT = {
-    Q: [0, 1, 2, 3],
-}
-
-const WORD_WIDTH = INPUT.Data.length
-const NUM_CELLS = Math.pow(2, INPUT.Address.length)
-
-export const RAM16x4Def =
-    defineComponent(11, 4, t.type({
-        type: t.literal("ram-16x4"),
+function defineRAM<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, N extends string>(numInputs: NumInputs, numOutputs: NumOutputs, jsonName: N, className: string) {
+    return defineComponent(numInputs, numOutputs, t.type({
+        type: t.literal(jsonName),
         showContent: typeOrUndefined(t.boolean),
         trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
-        content: typeOrUndefined(t.array(t.string)),
-    }, "RAM"))
+        content: typeOrUndefined(t.union([t.string, t.array(t.string)])),
+    }, className))
+}
 
-export type RAM16x4Repr = typeof RAM16x4Def.reprType
+type RAMRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
+    ComponentRepr<NumInputs, NumOutputs> & {
+        showContent: boolean | undefined,
+        trigger: EdgeTrigger | undefined,
+        content: string | string[] | undefined,
+    }
+
 
 const RAMDefaults = {
     showContent: true,
@@ -46,33 +35,112 @@ type RAMValue<BitWidth extends FixedArraySize> = {
     out: FixedReadonlyArray<LogicValue, BitWidth>
 }
 
-export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
+type RAMInputIndices<NumDataBits extends FixedArraySize, NumAddressBits extends FixedArraySize> = {
+    Clock: number,
+    WriteEnable: number,
+    Clear: number,
+    Data: FixedArray<number, NumDataBits>,
+    Address: FixedArray<number, NumAddressBits>,
+}
 
-    protected _showContent: boolean = RAMDefaults.showContent
-    protected _trigger: EdgeTrigger = RAMDefaults.trigger
-    protected _lastClock: LogicValue = Unknown
+type RAMOutputIndices<NumDataBits extends FixedArraySize> = {
+    Q: FixedArray<number, NumDataBits>,
+}
 
-    private static valueFilledWith(v: LogicValue): RAMValue<4> {
-        const mem: Array<FixedArray<LogicValue, 4>> = new Array(NUM_CELLS)
-        for (let i = 0; i < NUM_CELLS; i++) {
-            mem[i] = FixedArrayFill(v, WORD_WIDTH)
+abstract class RAM<NumInputs extends FixedArraySize,
+    NumOutputs extends FixedArraySize,
+    NumAddressBits extends FixedArraySize,
+    Repr extends RAMRepr<NumInputs, NumOutputs>
+    >
+    extends ComponentBaseWithSubclassDefinedNodes<
+    RAMInputIndices<NumOutputs, NumAddressBits>,
+    RAMOutputIndices<NumOutputs>,
+    NumInputs, NumOutputs, Repr, RAMValue<NumOutputs>
+    > {
+
+    private static generateInOffsets(numWords: number, wordWidth: number, numAddressBits: number): NodeVisual[] {
+        const gridHeight = RAM.gridHeight(numWords)
+        const bottomOffset = Math.floor((gridHeight + 1) / 2)
+        const topOffset = -bottomOffset
+        const clockYOffset = bottomOffset - 2
+
+        const ins: NodeVisual[] = [
+            [S.Components.Generic.InputClockDesc, -7, clockYOffset, "w"], // Clock
+            [S.Components.Generic.InputWriteEnableDesc, -2, bottomOffset, "s"], // WriteEnable
+            [S.Components.Generic.InputClearDesc, +2, bottomOffset, "s"], // Clear
+        ]
+
+        // Data in
+        const spacing = wordWidth >= 7 ? 1 : 2
+        const topInOffset = spacing === 1 ? -Math.round(wordWidth / 2) : -(wordWidth - 1) / 2 * spacing
+        for (let i = 0; i < wordWidth; i++) {
+            ins.push([`D${i}`, -7, topInOffset + i * spacing, "w", "D"])
         }
-        const out = FixedArrayFill(v, WORD_WIDTH)
+
+        // Address
+        const rightAddrOffset = numAddressBits - 1
+        for (let i = 0; i < numAddressBits; i++) {
+            ins.push([`Addr${i}`, rightAddrOffset - i * 2, topOffset, "n", "Addr"])
+        }
+        return ins
+    }
+
+    private static generateOutOffsets<NumOutputs extends FixedArraySize>(wordWidth: NumOutputs): FixedArray<NodeVisual, NumOutputs> {
+        const spacing = wordWidth >= 7 ? 1 : 2
+        const topOffset = spacing === 1 ? -Math.round(wordWidth / 2) : -(wordWidth - 1) / 2 * spacing
+        return FixedArrayFillFactory(i => [`Q${i}`, +7, topOffset + i * spacing, "e", "Q"], wordWidth)
+    }
+
+    protected static generateInputIndices<NumDataBits extends FixedArraySize, NumAddressBits extends FixedArraySize>(numDataBits: NumDataBits, numAdressBits: NumAddressBits): RAMInputIndices<NumDataBits, NumAddressBits> {
+        const numFixedInputs = 3
+        const Data = FixedArrayFillFactory(i => i + numFixedInputs, numDataBits)
+        const Address = FixedArrayFillFactory(i => i + numFixedInputs + numDataBits, numAdressBits)
+        return {
+            Clock: 0,
+            WriteEnable: 1,
+            Clear: 2,
+            Data,
+            Address,
+        }
+    }
+
+    protected static generateOutputIndices<NumDataBits extends FixedArraySize>(numDataBits: NumDataBits): RAMOutputIndices<NumDataBits> {
+        return {
+            Q: FixedArrayFillFactory(i => i, numDataBits),
+        }
+    }
+
+    private static gridHeight(numWords: number): number {
+        return numWords <= 16 ? 15 : 21
+    }
+
+    private static valueFilledWith<NumOutputs extends FixedArraySize>(v: LogicValue, numWords: number, wordWidth: NumOutputs): RAMValue<NumOutputs> {
+        const mem: Array<FixedArray<LogicValue, NumOutputs>> = new Array(numWords)
+        for (let i = 0; i < numWords; i++) {
+            mem[i] = FixedArrayFill(v, wordWidth)
+        }
+        const out = FixedArrayFill(v, wordWidth)
         return { mem, out }
     }
 
-    private static savedStateFrom(savedData: RAM16x4Repr | null): RAMValue<4> {
+    private static savedStateFrom<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize>(savedData: RAMRepr<NumInputs, NumOutputs> | null, numWords: number, wordWidth: NumOutputs): RAMValue<NumOutputs> {
         if (isNull(savedData) || isUndefined(savedData.content)) {
-            return RAM16by4.valueFilledWith(false)
+            return RAM.valueFilledWith(false, numWords, wordWidth)
         }
-        const mem: Array<FixedArray<LogicValue, 4>> = new Array(NUM_CELLS)
-        for (let i = 0; i < NUM_CELLS; i++) {
-            const row = FixedArrayFill<LogicValue, 4>(false, WORD_WIDTH)
-            if (i < savedData.content.length) {
-                const savedBits = savedData.content[i].split("")
-                const len = savedBits.length
-                for (let j = 0; j < WORD_WIDTH; j++) {
-                    const jj = len - j - 1
+        const mem: Array<FixedArray<LogicValue, NumOutputs>> = new Array(numWords)
+        const savedContent = Array.isArray(savedData.content) ? savedData.content : savedData.content.split(" ")
+        for (let i = 0; i < numWords; i++) {
+            const row = FixedArrayFill<LogicValue, NumOutputs>(false, wordWidth)
+            if (i < savedContent.length) {
+                const savedWordRepr = savedContent[i]
+                const len = savedWordRepr.length
+                const isBinary = len === wordWidth
+                const savedBits = isBinary ? savedWordRepr : parseInt(savedWordRepr, 16).toString(2).padStart(wordWidth, "0")
+
+                console.log(savedBits)
+
+                for (let j = 0; j < wordWidth; j++) {
+                    const jj = wordWidth - j - 1
                     if (jj >= 0) {
                         row[j] = toLogicValueFromChar(savedBits[jj])
                     } else {
@@ -82,47 +150,34 @@ export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
             }
             mem[i] = row
         }
-        const out = [...mem[0]] as const
+        const out = [...mem[0]] as FixedArray<LogicValue, NumOutputs>
         return { mem, out }
     }
 
+    private _numWords: number
+    private _wordWidth: NumOutputs
+    private _showContent: boolean = RAMDefaults.showContent
+    private _trigger: EdgeTrigger = RAMDefaults.trigger
+    private _lastClock: LogicValue = Unknown
 
-    public constructor(editor: LogicEditor, savedData: RAM16x4Repr | null) {
-        super(editor, RAM16by4.savedStateFrom(savedData), savedData, {
-            ins: [
-                [S.Components.Generic.InputClockDesc, -7, +6, "w"], // Clock
-                ["WE (Write Enable)", -2, +8, "s"], // WriteEnable
-                [S.Components.Generic.InputClearDesc, +2, +8, "s"], // Clear
-                // Data in
-                ["D0", -7, -3, "w", "D"],
-                ["D1", -7, -1, "w", "D"],
-                ["D2", -7, +1, "w", "D"],
-                ["D3", -7, 3, "w", "D"],
-                // Address
-                ["Addr0", +3, -8, "n", "Addr"],
-                ["Addr1", +1, -8, "n", "Addr"],
-                ["Addr2", -1, -8, "n", "Addr"],
-                ["Addr3", -3, -8, "n", "Addr"],
-            ],
-            outs: [
-                // Data out
-                ["Q0", +7, -3, "e", "Q"],
-                ["Q1", +7, -1, "e", "Q"],
-                ["Q2", +7, +1, "e", "Q"],
-                ["Q3", +7, 3, "e", "Q"],
-            ],
-        })
+    protected constructor(editor: LogicEditor, savedData: Repr | null, numWords: number, wordWidth: NumOutputs, numAddressBits: NumAddressBits) {
+        super(editor, 11, RAM.gridHeight(numWords), RAM.savedStateFrom<NumInputs, NumOutputs>(savedData, numWords, wordWidth), savedData, {
+            ins: RAM.generateInOffsets(numWords, wordWidth, numAddressBits),
+            outs: RAM.generateOutOffsets(wordWidth),
+        } as unknown as NodeVisuals<NumInputs, NumOutputs>)
+        this._numWords = numWords
+        this._wordWidth = wordWidth
         if (isNotNull(savedData)) {
             this._showContent = savedData.showContent ?? RAMDefaults.showContent
             this._trigger = savedData.trigger ?? RAMDefaults.trigger
         }
+        const INPUT = this.INPUT
         this.setInputsPreferSpike(INPUT.Clock, INPUT.Clear)
     }
 
-    public toJSON() {
+    protected override toJSONBase() {
         return {
-            type: "ram-16x4" as const,
-            ...this.toJSONBase(),
+            ...super.toJSONBase(),
             showContent: (this._showContent !== RAMDefaults.showContent) ? this._showContent : undefined,
             trigger: (this._trigger !== RAMDefaults.trigger) ? this._trigger : undefined,
             content: this.contentRepr(),
@@ -133,46 +188,43 @@ export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
         return "ic" as const
     }
 
-    public get unrotatedWidth() {
-        return GRID_WIDTH * GRID_STEP
-    }
-
-    public get unrotatedHeight() {
-        return GRID_HEIGHT * GRID_STEP
-    }
-
     public get trigger() {
         return this._trigger
     }
 
-    private contentRepr(): string[] | undefined {
+    private contentRepr(): string | undefined {
         const cells: string[] = []
-        for (let addr = 0; addr < NUM_CELLS; addr++) {
-            const cell = this.value.mem[addr].map(toLogicValueRepr).reverse().join("")
-            cells.push(cell)
+        const useHex = this._wordWidth >= 8
+        const hexWidth = Math.ceil(this._wordWidth / 4)
+        for (let addr = 0; addr < this._numWords; addr++) {
+            let wordRepr = this.value.mem[addr].map(toLogicValueRepr).reverse().join("")
+            if (useHex) {
+                wordRepr = parseInt(wordRepr, 2).toString(16).toUpperCase().padStart(hexWidth, "0")
+            }
+            cells.push(wordRepr)
         }
-        for (let addr = NUM_CELLS - 1; addr >= 0; addr--) {
-            if (cells[addr] === "0000") {
-                cells.splice(addr, 1)
+        let numToSkip = 0
+        for (let addr = this._numWords - 1; addr >= 0; addr--) {
+            if (isAllZeros(cells[addr])) {
+                numToSkip++
             } else {
+                if (numToSkip > 0) {
+                    cells.splice(addr + 1, numToSkip)
+                }
                 break
             }
         }
-        return cells.length === 0 ? undefined : cells
+        return cells.length === 0 ? undefined : cells.join(" ")
     }
 
-    public override makeTooltip() {
-        const s = S.Components.RAM.tooltip
-        return tooltipContent(s.title, mods(
-            div(s.desc) // TODO more info
-        ))
-    }
 
-    protected doRecalcValue(): RAMValue<4> {
+    protected doRecalcValue(): RAMValue<NumOutputs> {
+        const INPUT = this.INPUT
         const clear = this.inputs[INPUT.Clear].value
+        const numWords = this._numWords
         if (clear === true) {
             // clear is true, preset is false, set output to 0
-            return RAM16by4.valueFilledWith(false)
+            return RAM.valueFilledWith(false, numWords, this._wordWidth)
         }
 
         // first, determine output
@@ -186,19 +238,19 @@ export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
         const we = this.inputs[INPUT.WriteEnable].value
         if (we !== true || !Flipflop.isClockTrigger(this.trigger, prevClock, clock)) {
             // nothing to write, just update output
-            const out = isUnknown(addr) ? [Unknown, Unknown, Unknown, Unknown] as const : oldState.mem[addr]
+            const out = isUnknown(addr) ? FixedArrayFill(Unknown, this._wordWidth) : oldState.mem[addr]
             return { mem: oldState.mem, out }
         }
 
         // we write
         if (isUnknown(addr)) {
-            return RAM16by4.valueFilledWith(Unknown)
+            return RAM.valueFilledWith(Unknown, numWords, this._wordWidth)
         }
 
         // build new state
-        const newData = this.inputValues<4>(INPUT.Data)
-        const newState: Array<FixedArray<LogicValue, 4>> = new Array(NUM_CELLS)
-        for (let i = 0; i < NUM_CELLS; i++) {
+        const newData = this.inputValues<NumOutputs>(INPUT.Data)
+        const newState: Array<FixedArray<LogicValue, NumOutputs>> = new Array(numWords)
+        for (let i = 0; i < numWords; i++) {
             if (i === addr) {
                 newState[i] = newData
             } else {
@@ -208,17 +260,14 @@ export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
         return { mem: newState, out: newData }
     }
 
-    public makeStateAfterClock(): FixedArray<LogicValue, 4> {
-        return INPUT.Data.map(i => this.inputs[i].value) as FixedArray<LogicValue, 4>
-    }
-
     private currentAddress(): number | Unknown {
-        const addrBits = this.inputValues<4>(INPUT.Address)
+        const addrBits = this.inputValues<NumAddressBits>(this.INPUT.Address)
         const [__, addr] = displayValuesFromArray(addrBits, false)
         return addr
     }
 
-    protected override propagateValue(newValue: RAMValue<4>) {
+    protected override propagateValue(newValue: RAMValue<NumOutputs>) {
+        const OUTPUT = this.OUTPUT
         for (let i = 0; i < OUTPUT.Q.length; i++) {
             this.outputs[OUTPUT.Q[i]].value = newValue.out[i]
         }
@@ -234,7 +283,20 @@ export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
         this.setNeedsRedraw("trigger changed")
     }
 
+
+    public override makeTooltip() {
+        const s = S.Components.RAM.tooltip
+        return tooltipContent(s.title, mods(
+            div(s.desc.expand({ numWords: this._numWords, wordWidth: this._wordWidth }))
+            // TODO more info
+        ))
+    }
+
+
     protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+
+        const INPUT = this.INPUT
+        const OUTPUT = this.OUTPUT
 
         const width = this.unrotatedWidth
         const height = this.unrotatedHeight
@@ -270,61 +332,32 @@ export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
 
         ctx.inNonTransformedFrame(ctx => {
             if (!this._showContent || this.editor.options.hideMemoryContent) {
-                g.font = `bold 16px sans-serif`
+                g.font = `bold 18px sans-serif`
                 g.fillStyle = COLOR_COMPONENT_BORDER
                 g.textAlign = "center"
                 g.textBaseline = "middle"
-                g.fillText("RAM", this.posX, this.posY)
+                g.fillText("RAM", this.posX, this.posY - 6)
+                g.font = `11px sans-serif`
+                g.fillText(`${this._numWords} × ${this._wordWidth} bits`, this.posX, this.posY + 12)
             } else {
                 const mem = this.value.mem
-                const cellWidth = GRID_STEP
-                const cellHeight = 6
-                const contentTop = this.posY - 8 * cellHeight
-                const contentLeft = this.posX - 2 * GRID_STEP
-                const contentRight = contentLeft + WORD_WIDTH * cellWidth
-                const contentBottom = contentTop + NUM_CELLS * cellHeight
-
-                // by default, paint everything as zero
-                g.fillStyle = COLOR_EMPTY
-                g.fillRect(contentLeft, contentTop, contentRight - contentLeft, contentBottom - contentTop)
-
-                for (let i = 0; i < NUM_CELLS; i++) {
-                    for (let j = 0; j < WORD_WIDTH; j++) {
-                        const v = mem[i][WORD_WIDTH - j - 1]
-                        if (v !== false) {
-                            g.fillStyle = colorForBoolean(v)
-                            g.fillRect(contentLeft + j * cellWidth, contentTop + i * cellHeight, cellWidth, cellHeight)
-                        }
-                    }
-                }
-
-                g.strokeStyle = COLOR_COMPONENT_BORDER
-                g.lineWidth = 0.5
-                for (let i = 1; i < NUM_CELLS; i++) {
-                    const y = contentTop + i * cellHeight
-                    strokeSingleLine(g, contentLeft, y, contentRight, y)
-                }
-                for (let j = 1; j < WORD_WIDTH; j++) {
-                    const x = contentLeft + j * cellWidth
-                    strokeSingleLine(g, x, contentTop, x, contentBottom)
-                }
-                g.lineWidth = 2
-                g.strokeRect(contentLeft, contentTop, contentRight - contentLeft, contentBottom - contentTop)
                 const addr = this.currentAddress()
-                if (!isUnknown(addr)) {
-                    const arrowY = contentTop + addr * cellHeight + cellHeight / 2
-                    const arrowRight = contentLeft - 3
-                    const arrowWidth = 8
-                    const arrowHalfHeight = 3
-                    g.beginPath()
-                    g.moveTo(arrowRight, arrowY)
-                    g.lineTo(arrowRight - arrowWidth, arrowY + arrowHalfHeight)
-                    g.lineTo(arrowRight - arrowWidth + 2, arrowY)
-                    g.lineTo(arrowRight - arrowWidth, arrowY - arrowHalfHeight)
-                    g.closePath()
-                    g.fillStyle = COLOR_COMPONENT_BORDER
-                    g.fill()
+                const numWords = this._numWords
+                const wordWidth = this._wordWidth
+                const showSingleVerticalBlock = numWords <= 16 || !Orientation.isVertical(this.orient)
+                const cellHeight = numWords <= 16
+                    ? Orientation.isVertical(this.orient) ? 4.5 : 6
+                    : 2.5
+
+                if (showSingleVerticalBlock) {
+                    const cellWidth = wordWidth <= 4 ? 10 : 8
+                    drawMemoryCells(g, mem, wordWidth, addr, 0, numWords, this.posX + 2, this.posY, cellWidth, cellHeight)
+                } else {
+                    const cellWidth = 6.5
+                    drawMemoryCells(g, mem, wordWidth, addr, 0, numWords / 2, this.posX + 2 - 38, this.posY, cellWidth, cellHeight)
+                    drawMemoryCells(g, mem, wordWidth, addr, numWords / 2, numWords, this.posX + 2 + 38, this.posY, cellWidth, cellHeight)
                 }
+
             }
 
             g.fillStyle = COLOR_COMPONENT_INNER_LABELS
@@ -334,14 +367,13 @@ export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
             drawLabel(ctx, this.orient, "Clr", "s", this.inputs[INPUT.Clear], bottom)
 
             g.font = "bold 12px sans-serif"
-            drawLabel(ctx, this.orient, "Addr", "n", this.posX, top, this.inputs[INPUT.Address[0]])
-            drawLabel(ctx, this.orient, "D", "w", left, this.posY, this.inputs[INPUT.Data[0]])
-            drawLabel(ctx, this.orient, "Q", "e", right, this.posY, this.outputs[OUTPUT.Q[0]])
+            const zero = 0 as number
+            drawLabel(ctx, this.orient, "Addr", "n", this.posX, top, this.inputs[INPUT.Address[zero]])
+            drawLabel(ctx, this.orient, "D", "w", left, this.posY, this.inputs[INPUT.Data[zero]])
+            drawLabel(ctx, this.orient, "Q", "e", right, this.posY, this.outputs[OUTPUT.Q[zero]])
         })
 
     }
-
-
 
     protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
         const icon = this._showContent ? "check" : "none"
@@ -363,4 +395,143 @@ export class RAM16by4 extends ComponentBase<11, 4, RAM16x4Repr, RAMValue<4>> {
         return items
     }
 
+
+}
+
+
+
+export const RAM16x4Def =
+    defineRAM(11, 4, "ram-16x4", "RAM16x4")
+
+export type RAM16x4Repr = typeof RAM16x4Def.reprType
+
+export class RAM16x4 extends RAM<11, 4, 4, RAM16x4Repr> {
+
+    protected static INPUT = RAM.generateInputIndices(4, 4)
+    protected static OUTPUT = RAM.generateOutputIndices(4)
+
+
+    public constructor(editor: LogicEditor, savedData: RAM16x4Repr | null) {
+        super(editor, savedData, 16, 4, 4)
+    }
+
+    public toJSON() {
+        return {
+            type: "ram-16x4" as const,
+            ...this.toJSONBase(),
+        }
+    }
+
+}
+
+
+
+export const RAM16x8Def =
+    defineRAM(15, 8, "ram-16x8", "RAM16x8")
+
+export type RAM16x8Repr = typeof RAM16x8Def.reprType
+
+export class RAM16x8 extends RAM<15, 8, 4, RAM16x8Repr> {
+
+    protected static INPUT = RAM.generateInputIndices(8, 4)
+    protected static OUTPUT = RAM.generateOutputIndices(8)
+
+
+    public constructor(editor: LogicEditor, savedData: RAM16x8Repr | null) {
+        super(editor, savedData, 16, 8, 4)
+    }
+
+    public toJSON() {
+        return {
+            type: "ram-16x8" as const,
+            ...this.toJSONBase(),
+        }
+    }
+
+}
+
+
+
+export const RAM64x8Def =
+    defineRAM(17, 8, "ram-64x8", "RAM64x8")
+
+export type RAM64x8Repr = typeof RAM64x8Def.reprType
+
+export class RAM64x8 extends RAM<17, 8, 6, RAM64x8Repr> {
+
+    protected static INPUT = RAM.generateInputIndices(8, 6)
+    protected static OUTPUT = RAM.generateOutputIndices(8)
+
+
+    public constructor(editor: LogicEditor, savedData: RAM64x8Repr | null) {
+        super(editor, savedData, 64, 8, 6)
+    }
+
+    public toJSON() {
+        return {
+            type: "ram-64x8" as const,
+            ...this.toJSONBase(),
+        }
+    }
+
+}
+
+
+function isAllZeros(s: string) {
+    for (let i = 0; i < s.length; i++) {
+        if (s[i] !== "0") {
+            return false
+        }
+    }
+    return true
+}
+
+export function drawMemoryCells<N extends FixedArraySize>(g: CanvasRenderingContext2D, mem: Array<FixedReadonlyArray<LogicValue, N>>, wordWidth: N, addr: number | Unknown, start: number, end: number, centerX: number, centerY: number, cellWidth: number, cellHeight: number,) {
+    const numCellsToDraw = end - start
+    const contentTop = centerY - numCellsToDraw / 2 * cellHeight
+    const contentLeft = centerX - wordWidth / 2 * cellWidth
+    const contentRight = contentLeft + wordWidth * cellWidth
+    const contentBottom = contentTop + numCellsToDraw * cellHeight
+
+    // by default, paint everything as zero
+    g.fillStyle = COLOR_EMPTY
+    g.fillRect(contentLeft, contentTop, contentRight - contentLeft, contentBottom - contentTop)
+
+    for (let i = start; i < end; i++) {
+        for (let j = 0; j < wordWidth; j++) {
+            const v = mem[i][wordWidth - j - 1]
+            if (v !== false) {
+                g.fillStyle = colorForBoolean(v)
+                g.fillRect(contentLeft + j * cellWidth, contentTop + i * cellHeight, cellWidth, cellHeight)
+            }
+        }
+    }
+
+    g.strokeStyle = COLOR_COMPONENT_BORDER
+    g.lineWidth = 0.5
+    for (let i = 1; i < numCellsToDraw; i++) {
+        const y = contentTop + i * cellHeight
+        strokeSingleLine(g, contentLeft, y, contentRight, y)
+    }
+    for (let j = 1; j < wordWidth; j++) {
+        const x = contentLeft + j * cellWidth
+        strokeSingleLine(g, x, contentTop, x, contentBottom)
+    }
+    const borderLineWidth = 2
+    g.lineWidth = borderLineWidth
+    g.strokeRect(contentLeft - borderLineWidth / 2, contentTop - borderLineWidth / 2, contentRight - contentLeft + borderLineWidth, contentBottom - contentTop + borderLineWidth)
+    if (!isUnknown(addr) && addr >= start && addr < end) {
+        const arrowY = contentTop + (addr - start) * cellHeight + cellHeight / 2
+        const arrowRight = contentLeft - 3
+        const arrowWidth = 8
+        const arrowHalfHeight = 3
+        g.beginPath()
+        g.moveTo(arrowRight, arrowY)
+        g.lineTo(arrowRight - arrowWidth, arrowY + arrowHalfHeight)
+        g.lineTo(arrowRight - arrowWidth + 2, arrowY)
+        g.lineTo(arrowRight - arrowWidth, arrowY - arrowHalfHeight)
+        g.closePath()
+        g.fillStyle = COLOR_COMPONENT_BORDER
+        g.fill()
+    }
 }

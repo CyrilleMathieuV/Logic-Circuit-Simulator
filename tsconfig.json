@@ -21,6 +21,7 @@
         "noFallthroughCasesInSwitch": true,
         "noImplicitAny": true,
         "noImplicitOverride": true,
+        // "noUncheckedIndexedAccess": true,
         "moduleResolution": "node",
         // "typeRoots": [
         //     "../../node_modules",

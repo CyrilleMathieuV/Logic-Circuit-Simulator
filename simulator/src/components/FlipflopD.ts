@@ -23,7 +23,7 @@ export class FlipflopD extends Flipflop<1, FlipflopDRepr> {
 
     public constructor(editor: LogicEditor, savedData: FlipflopDRepr | null) {
         super(editor, savedData, {
-            ins: [[S.Components.Generic.InputData, -4, -2, "w"]],
+            ins: [[S.Components.Generic.InputDataDesc, -4, -2, "w"]],
             clockYOffset: 2,
         })
     }

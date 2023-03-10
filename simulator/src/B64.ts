@@ -1,4 +1,4 @@
-// Inpired by http://www.webtoolkit.info/javascript-base64.html
+// Inspired by http://www.webtoolkit.info/javascript-base64.html
 
 export const B64 = {
 

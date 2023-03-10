@@ -62,7 +62,7 @@ export abstract class FlipflopOrLatch<
         }
     }
 
-    public override toJSONBase() {
+    protected override toJSONBase() {
         return {
             ...super.toJSONBase(),
             state: toLogicValueRepr(this.value[0]),
@@ -234,7 +234,7 @@ export abstract class Flipflop<
         this.setInputsPreferSpike(INPUT.Clock, INPUT.Preset, INPUT.Clear)
     }
 
-    public override toJSONBase() {
+    protected override toJSONBase() {
         return {
             ...super.toJSONBase(),
             trigger: (this._trigger !== FlipflopDefaults.trigger) ? this._trigger : undefined,
@@ -305,7 +305,7 @@ export abstract class Flipflop<
 
     public static drawClockInput(g: CanvasRenderingContext2D, left: number, clockNode: NodeIn, trigger: EdgeTrigger) {
         const clockY = clockNode.posYInParentTransform
-        const clockLineOffset = 2
+        const clockLineOffset = 1
         g.strokeStyle = COLOR_COMPONENT_BORDER
         g.lineWidth = 2
 

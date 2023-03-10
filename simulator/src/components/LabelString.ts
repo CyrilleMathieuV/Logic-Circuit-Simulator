@@ -3,7 +3,7 @@ import { DrawZIndex } from "../ComponentList"
 import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isNotNull, typeOrUndefined } from "../utils"
+import { isNotNull, isUndefined, typeOrUndefined } from "../utils"
 import { ComponentBase, defineComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
@@ -26,6 +26,7 @@ export class LabelString extends ComponentBase<0, 0, LabelStringRepr, undefined>
     private _text: string
     // private _align: CanvasTextAlign // causes issues with mouseovers and stuff
     private _font: string
+    private _cachedTextMetrics: TextMetrics | undefined = undefined
 
     public constructor(editor: LogicEditor, savedData: LabelStringRepr | null) {
         super(editor, undefined, savedData, {})
@@ -54,12 +55,15 @@ export class LabelString extends ComponentBase<0, 0, LabelStringRepr, undefined>
     }
 
     public get unrotatedWidth() {
-        // TODO measure text width
-        return GRID_STEP * this._text.length
+        return this._cachedTextMetrics?.width ?? GRID_STEP * this._text.length
     }
 
     public get unrotatedHeight() {
-        return 2 * GRID_STEP
+        const metrics = this._cachedTextMetrics
+        if (isUndefined(metrics)) {
+            return 2 * GRID_STEP
+        }
+        return metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
     }
 
     protected doRecalcValue(): undefined {
@@ -71,8 +75,14 @@ export class LabelString extends ComponentBase<0, 0, LabelStringRepr, undefined>
     }
 
     protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+
+        g.font = this._font
         g.lineWidth = 3
+
         if (ctx.isMouseOver) {
+            if (isUndefined(this._cachedTextMetrics)) {
+                this._cachedTextMetrics = g.measureText(this._text)
+            }
             const width = this.unrotatedWidth
             const height = this.unrotatedHeight
             g.strokeStyle = COLOR_MOUSE_OVER
@@ -82,7 +92,6 @@ export class LabelString extends ComponentBase<0, 0, LabelStringRepr, undefined>
         }
 
         g.fillStyle = COLOR_COMPONENT_BORDER
-        g.font = this._font
         g.textAlign = "center"
         g.textBaseline = "middle"
         g.fillText(this._text, this.posX, this.posY)
@@ -90,11 +99,13 @@ export class LabelString extends ComponentBase<0, 0, LabelStringRepr, undefined>
 
     private doSetText(text: string) {
         this._text = text
+        this._cachedTextMetrics = undefined
         this.setNeedsRedraw("text changed")
     }
 
     private doSetFont(font: string) {
         this._font = font
+        this._cachedTextMetrics = undefined
         this.setNeedsRedraw("font changed")
     }
 
