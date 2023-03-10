@@ -59,7 +59,7 @@ abstract class RAM<NumInputs extends FixedArraySize,
     > {
 
     private static generateInOffsets(numWords: number, wordWidth: number, numAddressBits: number): NodeVisual[] {
-        const gridHeight = RAM.gridHeight(numWords)
+        const gridHeight = RAM.gridHeight(wordWidth)
         const bottomOffset = Math.floor((gridHeight + 1) / 2)
         const topOffset = -bottomOffset
         const clockYOffset = bottomOffset - 2
