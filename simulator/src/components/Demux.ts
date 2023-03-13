@@ -4,8 +4,8 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { IconName } from "../images"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, HighImpedance, isDefined, isNotNull, isUndefined, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentRepr, defineComponent, NodeVisual, NodeVisuals } from "./Component"
+import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, HighImpedance, isDefined, isNotNull, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, defineComponent, NodeVisual, NodeVisuals } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { WireStyles } from "./Wire"
 
@@ -29,9 +29,9 @@ export function defineDemux<NumInputs extends FixedArraySize, NumOutputs extends
 
 type DemuxRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
     ComponentRepr<NumInputs, NumOutputs> & {
-    showWiring: boolean | undefined,
-    disconnectedAsHighZ: boolean | undefined,
-}
+        showWiring: boolean | undefined,
+        disconnectedAsHighZ: boolean | undefined,
+    }
 
 const DemuxDefaults = {
     showWiring: true,
@@ -41,8 +41,13 @@ const DemuxDefaults = {
 export abstract class Demux<
     NumInputs extends FixedArraySize,
     NumOutputs extends FixedArraySize,
-    Repr extends DemuxRepr<NumInputs, NumOutputs>>
-    extends ComponentBase<NumInputs, NumOutputs, Repr, FixedArray<LogicValue, NumOutputs>>{
+    Repr extends DemuxRepr<NumInputs, NumOutputs>
+>
+    extends ComponentBaseWithSubclassDefinedNodes<
+        DemuxInputIndices<NumInputs>,
+        DemuxOutputIndices<NumOutputs>,
+        NumInputs, NumOutputs, Repr, FixedArray<LogicValue, NumOutputs>
+    > {
 
     private static generateInOffsets(numFrom: number, numSel: number, numTo: number): NodeVisual[] {
         const offsets: NodeVisual[] = []
@@ -52,19 +57,19 @@ export abstract class Demux<
         const spacing = compact ? 1 : 2
         const numGroups = numTo / numFrom
         const addByGroupSep = numFrom > 1 ? 1 : 0
-        const numLeftSlots = numTo + (numGroups - 1) * addByGroupSep
+        const numLeftSlots = (numTo * spacing) / 2 + (numGroups - 1) * addByGroupSep
         const topOffset = spacing === 1 ? -Math.round(numFrom / 2) : -(numFrom - 1) / 2 * spacing
-        let x = -2 - numSel
+        const left = -1 - numSel
         const y = -(numLeftSlots - 1)
         const selY = y - 2
         for (let i = 0; i < numFrom; i++) {
-            offsets.push([`A${i}`, x, topOffset + spacing * i, "w", "A"])
+            offsets.push([`A${i}`, left, topOffset + spacing * i, "w", "A"])
         }
 
         // top input selectors
-        x = (numSel - 1)
+        const topRight = numSel - 1
         for (let s = 0; s < numSel; s++) {
-            offsets.push([`S${s}`, x - 2 * s, selY, "n", "S"])
+            offsets.push([`S${s}`, topRight - 2 * s, selY, "n", "S"])
         }
         return offsets
     }
@@ -78,7 +83,7 @@ export abstract class Demux<
         const addByGroupSep = numFrom > 1 ? 1 : 0
         const numLeftSlots = (numTo * spacing) / 2 + (numGroups - 1) * addByGroupSep
 
-        const x = 2 + numSel
+        const x = 1 + numSel
         let y = -(numLeftSlots - 1)
 
         // right outputs
@@ -125,7 +130,7 @@ export abstract class Demux<
     }
 
     private static gridWidth(numSel: number): number {
-        return 1 + 2 * numSel
+        return 2 * numSel
     }
 
     private static gridHeight(numFrom: number, numTo: number): number {
@@ -138,26 +143,24 @@ export abstract class Demux<
     }
 
     public readonly numGroups: number
-    private readonly gridWidth: number
-    private readonly gridHeight: number
-    private __INPUT: DemuxInputIndices<NumInputs> | undefined
-    private __OUTPUT: DemuxOutputIndices<NumOutputs> | undefined
 
     private _showWiring = DemuxDefaults.showWiring
     private _disconnectedAsHighZ = DemuxDefaults.disconnectedAsHighZ
 
     protected constructor(editor: LogicEditor, savedData: Repr | null,
-                          public readonly numFrom: number,
-                          public readonly numSel: number,
-                          public readonly numTo: NumOutputs,
+        public readonly numFrom: FixedArraySize,
+        public readonly numSel: FixedArraySize,
+        public readonly numTo: NumOutputs,
     ) {
-        super(editor, FixedArrayFill(false as LogicValue, numTo), savedData, {
-            ins: Demux.generateInOffsets(numFrom, numSel, numTo),
-            outs: Demux.generateOutOffsets(numFrom, numSel, numTo),
-        } as unknown as NodeVisuals<NumInputs, NumOutputs>)
+        super(editor,
+            Demux.gridWidth(numSel), Demux.gridHeight(numFrom, numTo),
+            Demux.generateInputIndices(numFrom, numSel),
+            Demux.generateOutputIndices(numFrom, numTo),
+            FixedArrayFill(false as LogicValue, numTo), savedData, {
+                ins: Demux.generateInOffsets(numFrom, numSel, numTo),
+                outs: Demux.generateOutOffsets(numFrom, numSel, numTo),
+            } as unknown as NodeVisuals<NumInputs, NumOutputs>)
         this.numGroups = this.numTo / this.numFrom
-        this.gridWidth = Demux.gridWidth(numSel)
-        this.gridHeight = Demux.gridHeight(numFrom, numTo)
         if (isNotNull(savedData)) {
             this._showWiring = savedData.showWiring ?? DemuxDefaults.showWiring
             this._disconnectedAsHighZ = savedData.disconnectedAsHighZ ?? DemuxDefaults.disconnectedAsHighZ
@@ -172,44 +175,8 @@ export abstract class Demux<
         }
     }
 
-    // lazy loading from subclass because accessed by superclass constructor
-    private get INPUT(): DemuxInputIndices<NumInputs> {
-        let INPUT = this.__INPUT
-        if (isUndefined(INPUT)) {
-            INPUT = Object.getPrototypeOf(this).constructor.INPUT
-            if (isUndefined(INPUT)) {
-                console.log("ERROR: Undefined INPUT indices in Demux subclass")
-                throw new Error("INPUT is undefined")
-            }
-            this.__INPUT = INPUT
-        }
-        return INPUT
-    }
-
-    // lazy loading from subclass because accessed by superclass constructor
-    private get OUTPUT(): DemuxOutputIndices<NumOutputs> {
-        let OUTPUT = this.__OUTPUT
-        if (isUndefined(OUTPUT)) {
-            OUTPUT = Object.getPrototypeOf(this).constructor.OUTPUT
-            if (isUndefined(OUTPUT)) {
-                console.log("ERROR: Undefined OUTPUT indices in Demux subclass")
-                throw new Error("OUTPUT is undefined")
-            }
-            this.__OUTPUT = OUTPUT
-        }
-        return OUTPUT
-    }
-
     public get componentType() {
         return "ic" as const
-    }
-
-    public get unrotatedWidth() {
-        return this.gridWidth * GRID_STEP
-    }
-
-    public get unrotatedHeight() {
-        return this.gridHeight * GRID_STEP
     }
 
     public override makeTooltip() {
@@ -280,23 +247,16 @@ export abstract class Demux<
             }
         }
 
-        // outline
-        g.fillStyle = COLOR_BACKGROUND
-        g.lineWidth = 3
-        if (ctx.isMouseOver) {
-            g.strokeStyle = COLOR_MOUSE_OVER
-        } else {
-            g.strokeStyle = COLOR_COMPONENT_BORDER
-        }
+        // background
+        const outlinePath = new Path2D()
         const dy = (right - left) / 3
-        g.beginPath()
-        g.moveTo(left, top + dy)
-        g.lineTo(right, top)
-        g.lineTo(right, bottom)
-        g.lineTo(left, bottom - dy)
-        g.closePath()
-        g.fill()
-        g.stroke()
+        outlinePath.moveTo(left, top + dy)
+        outlinePath.lineTo(right, top)
+        outlinePath.lineTo(right, bottom)
+        outlinePath.lineTo(left, bottom - dy)
+        outlinePath.closePath()
+        g.fillStyle = COLOR_BACKGROUND
+        g.fill(outlinePath)
 
         // wiring
         if (this._showWiring) {
@@ -314,22 +274,31 @@ export abstract class Demux<
                     const fromNode = this.inputs[from[i]]
                     const fromY = fromNode.posYInParentTransform
                     const toY = this.outputs[to[i]].posYInParentTransform
-                    g.moveTo(left + 2, fromY)
+                    g.moveTo(left + 1, fromY)
                     if (wireStyleStraight) {
-                        g.lineTo(left + 4, fromY)
-                        g.lineTo(right - 4, toY)
-                        g.lineTo(right - 2, toY)
+                        g.lineTo(left + 3, fromY)
+                        g.lineTo(right - 3, toY)
+                        g.lineTo(right - 1, toY)
                     } else {
                         g.bezierCurveTo(
                             left + anchorDiffX, fromY, // anchor left
                             right - anchorDiffX, toY, // anchor right
-                            right - 2, toY,
+                            right - 1, toY,
                         )
                     }
                     strokeAsWireLine(g, this.inputs[from[i]].value, fromNode.color, false, neutral)
                 }
             }
         }
+
+        // outline
+        g.lineWidth = 3
+        if (ctx.isMouseOver) {
+            g.strokeStyle = COLOR_MOUSE_OVER
+        } else {
+            g.strokeStyle = COLOR_COMPONENT_BORDER
+        }
+        g.stroke(outlinePath)
 
     }
 
@@ -381,9 +350,6 @@ export const Demux1To2Def = defineDemux(2, 2, "demux-1to2", "Demux1To2")
 export type Demux1To2Repr = typeof Demux1To2Def.reprType
 export class Demux1To2 extends Demux<2, 2, Demux1To2Repr> {
 
-    protected static INPUT = Demux.generateInputIndices(1, 1)
-    protected static OUTPUT = Demux.generateOutputIndices(1, 2)
-
     public constructor(editor: LogicEditor, savedData: Demux1To2Repr | null) {
         super(editor, savedData, 1, 1, 2)
     }
@@ -399,9 +365,6 @@ export class Demux1To2 extends Demux<2, 2, Demux1To2Repr> {
 export const Demux1To4Def = defineDemux(3, 4, "demux-1to4", "Demux1To4")
 export type Demux1To4Repr = typeof Demux1To4Def.reprType
 export class Demux1To4 extends Demux<3, 4, Demux1To4Repr> {
-
-    protected static INPUT = Demux.generateInputIndices(1, 2)
-    protected static OUTPUT = Demux.generateOutputIndices(1, 4)
 
     public constructor(editor: LogicEditor, savedData: Demux1To4Repr | null) {
         super(editor, savedData, 1, 2, 4)
@@ -419,9 +382,6 @@ export const Demux1To8Def = defineDemux(4, 8, "demux-1to8", "Demux1To8")
 export type Demux1To8Repr = typeof Demux1To8Def.reprType
 export class Demux1To8 extends Demux<4, 8, Demux1To8Repr> {
 
-    protected static INPUT = Demux.generateInputIndices(1, 3)
-    protected static OUTPUT = Demux.generateOutputIndices(1, 8)
-
     public constructor(editor: LogicEditor, savedData: Demux1To8Repr | null) {
         super(editor, savedData, 1, 3, 8)
     }
@@ -437,9 +397,6 @@ export class Demux1To8 extends Demux<4, 8, Demux1To8Repr> {
 export const Demux2To4Def = defineDemux(3, 4, "demux-2to4", "Demux2To4")
 export type Demux2To4Repr = typeof Demux2To4Def.reprType
 export class Demux2To4 extends Demux<3, 4, Demux2To4Repr> {
-
-    protected static INPUT = Demux.generateInputIndices(2, 1)
-    protected static OUTPUT = Demux.generateOutputIndices(2, 4)
 
     public constructor(editor: LogicEditor, savedData: Demux2To4Repr | null) {
         super(editor, savedData, 2, 1, 4)
@@ -457,9 +414,6 @@ export const Demux2To8Def = defineDemux(4, 8, "demux-2to8", "Demux2To8")
 export type Demux2To8Repr = typeof Demux2To8Def.reprType
 export class Demux2To8 extends Demux<4, 8, Demux2To8Repr> {
 
-    protected static INPUT = Demux.generateInputIndices(2, 2)
-    protected static OUTPUT = Demux.generateOutputIndices(2, 8)
-
     public constructor(editor: LogicEditor, savedData: Demux2To8Repr | null) {
         super(editor, savedData, 2, 2, 8)
     }
@@ -476,9 +430,6 @@ export const Demux4To8Def = defineDemux(5, 8, "demux-4to8", "Demux4To8")
 export type Demux4To8Repr = typeof Demux4To8Def.reprType
 export class Demux4To8 extends Demux<5, 8, Demux4To8Repr> {
 
-    protected static INPUT = Demux.generateInputIndices(4, 1)
-    protected static OUTPUT = Demux.generateOutputIndices(4, 8)
-
     public constructor(editor: LogicEditor, savedData: Demux4To8Repr | null) {
         super(editor, savedData, 4, 1, 8)
     }
@@ -494,9 +445,6 @@ export class Demux4To8 extends Demux<5, 8, Demux4To8Repr> {
 export const Demux8To16Def = defineDemux(9, 16, "demux-8to16", "Demux8To16")
 export type Demux8To16Repr = typeof Demux8To16Def.reprType
 export class Demux8To16 extends Demux<9, 16, Demux8To16Repr> {
-
-    protected static INPUT = Demux.generateInputIndices(8, 1)
-    protected static OUTPUT = Demux.generateOutputIndices(8, 16)
 
     public constructor(editor: LogicEditor, savedData: Demux8To16Repr | null) {
         super(editor, savedData, 8, 1, 16)

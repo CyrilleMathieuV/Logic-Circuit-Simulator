@@ -161,10 +161,14 @@ abstract class RAM<NumInputs extends FixedArraySize,
     private _lastClock: LogicValue = Unknown
 
     protected constructor(editor: LogicEditor, savedData: Repr | null, numWords: number, wordWidth: NumOutputs, numAddressBits: NumAddressBits) {
-        super(editor, 11, RAM.gridHeight(numWords), RAM.savedStateFrom<NumInputs, NumOutputs>(savedData, numWords, wordWidth), savedData, {
-            ins: RAM.generateInOffsets(numWords, wordWidth, numAddressBits),
-            outs: RAM.generateOutOffsets(wordWidth),
-        } as unknown as NodeVisuals<NumInputs, NumOutputs>)
+        super(editor, 11, RAM.gridHeight(numWords),
+            RAM.generateInputIndices(wordWidth, numAddressBits),
+            RAM.generateOutputIndices(wordWidth),
+            RAM.savedStateFrom<NumInputs, NumOutputs>(savedData, numWords, wordWidth),
+            savedData, {
+                ins: RAM.generateInOffsets(numWords, wordWidth, numAddressBits),
+                outs: RAM.generateOutOffsets(wordWidth),
+            } as unknown as NodeVisuals<NumInputs, NumOutputs>)
         this._numWords = numWords
         this._wordWidth = wordWidth
         if (isNotNull(savedData)) {
@@ -408,10 +412,6 @@ export type RAM16x4Repr = typeof RAM16x4Def.reprType
 
 export class RAM16x4 extends RAM<11, 4, 4, RAM16x4Repr> {
 
-    protected static INPUT = RAM.generateInputIndices(4, 4)
-    protected static OUTPUT = RAM.generateOutputIndices(4)
-
-
     public constructor(editor: LogicEditor, savedData: RAM16x4Repr | null) {
         super(editor, savedData, 16, 4, 4)
     }
@@ -434,10 +434,6 @@ export type RAM16x8Repr = typeof RAM16x8Def.reprType
 
 export class RAM16x8 extends RAM<15, 8, 4, RAM16x8Repr> {
 
-    protected static INPUT = RAM.generateInputIndices(8, 4)
-    protected static OUTPUT = RAM.generateOutputIndices(8)
-
-
     public constructor(editor: LogicEditor, savedData: RAM16x8Repr | null) {
         super(editor, savedData, 16, 8, 4)
     }
@@ -457,10 +453,6 @@ export const RAM64x8Def =
 export type RAM64x8Repr = typeof RAM64x8Def.reprType
 
 export class RAM64x8 extends RAM<17, 8, 6, RAM64x8Repr> {
-
-    protected static INPUT = RAM.generateInputIndices(8, 6)
-    protected static OUTPUT = RAM.generateOutputIndices(8)
-
 
     public constructor(editor: LogicEditor, savedData: RAM64x8Repr | null) {
         super(editor, savedData, 64, 8, 6)

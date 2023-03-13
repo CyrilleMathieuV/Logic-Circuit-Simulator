@@ -55,7 +55,7 @@ abstract class Mux<
         const numGroups = numFrom / numTo
         const addByGroupSep = numTo > 1 ? 1 : 0
         const numLeftSlots = (numFrom * spacing) / 2 + (numGroups - 1) * addByGroupSep
-        let x = -2 - numSel
+        let x = -1 - numSel
         let y = -(numLeftSlots - 1)
         const selY = y - 2
         let groupLetter = "A"
@@ -83,7 +83,7 @@ abstract class Mux<
         const compact = numTo >= 7
         const spacing = compact ? 1 : 2
         const topOffset = spacing === 1 ? -Math.round(numTo / 2) : -(numTo - 1) / 2 * spacing
-        const x = 2 + numSel
+        const x = 1 + numSel
         for (let i = 0; i < numTo; i++) {
             offsets.push([`Z${i}`, x, topOffset + spacing * i, "e", "Z"])
         }
@@ -118,7 +118,7 @@ abstract class Mux<
     }
 
     private static gridWidth(numSel: number): number {
-        return 1 + 2 * numSel
+        return 2 * numSel
     }
 
     private static gridHeight(numFrom: number, numTo: number): number {
@@ -133,14 +133,18 @@ abstract class Mux<
     private _showWiring = MuxDefaults.showWiring
 
     protected constructor(editor: LogicEditor, savedData: Repr | null,
-        public readonly numFrom: number,
-        public readonly numSel: number,
+        public readonly numFrom: FixedArraySize,
+        public readonly numSel: FixedArraySize,
         public readonly numTo: NumOutputs,
     ) {
-        super(editor, Mux.gridWidth(numSel), Mux.gridHeight(numFrom, numTo), FixedArrayFill(false as LogicValue, numTo), savedData, {
-            ins: Mux.generateInOffsets(numFrom, numSel, numTo),
-            outs: Mux.generateOutOffsets(numSel, numTo),
-        } as unknown as NodeVisuals<NumInputs, NumOutputs>)
+        super(editor, Mux.gridWidth(numSel), Mux.gridHeight(numFrom, numTo),
+            Mux.generateInputIndices(numFrom, numSel, numTo),
+            Mux.generateOutputIndices(numTo),
+            FixedArrayFill(false as LogicValue, numTo),
+            savedData, {
+                ins: Mux.generateInOffsets(numFrom, numSel, numTo),
+                outs: Mux.generateOutOffsets(numSel, numTo),
+            } as unknown as NodeVisuals<NumInputs, NumOutputs>)
         if (isNotNull(savedData)) {
             this._showWiring = savedData.showWiring ?? MuxDefaults.showWiring
         }
@@ -209,23 +213,16 @@ abstract class Mux<
             drawWireLineToComponent(g, outputi, right, outputi.posYInParentTransform)
         }
 
-        // outline
+        // background
         g.fillStyle = COLOR_BACKGROUND
-        g.lineWidth = 3
-        if (ctx.isMouseOver) {
-            g.strokeStyle = COLOR_MOUSE_OVER
-        } else {
-            g.strokeStyle = COLOR_COMPONENT_BORDER
-        }
+        const outlinePath = new Path2D()
         const dy = (right - left) / 3
-        g.beginPath()
-        g.moveTo(left, top)
-        g.lineTo(right, top + dy)
-        g.lineTo(right, bottom - dy)
-        g.lineTo(left, bottom)
-        g.closePath()
-        g.fill()
-        g.stroke()
+        outlinePath.moveTo(left, top)
+        outlinePath.lineTo(right, top + dy)
+        outlinePath.lineTo(right, bottom - dy)
+        outlinePath.lineTo(left, bottom)
+        outlinePath.closePath()
+        g.fill(outlinePath)
 
         // wiring
         if (this._showWiring) {
@@ -244,22 +241,31 @@ abstract class Mux<
                     const fromY = this.inputs[from[i]].posYInParentTransform
                     const toNode = this.outputs[to[i]]
                     const toY = toNode.posYInParentTransform
-                    g.moveTo(left + 2, fromY)
+                    g.moveTo(left + 1, fromY)
                     if (wireStyleStraight) {
-                        g.lineTo(left + 4, fromY)
-                        g.lineTo(right - 4, toY)
-                        g.lineTo(right - 2, toY)
+                        g.lineTo(left + 3, fromY)
+                        g.lineTo(right - 3, toY)
+                        g.lineTo(right - 1, toY)
                     } else {
                         g.bezierCurveTo(
                             left + anchorDiffX, fromY, // anchor left
                             right - anchorDiffX, toY, // anchor right
-                            right - 2, toY,
+                            right - 1, toY,
                         )
                     }
                     strokeAsWireLine(g, this.inputs[from[i]].value, toNode.color, false, neutral)
                 }
             }
         }
+
+        // outline
+        g.lineWidth = 3
+        if (ctx.isMouseOver) {
+            g.strokeStyle = COLOR_MOUSE_OVER
+        } else {
+            g.strokeStyle = COLOR_COMPONENT_BORDER
+        }
+        g.stroke(outlinePath)
 
     }
 
@@ -292,13 +298,9 @@ abstract class Mux<
 }
 
 
-
 export const Mux2To1Def = defineMux(3, 1, "mux-2to1", "Mux2To1")
 export type Mux2To1Repr = typeof Mux2To1Def.reprType
 export class Mux2To1 extends Mux<3, 1, Mux2To1Repr> {
-
-    protected static INPUT = Mux.generateInputIndices(2, 1, 1)
-    protected static OUTPUT = Mux.generateOutputIndices(1)
 
     public constructor(editor: LogicEditor, savedData: Mux2To1Repr | null) {
         super(editor, savedData, 2, 1, 1)
@@ -316,9 +318,6 @@ export const Mux4To1Def = defineMux(6, 1, "mux-4to1", "Mux4To1")
 export type Mux4To1Repr = typeof Mux4To1Def.reprType
 export class Mux4To1 extends Mux<6, 1, Mux4To1Repr> {
 
-    protected static INPUT = Mux.generateInputIndices(4, 2, 1)
-    protected static OUTPUT = Mux.generateOutputIndices(1)
-
     public constructor(editor: LogicEditor, savedData: Mux4To1Repr | null) {
         super(editor, savedData, 4, 2, 1)
     }
@@ -334,9 +333,6 @@ export class Mux4To1 extends Mux<6, 1, Mux4To1Repr> {
 export const Mux8To1Def = defineMux(11, 1, "mux-8to1", "Mux8To1")
 export type Mux8To1Repr = typeof Mux8To1Def.reprType
 export class Mux8To1 extends Mux<11, 1, Mux8To1Repr> {
-
-    protected static INPUT = Mux.generateInputIndices(8, 3, 1)
-    protected static OUTPUT = Mux.generateOutputIndices(1)
 
     public constructor(editor: LogicEditor, savedData: Mux8To1Repr | null) {
         super(editor, savedData, 8, 3, 1)
@@ -354,9 +350,6 @@ export const Mux4To2Def = defineMux(5, 2, "mux-4to2", "Mux4To2")
 export type Mux4To2Repr = typeof Mux4To2Def.reprType
 export class Mux4To2 extends Mux<5, 2, Mux4To2Repr> {
 
-    protected static INPUT = Mux.generateInputIndices(4, 1, 2)
-    protected static OUTPUT = Mux.generateOutputIndices(2)
-
     public constructor(editor: LogicEditor, savedData: Mux4To2Repr | null) {
         super(editor, savedData, 4, 1, 2)
     }
@@ -372,9 +365,6 @@ export class Mux4To2 extends Mux<5, 2, Mux4To2Repr> {
 export const Mux8To2Def = defineMux(10, 2, "mux-8to2", "Mux8To2")
 export type Mux8To2Repr = typeof Mux8To2Def.reprType
 export class Mux8To2 extends Mux<10, 2, Mux8To2Repr> {
-
-    protected static INPUT = Mux.generateInputIndices(8, 2, 2)
-    protected static OUTPUT = Mux.generateOutputIndices(2)
 
     public constructor(editor: LogicEditor, savedData: Mux8To2Repr | null) {
         super(editor, savedData, 8, 2, 2)
@@ -392,9 +382,6 @@ export const Mux8To4Def = defineMux(9, 4, "mux-8to4", "Mux8To4")
 export type Mux8To4Repr = typeof Mux8To4Def.reprType
 export class Mux8To4 extends Mux<9, 4, Mux8To4Repr> {
 
-    protected static INPUT = Mux.generateInputIndices(8, 1, 4)
-    protected static OUTPUT = Mux.generateOutputIndices(4)
-
     public constructor(editor: LogicEditor, savedData: Mux8To4Repr | null) {
         super(editor, savedData, 8, 1, 4)
     }
@@ -411,9 +398,6 @@ export class Mux8To4 extends Mux<9, 4, Mux8To4Repr> {
 export const Mux16To8Def = defineMux(17, 8, "mux-16to8", "Mux16To8")
 export type Mux16To8Repr = typeof Mux16To8Def.reprType
 export class Mux16To8 extends Mux<17, 8, Mux16To8Repr> {
-
-    protected static INPUT = Mux.generateInputIndices(16, 1, 8)
-    protected static OUTPUT = Mux.generateOutputIndices(8)
 
     public constructor(editor: LogicEditor, savedData: Mux16To8Repr | null) {
         super(editor, savedData, 16, 1, 8)

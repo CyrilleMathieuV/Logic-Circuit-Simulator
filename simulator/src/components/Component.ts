@@ -219,7 +219,7 @@ export abstract class ComponentBase<
     NumInputs extends FixedArraySize, // statically know the number of inputs
     NumOutputs extends FixedArraySize, // statically know the number of outputs
     Repr extends ComponentRepr<NumInputs, NumOutputs>, // JSON representation, varies according to input/output number
-    Value // usually TriState or number
+    Value // usually LogicValue or number
     > extends DrawableWithDraggablePosition {
 
     private _state: ComponentState
@@ -849,43 +849,13 @@ export abstract class ComponentBaseWithSubclassDefinedNodes<
         editor: LogicEditor,
         protected readonly gridWidth: number,
         protected readonly gridHeight: number,
+        protected readonly INPUT: InputIndices,
+        protected readonly OUTPUT: OutputIndices,
         _value: Value,
         savedData: Repr | null,
         nodeOffsets: NodeVisuals<NumInputs, NumOutputs>) {
         super(editor, _value, savedData, nodeOffsets)
     }
-
-    private __INPUT: InputIndices | undefined
-    private __OUTPUT: OutputIndices | undefined
-
-    // lazy loading from subclass because accessed by superclass constructor
-    protected get INPUT(): InputIndices {
-        let INPUT = this.__INPUT
-        if (isUndefined(INPUT)) {
-            INPUT = Object.getPrototypeOf(this).constructor.INPUT
-            if (isUndefined(INPUT)) {
-                console.log("ERROR: Undefined INPUT indices in Mux subclass")
-                throw new Error("INPUT is undefined")
-            }
-            this.__INPUT = INPUT
-        }
-        return INPUT
-    }
-
-    // lazy loading from subclass because accessed by superclass constructor
-    protected get OUTPUT(): OutputIndices {
-        let OUTPUT = this.__OUTPUT
-        if (isUndefined(OUTPUT)) {
-            OUTPUT = Object.getPrototypeOf(this).constructor.OUTPUT
-            if (isUndefined(OUTPUT)) {
-                console.log("ERROR: Undefined OUTPUT indices in Mux subclass")
-                throw new Error("OUTPUT is undefined")
-            }
-            this.__OUTPUT = OUTPUT
-        }
-        return OUTPUT
-    }
-
 
     public get unrotatedWidth() {
         return this.gridWidth * GRID_STEP
