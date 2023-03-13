@@ -23,15 +23,15 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "history": [
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;history&quot;: [
     {
-      "author": "CyrilleMathieuV"
+      &quot;author&quot;: &quot;CyrilleMathieuV&quot;
     }
   ],
-  "lastFilter": {
+  &quot;lastFilter&quot;: {
   }
-}]]></component>
+}</component>
   <component name="GithubPullRequestsUISettings">
     <option name="selectedUrlAndAccountId">
       <UrlAndAccount>
@@ -97,6 +97,7 @@
       <workItem from="1677859590838" duration="128000" />
       <workItem from="1677864017981" duration="600000" />
       <workItem from="1678452840152" duration="9033000" />
+      <workItem from="1678522329240" duration="457000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
