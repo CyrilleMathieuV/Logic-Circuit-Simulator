@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="Update workspace.xml" />
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="Update workspace.xml">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/RAM.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/RAM.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -99,6 +104,7 @@
       <workItem from="1678452840152" duration="9033000" />
       <workItem from="1678522329240" duration="457000" />
       <workItem from="1678737321105" duration="13000" />
+      <workItem from="1678836162700" duration="855000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
