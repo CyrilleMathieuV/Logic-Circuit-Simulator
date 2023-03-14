@@ -1,12 +1,12 @@
 import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
+import { LogicEditor } from "../LogicEditor"
 import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_RECTANGLE_BACKGROUND, COLOR_RECTANGLE_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { span, style, title } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isDefined, isNotNull, isUndefined, typeOrUndefined } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, Drawable, DrawableWithPosition, DrawContext } from "./Drawable"
+import { ComponentBase, Repr, defineComponent } from "./Component"
+import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Drawable, DrawableWithPosition } from "./Drawable"
 
 export const RectangleColor = {
     grey: "grey",
@@ -35,7 +35,7 @@ export type CaptionPosition = keyof typeof CaptionPosition
 
 
 export const LabelRectDef =
-    defineComponent(0, 0, t.type({
+    defineComponent(false, false, t.type({
         type: t.literal("rect"),
         w: t.number,
         h: t.number,
@@ -49,7 +49,7 @@ export const LabelRectDef =
         font: typeOrUndefined(t.string),
     }, "Rectangle"))
 
-export type LabelRectRepr = typeof LabelRectDef.reprType
+type LabelRectRepr = Repr<typeof LabelRectDef>
 
 const LabelRectDefaults = {
     width: 10 * GRID_STEP,
@@ -64,7 +64,7 @@ const LabelRectDefaults = {
     font: FONT_LABEL_DEFAULT,
 }
 
-export class LabelRect extends ComponentBase<0, 0, LabelRectRepr, undefined> {
+export class LabelRect extends ComponentBase<LabelRectRepr, undefined> {
 
     private _w: number
     private _h: number

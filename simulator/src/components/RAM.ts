@@ -1,15 +1,15 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_EMPTY, COLOR_MOUSE_OVER, displayValuesFromArray, drawLabel, drawWireLineToComponent, strokeSingleLine } from "../drawutils"
-import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_EMPTY, COLOR_MOUSE_OVER, colorForBoolean, displayValuesFromArray, drawLabel, drawWireLineToComponent, strokeSingleLine } from "../drawutils"
+import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, FixedArrayFillFactory, FixedArraySize, FixedReadonlyArray, isDefined, isNotNull, isNull, isUndefined, isUnknown, LogicValue, toLogicValueFromChar, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, defineComponent, NodeVisual, NodeVisuals } from "./Component"
+import { ArrayFillUsing, ArrayFillWith, LogicValue, Unknown, isDefined, isNotNull, isNull, isUndefined, isUnknown, toLogicValueFromChar, toLogicValueRepr, typeOrUndefined } from "../utils"
+import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, NodeVisual, Repr, defineComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 import { EdgeTrigger, Flipflop, makeTriggerItems } from "./FlipflopOrLatch"
 
-function defineRAM<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, N extends string>(numInputs: NumInputs, numOutputs: NumOutputs, jsonName: N, className: string) {
-    return defineComponent(numInputs, numOutputs, t.type({
+function defineRAM<TName extends string>(jsonName: TName, className: string) {
+    return defineComponent(true, true, t.type({
         type: t.literal(jsonName),
         showContent: typeOrUndefined(t.boolean),
         trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
@@ -17,12 +17,12 @@ function defineRAM<NumInputs extends FixedArraySize, NumOutputs extends FixedArr
     }, className))
 }
 
-type RAMRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
-    ComponentRepr<NumInputs, NumOutputs> & {
-    showContent: boolean | undefined,
-    trigger: EdgeTrigger | undefined,
-    content: string | string[] | undefined,
-}
+export type RAMRepr =
+    ComponentRepr<true, true> & {
+        showContent: boolean | undefined,
+        trigger: EdgeTrigger | undefined,
+        content: string | string[] | undefined,
+    }
 
 
 const RAMDefaults = {
@@ -30,32 +30,30 @@ const RAMDefaults = {
     trigger: EdgeTrigger.rising,
 }
 
-type RAMValue<BitWidth extends FixedArraySize> = {
-    mem: Array<FixedArray<LogicValue, BitWidth>>
-    out: FixedReadonlyArray<LogicValue, BitWidth>
+type RAMValue = {
+    mem: LogicValue[][]
+    out: LogicValue[]
 }
 
-type RAMInputIndices<NumDataBits extends FixedArraySize, NumAddressBits extends FixedArraySize> = {
+type RAMInputIndices = {
     Clock: number,
     WriteEnable: number,
     Clear: number,
-    Data: FixedArray<number, NumDataBits>,
-    Address: FixedArray<number, NumAddressBits>,
+    Data: number[],
+    Address: number[],
 }
 
-type RAMOutputIndices<NumDataBits extends FixedArraySize> = {
-    Q: FixedArray<number, NumDataBits>,
+type RAMOutputIndices = {
+    Q: number[],
 }
 
-abstract class RAM<NumInputs extends FixedArraySize,
-    NumOutputs extends FixedArraySize,
-    NumAddressBits extends FixedArraySize,
-    Repr extends RAMRepr<NumInputs, NumOutputs>
->
+abstract class RAM<Repr extends RAMRepr>
     extends ComponentBaseWithSubclassDefinedNodes<
-        RAMInputIndices<NumOutputs, NumAddressBits>,
-        RAMOutputIndices<NumOutputs>,
-        NumInputs, NumOutputs, Repr, RAMValue<NumOutputs>
+        Repr,
+        RAMValue,
+        RAMInputIndices,
+        RAMOutputIndices,
+        true, true
     > {
 
     private static generateInOffsets(numWords: number, wordWidth: number, numAddressBits: number): NodeVisual[] {
@@ -85,16 +83,16 @@ abstract class RAM<NumInputs extends FixedArraySize,
         return ins
     }
 
-    private static generateOutOffsets<NumOutputs extends FixedArraySize>(wordWidth: NumOutputs): FixedArray<NodeVisual, NumOutputs> {
+    private static generateOutOffsets(wordWidth: number): NodeVisual[] {
         const spacing = wordWidth >= 7 ? 1 : 2
         const topOffset = spacing === 1 ? -Math.round(wordWidth / 2) : -(wordWidth - 1) / 2 * spacing
-        return FixedArrayFillFactory(i => [`Q${i}`, +7, topOffset + i * spacing, "e", "Q"], wordWidth)
+        return ArrayFillUsing(i => [`Q${i}`, +7, topOffset + i * spacing, "e", "Q"], wordWidth)
     }
 
-    protected static generateInputIndices<NumDataBits extends FixedArraySize, NumAddressBits extends FixedArraySize>(numDataBits: NumDataBits, numAdressBits: NumAddressBits): RAMInputIndices<NumDataBits, NumAddressBits> {
+    protected static generateInputIndices(numDataBits: number, numAdressBits: number): RAMInputIndices {
         const numFixedInputs = 3
-        const Data = FixedArrayFillFactory(i => i + numFixedInputs, numDataBits)
-        const Address = FixedArrayFillFactory(i => i + numFixedInputs + numDataBits, numAdressBits)
+        const Data = ArrayFillUsing(i => i + numFixedInputs, numDataBits)
+        const Address = ArrayFillUsing(i => i + numFixedInputs + numDataBits, numAdressBits)
         return {
             Clock: 0,
             WriteEnable: 1,
@@ -104,9 +102,9 @@ abstract class RAM<NumInputs extends FixedArraySize,
         }
     }
 
-    protected static generateOutputIndices<NumDataBits extends FixedArraySize>(numDataBits: NumDataBits): RAMOutputIndices<NumDataBits> {
+    protected static generateOutputIndices(numDataBits: number): RAMOutputIndices {
         return {
-            Q: FixedArrayFillFactory(i => i, numDataBits),
+            Q: ArrayFillUsing(i => i, numDataBits),
         }
     }
 
@@ -114,31 +112,28 @@ abstract class RAM<NumInputs extends FixedArraySize,
         return numWords <= 16 ? 15 : 21
     }
 
-    private static valueFilledWith<NumOutputs extends FixedArraySize>(v: LogicValue, numWords: number, wordWidth: NumOutputs): RAMValue<NumOutputs> {
-        const mem: Array<FixedArray<LogicValue, NumOutputs>> = new Array(numWords)
+    private static valueFilledWith(v: LogicValue, numWords: number, wordWidth: number): RAMValue {
+        const mem: LogicValue[][] = new Array(numWords)
         for (let i = 0; i < numWords; i++) {
-            mem[i] = FixedArrayFill(v, wordWidth)
+            mem[i] = ArrayFillWith(v, wordWidth)
         }
-        const out = FixedArrayFill(v, wordWidth)
+        const out = ArrayFillWith(v, wordWidth)
         return { mem, out }
     }
 
-    private static savedStateFrom<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize>(savedData: RAMRepr<NumInputs, NumOutputs> | null, numWords: number, wordWidth: NumOutputs): RAMValue<NumOutputs> {
+    private static savedStateFrom(savedData: RAMRepr | null, numWords: number, wordWidth: number): RAMValue {
         if (isNull(savedData) || isUndefined(savedData.content)) {
             return RAM.valueFilledWith(false, numWords, wordWidth)
         }
-        const mem: Array<FixedArray<LogicValue, NumOutputs>> = new Array(numWords)
+        const mem: LogicValue[][] = new Array(numWords)
         const savedContent = Array.isArray(savedData.content) ? savedData.content : savedData.content.split(" ")
         for (let i = 0; i < numWords; i++) {
-            const row = FixedArrayFill<LogicValue, NumOutputs>(false, wordWidth)
+            const row = ArrayFillWith(false as LogicValue, wordWidth)
             if (i < savedContent.length) {
                 const savedWordRepr = savedContent[i]
                 const len = savedWordRepr.length
                 const isBinary = len === wordWidth
                 const savedBits = isBinary ? savedWordRepr : parseInt(savedWordRepr, 16).toString(2).padStart(wordWidth, "0")
-
-                console.log(savedBits)
-
                 for (let j = 0; j < wordWidth; j++) {
                     const jj = wordWidth - j - 1
                     if (jj >= 0) {
@@ -150,25 +145,25 @@ abstract class RAM<NumInputs extends FixedArraySize,
             }
             mem[i] = row
         }
-        const out = [...mem[0]] as FixedArray<LogicValue, NumOutputs>
+        const out = [...mem[0]]
         return { mem, out }
     }
 
     private _numWords: number
-    private _wordWidth: NumOutputs
+    private _wordWidth: number
     private _showContent: boolean = RAMDefaults.showContent
     private _trigger: EdgeTrigger = RAMDefaults.trigger
     private _lastClock: LogicValue = Unknown
 
-    protected constructor(editor: LogicEditor, savedData: Repr | null, numWords: number, wordWidth: NumOutputs, numAddressBits: NumAddressBits) {
+    protected constructor(editor: LogicEditor, savedData: Repr | null, numWords: number, wordWidth: number, numAddressBits: number) {
         super(editor, 11, RAM.gridHeight(numWords),
             RAM.generateInputIndices(wordWidth, numAddressBits),
             RAM.generateOutputIndices(wordWidth),
-            RAM.savedStateFrom<NumInputs, NumOutputs>(savedData, numWords, wordWidth),
+            RAM.savedStateFrom(savedData, numWords, wordWidth),
             savedData, {
                 ins: RAM.generateInOffsets(numWords, wordWidth, numAddressBits),
                 outs: RAM.generateOutOffsets(wordWidth),
-            } as unknown as NodeVisuals<NumInputs, NumOutputs>)
+            })
         this._numWords = numWords
         this._wordWidth = wordWidth
         if (isNotNull(savedData)) {
@@ -222,7 +217,7 @@ abstract class RAM<NumInputs extends FixedArraySize,
     }
 
 
-    protected doRecalcValue(): RAMValue<NumOutputs> {
+    protected doRecalcValue(): RAMValue {
         const INPUT = this.INPUT
         const clear = this.inputs[INPUT.Clear].value
         const numWords = this._numWords
@@ -242,7 +237,7 @@ abstract class RAM<NumInputs extends FixedArraySize,
         const we = this.inputs[INPUT.WriteEnable].value
         if (we !== true || !Flipflop.isClockTrigger(this.trigger, prevClock, clock)) {
             // nothing to write, just update output
-            const out = isUnknown(addr) ? FixedArrayFill(Unknown, this._wordWidth) : oldState.mem[addr]
+            const out = isUnknown(addr) ? ArrayFillWith(Unknown, this._wordWidth) : oldState.mem[addr]
             return { mem: oldState.mem, out }
         }
 
@@ -252,8 +247,8 @@ abstract class RAM<NumInputs extends FixedArraySize,
         }
 
         // build new state
-        const newData = this.inputValues<NumOutputs>(INPUT.Data)
-        const newState: Array<FixedArray<LogicValue, NumOutputs>> = new Array(numWords)
+        const newData = this.inputValues(INPUT.Data)
+        const newState: LogicValue[][] = new Array(numWords)
         for (let i = 0; i < numWords; i++) {
             if (i === addr) {
                 newState[i] = newData
@@ -265,12 +260,12 @@ abstract class RAM<NumInputs extends FixedArraySize,
     }
 
     private currentAddress(): number | Unknown {
-        const addrBits = this.inputValues<NumAddressBits>(this.INPUT.Address)
+        const addrBits = this.inputValues(this.INPUT.Address)
         const [__, addr] = displayValuesFromArray(addrBits, false)
         return addr
     }
 
-    protected override propagateValue(newValue: RAMValue<NumOutputs>) {
+    protected override propagateValue(newValue: RAMValue) {
         const OUTPUT = this.OUTPUT
         for (let i = 0; i < OUTPUT.Q.length; i++) {
             this.outputs[OUTPUT.Q[i]].value = newValue.out[i]
@@ -353,12 +348,11 @@ abstract class RAM<NumInputs extends FixedArraySize,
                     ? Orientation.isVertical(this.orient) ? 4.5 : 6
                     : 2.5
 
-                // Modification CMN for bigger wordWith
                 if (showSingleVerticalBlock) {
-                    const cellWidth = wordWidth <= 4 ? 10 : wordWidth <= 8 ? 8 : 6
+                    const cellWidth = wordWidth <= 4 ? 10 : 8
                     drawMemoryCells(g, mem, wordWidth, addr, 0, numWords, this.posX + 2, this.posY, cellWidth, cellHeight)
                 } else {
-                    const cellWidth = wordWidth <= 8 ? 6.5 : 4
+                    const cellWidth = 6.5
                     drawMemoryCells(g, mem, wordWidth, addr, 0, numWords / 2, this.posX + 2 - 38, this.posY, cellWidth, cellHeight)
                     drawMemoryCells(g, mem, wordWidth, addr, numWords / 2, numWords, this.posX + 2 + 38, this.posY, cellWidth, cellHeight)
                 }
@@ -406,11 +400,11 @@ abstract class RAM<NumInputs extends FixedArraySize,
 
 
 export const RAM16x4Def =
-    defineRAM(11, 4, "ram-16x4", "RAM16x4")
+    defineRAM("ram-16x4", "RAM16x4")
 
-export type RAM16x4Repr = typeof RAM16x4Def.reprType
+type RAM16x4Repr = Repr<typeof RAM16x4Def>
 
-export class RAM16x4 extends RAM<11, 4, 4, RAM16x4Repr> {
+export class RAM16x4 extends RAM<RAM16x4Repr> {
 
     public constructor(editor: LogicEditor, savedData: RAM16x4Repr | null) {
         super(editor, savedData, 16, 4, 4)
@@ -428,11 +422,11 @@ export class RAM16x4 extends RAM<11, 4, 4, RAM16x4Repr> {
 
 
 export const RAM16x8Def =
-    defineRAM(15, 8, "ram-16x8", "RAM16x8")
+    defineRAM("ram-16x8", "RAM16x8")
 
-export type RAM16x8Repr = typeof RAM16x8Def.reprType
+type RAM16x8Repr = Repr<typeof RAM16x8Def>
 
-export class RAM16x8 extends RAM<15, 8, 4, RAM16x8Repr> {
+export class RAM16x8 extends RAM<RAM16x8Repr> {
 
     public constructor(editor: LogicEditor, savedData: RAM16x8Repr | null) {
         super(editor, savedData, 16, 8, 4)
@@ -447,12 +441,14 @@ export class RAM16x8 extends RAM<15, 8, 4, RAM16x8Repr> {
 
 }
 
+
+
 export const RAM64x8Def =
-    defineRAM(17, 8, "ram-64x8", "RAM64x8")
+    defineRAM("ram-64x8", "RAM64x8")
 
-export type RAM64x8Repr = typeof RAM64x8Def.reprType
+type RAM64x8Repr = Repr<typeof RAM64x8Def>
 
-export class RAM64x8 extends RAM<17, 8, 6, RAM64x8Repr> {
+export class RAM64x8 extends RAM<RAM64x8Repr> {
 
     public constructor(editor: LogicEditor, savedData: RAM64x8Repr | null) {
         super(editor, savedData, 64, 8, 6)
@@ -467,29 +463,6 @@ export class RAM64x8 extends RAM<17, 8, 6, RAM64x8Repr> {
 
 }
 
-export const RAM32x12Def =
-    defineRAM(20, 12, "ram-32x12", "RAM32x12")
-
-export type RAM32x12Repr = typeof RAM32x12Def.reprType
-
-export class RAM32x12 extends RAM<20, 12, 5, RAM32x12Repr> {
-
-    protected static INPUT = RAM.generateInputIndices(12, 5)
-    protected static OUTPUT = RAM.generateOutputIndices(12)
-
-
-    public constructor(editor: LogicEditor, savedData: RAM32x12Repr | null) {
-        super(editor, savedData, 32, 12, 5)
-    }
-
-    public toJSON() {
-        return {
-            type: "ram-32x12" as const,
-            ...this.toJSONBase(),
-        }
-    }
-
-}
 
 function isAllZeros(s: string) {
     for (let i = 0; i < s.length; i++) {
@@ -500,7 +473,7 @@ function isAllZeros(s: string) {
     return true
 }
 
-export function drawMemoryCells<N extends FixedArraySize>(g: CanvasRenderingContext2D, mem: Array<FixedReadonlyArray<LogicValue, N>>, wordWidth: N, addr: number | Unknown, start: number, end: number, centerX: number, centerY: number, cellWidth: number, cellHeight: number,) {
+export function drawMemoryCells(g: CanvasRenderingContext2D, mem: LogicValue[][], wordWidth: number, addr: number | Unknown, start: number, end: number, centerX: number, centerY: number, cellWidth: number, cellHeight: number,) {
     const numCellsToDraw = end - start
     const contentTop = centerY - numCellsToDraw / 2 * cellHeight
     const contentLeft = centerX - wordWidth / 2 * cellWidth

@@ -4,11 +4,11 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { HighImpedance, isHighImpedance, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { DrawContext } from "./Drawable"
 
 export const TriStateBufferDef =
-    defineComponent(2, 1, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("TRI"),
     }, "TriStateBuffer"))
 
@@ -23,9 +23,9 @@ const enum OUTPUT {
 const GRID_WIDTH = 7
 const GRID_HEIGHT = 4
 
-export type TriStateBufferRepr = typeof TriStateBufferDef.reprType
+type TriStateBufferRepr = Repr<typeof TriStateBufferDef>
 
-export class TriStateBuffer extends ComponentBase<2, 1, TriStateBufferRepr, LogicValue> {
+export class TriStateBuffer extends ComponentBase<TriStateBufferRepr, LogicValue> {
 
     public constructor(editor: LogicEditor, savedData: TriStateBufferRepr | null) {
         super(editor, HighImpedance, savedData, {

@@ -1,5 +1,5 @@
 import { Component } from "./components/Component"
-import { FixedArrayFillFactory } from "./utils"
+import { ArrayFillUsing } from "./utils"
 
 export const DrawZIndex = {
     Background: 0,
@@ -12,7 +12,7 @@ export type DrawZIndex = typeof DrawZIndex[keyof typeof DrawZIndex]
 export class ComponentList {
 
     // eslint-disable-next-line @typescript-eslint/semi
-    private _componentsByZIndex = FixedArrayFillFactory((__i) => [] as Component[], 3);
+    private _componentsByZIndex = ArrayFillUsing(() => [] as Component[], 3);
 
     public *all() {
         for (const compList of this._componentsByZIndex) {

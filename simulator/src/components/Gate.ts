@@ -1,10 +1,10 @@
 import * as t from "io-ts"
-import { circle, ColorString, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_DARK_RED, COLOR_GATE_NAMES, COLOR_MOUSE_OVER, COLOR_UNKNOWN, drawWireLineToComponent, GRID_STEP, PATTERN_STRIPED_GRAY } from "../drawutils"
-import { asValue, b, cls, div, emptyMod, Modifier, ModifierObject, mods, table, tbody, td, th, thead, tooltipContent, tr } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_DARK_RED, COLOR_GATE_NAMES, COLOR_MOUSE_OVER, COLOR_UNKNOWN, ColorString, GRID_STEP, PATTERN_STRIPED_GRAY, circle, drawWireLineToComponent } from "../drawutils"
+import { Modifier, ModifierObject, asValue, b, cls, div, emptyMod, mods, table, tbody, td, th, thead, tooltipContent, tr } from "../htmlgen"
 import { S } from "../strings"
-import { FixedArraySizeNonZero, isDefined, isHighImpedance, isString, isUndefined, isUnknown, LogicValue, Mode, RichStringEnum, Unknown } from "../utils"
-import { ComponentBase, ComponentRepr, defineComponent, NodeVisuals } from "./Component"
+import { LogicValue, Mode, RichStringEnum, Unknown, isDefined, isHighImpedance, isString, isUndefined, isUnknown } from "../utils"
+import { ComponentBase, ComponentRepr, NodeVisuals, defineComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { TriStateBuffer, TriStateBufferDef } from "./TriStateBuffer"
 
@@ -246,10 +246,10 @@ export const GateTypes = {
 
 type GateMandatoryParams<G extends GateType> = { type: G }
 
-const Gate2Def = defineComponent(2, 1, Gate2MandatoryParams)
-const Gate1Def = defineComponent(1, 1, Gate1MandatoryParams)
-const Gate3Def = defineComponent(3, 1, Gate3MandatoryParams)
-const Gate4Def = defineComponent(4, 1, Gate4MandatoryParams)
+const Gate2Def = defineComponent(true, true, Gate2MandatoryParams)
+const Gate1Def = defineComponent(true, true, Gate1MandatoryParams)
+const Gate3Def = defineComponent(true, true, Gate3MandatoryParams)
+const Gate4Def = defineComponent(true, true, Gate4MandatoryParams)
 
 export const GateDef = t.union([
     Gate2Def.repr,
@@ -260,7 +260,7 @@ export const GateDef = t.union([
 ], "Gate")
 
 
-type GateRepr<N extends FixedArraySizeNonZero, G extends GateType> = ComponentRepr<N, 1> & GateMandatoryParams<G> & {
+type GateRepr<G extends GateType> = ComponentRepr<true, true> & GateMandatoryParams<G> & {
     poseAs?: G | undefined
     showAsUnknown: boolean | undefined
 }
@@ -274,19 +274,18 @@ const GRID_HEIGHT_3 = 6
 const GRID_WIDTH_4 = 11
 const GRID_HEIGHT_4 = 8
 
-export type Gate = GateBase<GateType, any, GateRepr<any, GateType>>
+export type Gate = GateBase<GateType, GateRepr<GateType>>
 
 export abstract class GateBase<
     G extends GateType,
-    NumInput extends FixedArraySizeNonZero,
-    Repr extends GateRepr<NumInput, G>
-    > extends ComponentBase<NumInput, 1, Repr, LogicValue> {
+    Repr extends GateRepr<G>
+    > extends ComponentBase<Repr, LogicValue, true, true> {
 
     private _type: G
     private _poseAs: G | undefined = undefined
     private _showAsUnknown = false
 
-    protected constructor(editor: LogicEditor, savedData: Repr | GateMandatoryParams<G>, nodeOffsets: NodeVisuals<NumInput, 1>) {
+    protected constructor(editor: LogicEditor, savedData: Repr | GateMandatoryParams<G>, nodeOffsets: NodeVisuals<true, true>) {
         super(editor, false, "in" in savedData ? savedData : null, nodeOffsets)
         this._type = savedData.type
         if ("poseAs" in savedData) {
@@ -704,8 +703,8 @@ export abstract class GateBase<
 
 
 
-type Gate1Repr = GateRepr<1, Gate1Type>
-export class Gate1 extends GateBase<Gate1Type, 1, Gate1Repr> {
+type Gate1Repr = GateRepr<Gate1Type>
+export class Gate1 extends GateBase<Gate1Type, Gate1Repr> {
 
     public constructor(editor: LogicEditor, savedData: Gate1Repr | Gate1MandatoryParams) {
         super(editor, savedData, {
@@ -790,8 +789,8 @@ export class Gate1 extends GateBase<Gate1Type, 1, Gate1Repr> {
 
 }
 
-type Gate2Repr = GateRepr<2, Gate2Type>
-export class Gate2 extends GateBase<Gate2Type, 2, Gate2Repr> {
+type Gate2Repr = GateRepr<Gate2Type>
+export class Gate2 extends GateBase<Gate2Type, Gate2Repr> {
 
     public constructor(editor: LogicEditor, savedData: Gate2Repr | Gate2MandatoryParams) {
         super(editor, savedData, {
@@ -899,8 +898,8 @@ export class Gate2 extends GateBase<Gate2Type, 2, Gate2Repr> {
 
 
 
-type Gate3Repr = GateRepr<3, Gate3Type>
-export class Gate3 extends GateBase<Gate3Type, 3, Gate3Repr> {
+type Gate3Repr = GateRepr<Gate3Type>
+export class Gate3 extends GateBase<Gate3Type, Gate3Repr> {
 
     public constructor(editor: LogicEditor, savedData: Gate3Repr | Gate3MandatoryParams) {
         super(editor, savedData, {
@@ -992,8 +991,8 @@ export class Gate3 extends GateBase<Gate3Type, 3, Gate3Repr> {
 
 
 
-type Gate4Repr = GateRepr<4, Gate4Type>
-export class Gate4 extends GateBase<Gate4Type, 4, Gate4Repr> {
+type Gate4Repr = GateRepr<Gate4Type>
+export class Gate4 extends GateBase<Gate4Type, Gate4Repr> {
 
     public constructor(editor: LogicEditor, savedData: Gate4Repr | Gate4MandatoryParams) {
         super(editor, savedData, {
@@ -1108,7 +1107,7 @@ const makeGateTooltip = (nInput: number, title: Modifier, description: Modifier,
 
 export const GateFactory = {
 
-    make: <N extends FixedArraySizeNonZero>(editor: LogicEditor, savedDataOrType: GateRepr<N, GateType> | string | undefined) => {
+    make: (editor: LogicEditor, savedDataOrType: GateRepr<GateType> | string | undefined) => {
         let gateParams
         let blank = true
         if (isUndefined(savedDataOrType)) {

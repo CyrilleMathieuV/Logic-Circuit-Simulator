@@ -1,21 +1,21 @@
 import * as t from "io-ts"
-import { circle, colorForBoolean, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, dist, drawComponentName, drawRoundValueCentered, drawWireLineToComponent, GRID_STEP, INPUT_OUTPUT_DIAMETER, triangle } from "../drawutils"
-import { emptyMod, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, GRID_STEP, INPUT_OUTPUT_DIAMETER, circle, colorForBoolean, dist, drawComponentName, drawRoundValueCentered, drawWireLineToComponent, triangle } from "../drawutils"
+import { emptyMod, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { HighImpedance, isDefined, isNotNull, isUndefined, isUnknown, LogicValue, LogicValueRepr, Mode, toLogicValue, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { Component, ComponentBase, ComponentName, ComponentNameRepr, defineComponent, extendComponent } from "./Component"
+import { HighImpedance, LogicValue, LogicValueRepr, Mode, Unknown, isDefined, isNotNull, isUndefined, isUnknown, toLogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
+import { Component, ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent, extendComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 import { Node, NodeIn } from "./Node"
 
 export const InputBitBaseDef =
-    defineComponent(0, 1, t.type({
+    defineComponent(false, true, t.type({
         name: ComponentNameRepr,
     }, "InputBitBase"))
 
-export type InputBitBaseRepr = typeof InputBitBaseDef.reprType
+type InputBitBaseRepr = Repr<typeof InputBitBaseDef>
 
-export abstract class InputBitBase<Repr extends InputBitBaseRepr> extends ComponentBase<0, 1, Repr, LogicValue> {
+export abstract class InputBitBase<Repr extends InputBitBaseRepr> extends ComponentBase<Repr, LogicValue, false, true> {
 
     private _name: ComponentName = undefined
 
@@ -167,7 +167,7 @@ export const InputBitDef =
         isConstant: typeOrUndefined(t.boolean),
     }, "InputBit"))
 
-export type InputBitRepr = typeof InputBitDef.reprType
+type InputBitRepr = Repr<typeof InputBitDef>
 
 const InputBitDefaults = {
     isPushButton: false,

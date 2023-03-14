@@ -1,14 +1,14 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, drawWireLineToComponent, GRID_STEP } from "../drawutils"
-import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, GRID_STEP, colorForBoolean, drawWireLineToComponent } from "../drawutils"
+import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { FixedArrayFill, FixedReadonlyArray, HighImpedance, isHighImpedance, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ArrayFillWith, HighImpedance, LogicValue, Unknown, isHighImpedance, isUnknown } from "../utils"
+import { ComponentBase, Repr, defineComponent } from "./Component"
 import { DrawContext } from "./Drawable"
 
 export const QuadTriStateDef =
-    defineComponent(5, 4, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("quad-tristate"),
     }, "QuadTriState"))
 
@@ -20,12 +20,12 @@ const INPUT = {
 const GRID_WIDTH = 4
 const GRID_HEIGHT = 8
 
-export type QuadTriStateRepr = typeof QuadTriStateDef.reprType
+type QuadTriStateRepr = Repr<typeof QuadTriStateDef>
 
-export class QuadTriState extends ComponentBase<5, 4, QuadTriStateRepr, FixedReadonlyArray<LogicValue, 4>> {
+export class QuadTriState extends ComponentBase<QuadTriStateRepr, LogicValue[]> {
 
     public constructor(editor: LogicEditor, savedData: QuadTriStateRepr | null) {
-        super(editor, FixedArrayFill(HighImpedance, 4), savedData, {
+        super(editor, ArrayFillWith(HighImpedance, 4), savedData, {
             ins: [
                 ["I0", -3, -3, "w", "In"],
                 ["I1", -3, -1, "w", "In"],
@@ -68,22 +68,22 @@ export class QuadTriState extends ComponentBase<5, 4, QuadTriStateRepr, FixedRea
         ))
     }
 
-    protected doRecalcValue(): FixedReadonlyArray<LogicValue, 4> {
-        const input = this.inputValues<4>(INPUT.I)
+    protected doRecalcValue(): LogicValue[] {
+        const input = this.inputValues(INPUT.I)
         const enable = this.inputs[INPUT.E].value
 
         if (isUnknown(enable) || isHighImpedance(enable)) {
-            return FixedArrayFill(Unknown, 4)
+            return ArrayFillWith(Unknown, 4)
         }
 
         if (!enable) {
-            return FixedArrayFill(HighImpedance, 4)
+            return ArrayFillWith(HighImpedance, 4)
         }
 
         return input
     }
 
-    protected override propagateValue(newValue: FixedReadonlyArray<LogicValue, 4>) {
+    protected override propagateValue(newValue: LogicValue[]) {
         for (let i = 0; i < 4; i++) {
             this.outputs[i].value = newValue[i]
         }

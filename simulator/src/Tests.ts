@@ -1,11 +1,11 @@
 import { doALUOp } from "./components/ALU"
 import { displayValuesFromArray } from "./drawutils"
-import { FixedArray, FixedReadonlyArray, LogicValue } from "./utils"
+import { LogicValue } from "./utils"
 
 export class Tests {
 
     public aluOps() {
-        function* nibbles(): Generator<FixedArray<boolean, 4>, void, unknown> {
+        function* nibbles(): Generator<boolean[], void, unknown> {
             for (const a of [false, true]) {
                 for (const b of [false, true]) {
                     for (const c of [false, true]) {
@@ -18,7 +18,7 @@ export class Tests {
         }
 
 
-        function representationsOf(v: FixedReadonlyArray<LogicValue, 4>): [string, number, number] {
+        function representationsOf(v: LogicValue[]): [string, number, number] {
             const [str, uint_] = displayValuesFromArray(v, true)
             const uint = uint_ as number
             const sint = uint < 8 ? uint : uint - 16

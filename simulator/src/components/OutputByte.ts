@@ -1,10 +1,10 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, drawComponentName, drawRoundValue, drawWireLineToComponent, GRID_STEP } from "../drawutils"
-import { mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, GRID_STEP, colorForBoolean, drawComponentName, drawRoundValue, drawWireLineToComponent } from "../drawutils"
+import { mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, isDefined, isNotNull, LogicValue, Mode, toLogicValueRepr, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ArrayFillWith, LogicValue, Mode, Unknown, isDefined, isNotNull, toLogicValueRepr } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 const GRID_WIDTH = 2
@@ -12,19 +12,19 @@ const GRID_UPPER_HEIGHT = 4.5
 const GRID_LOWER_HEIGHT = 3.5
 
 export const OutputByteDef =
-    defineComponent(8, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("byte"),
         name: ComponentNameRepr,
     }, "OutputByte"))
 
-type OutputByteRepr = typeof OutputByteDef.reprType
+type OutputByteRepr = Repr<typeof OutputByteDef>
 
-export class OutputByte extends ComponentBase<8, 0, OutputByteRepr, FixedArray<LogicValue, 8>> {
+export class OutputByte extends ComponentBase<OutputByteRepr, LogicValue[]> {
 
     private _name: ComponentName = undefined
 
     public constructor(editor: LogicEditor, savedData: OutputByteRepr | null) {
-        super(editor, FixedArrayFill(false, 8), savedData, {
+        super(editor, ArrayFillWith(false, 8), savedData, {
             ins: [
                 [undefined, -2, -4, "w", "In"],
                 [undefined, -2, -3, "w", "In"],
@@ -65,9 +65,9 @@ export class OutputByte extends ComponentBase<8, 0, OutputByteRepr, FixedArray<L
         return tooltipContent(undefined, mods(S.Components.OutputByte.tooltip))
     }
 
-    protected doRecalcValue(): FixedArray<LogicValue, 8> {
+    protected doRecalcValue(): LogicValue[] {
         // this never changes on its own, just upon user interaction
-        return this.inputValues<8>([0, 1, 2, 3, 4, 5, 6, 7])
+        return this.inputValues([0, 1, 2, 3, 4, 5, 6, 7])
     }
 
     protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
@@ -88,7 +88,7 @@ export class OutputByte extends ComponentBase<8, 0, OutputByteRepr, FixedArray<L
         g.fill()
         g.stroke()
 
-        const displayValues = this.editor.options.hideOutputColors ? FixedArrayFill(Unknown, 8) : this.value
+        const displayValues = this.editor.options.hideOutputColors ? ArrayFillWith(Unknown, 8) : this.value
 
         g.lineWidth = 1
         const cellHeight = GRID_STEP

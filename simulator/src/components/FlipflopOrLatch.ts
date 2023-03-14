@@ -1,17 +1,17 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_BACKGROUND_INVALID, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_MOUSE_OVER, drawLabel, drawRoundValue, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_BACKGROUND_INVALID, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_MOUSE_OVER, GRID_STEP, colorForBoolean, drawLabel, drawRoundValue, drawWireLineToComponent } from "../drawutils"
 import { S } from "../strings"
-import { FixedArraySize, FixedArraySizeNonZero, isDefined, isNotNull, isNull, LogicValue, LogicValueRepr, Plus3, toLogicValue, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentRepr, defineComponent, NodeVisuals } from "./Component"
+import { LogicValue, LogicValueRepr, Unknown, isDefined, isNotNull, isNull, toLogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
+import { ComponentBase, ComponentRepr, NodeVisuals, defineComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { NodeIn } from "./Node"
 
 const GRID_WIDTH = 5
 const GRID_HEIGHT = 7
 
-export function defineFlipflopOrLatch<NumInputs extends FixedArraySize, N extends string, P extends t.Props>(numInputs: NumInputs, jsonName: N, className: string, props: P) {
-    return defineComponent(numInputs, 2, t.type({
+export function defineFlipflopOrLatch<TName extends string, P extends t.Props>(jsonName: TName, className: string, props: P) {
+    return defineComponent(true, true, t.type({
         type: t.literal(jsonName),
         state: typeOrUndefined(LogicValueRepr),
         showContent: typeOrUndefined(t.boolean),
@@ -19,11 +19,11 @@ export function defineFlipflopOrLatch<NumInputs extends FixedArraySize, N extend
     }, className))
 }
 
-export type FlipflopOrLatchRepr<NumInputs extends FixedArraySize> =
-    ComponentRepr<NumInputs, 2> & {
-    state: LogicValueRepr | undefined
-    showContent: boolean | undefined
-}
+type FlipflopOrLatchRepr =
+    ComponentRepr<true, true> & {
+        state: LogicValueRepr | undefined
+        showContent: boolean | undefined
+    }
 
 const FlipflorOrLatchDefaults = {
     showContent: true,
@@ -33,10 +33,7 @@ export const enum OUTPUT {
     Q, Qb
 }
 
-export abstract class FlipflopOrLatch<
-    NumInputs extends FixedArraySize,
-    Repr extends FlipflopOrLatchRepr<NumInputs>,
-> extends ComponentBase<NumInputs, 2, Repr, [LogicValue, LogicValue]> {
+export abstract class FlipflopOrLatch<Repr extends FlipflopOrLatchRepr> extends ComponentBase<Repr, [LogicValue, LogicValue], true, true> {
 
     private static savedStateFrom(savedData: { state: LogicValueRepr | undefined } | null): [LogicValue, LogicValue] {
         if (isNull(savedData)) {
@@ -49,14 +46,14 @@ export abstract class FlipflopOrLatch<
     protected _showContent: boolean = FlipflorOrLatchDefaults.showContent
     protected _isInInvalidState = false
 
-    protected constructor(editor: LogicEditor, savedData: Repr | null, nodeInOffsets: NodeVisuals<NumInputs, 0>) {
+    protected constructor(editor: LogicEditor, savedData: Repr | null, nodeInOffsets: NodeVisuals<true, false>) {
         super(editor, FlipflopOrLatch.savedStateFrom(savedData), savedData, {
-            ins: (nodeInOffsets as any).ins,
+            ins: nodeInOffsets.ins,
             outs: [
                 [S.Components.Generic.OutputQDesc, +4, -2, "e"],
                 [S.Components.Generic.OutputQBarDesc, +4, 2, "e"],
             ],
-        } as any)
+        })
         if (isNotNull(savedData)) {
             this._showContent = savedData.showContent ?? FlipflorOrLatchDefaults.showContent
         }
@@ -163,17 +160,17 @@ export const EdgeTrigger = {
 } as const
 export type EdgeTrigger = keyof typeof EdgeTrigger
 
-export function defineFlipflop<NumInputs extends FixedArraySize, N extends string, P extends t.Props>(numExtraInputs: NumInputs, jsonName: N, className: string, props: P) {
-    return defineFlipflopOrLatch(3 + numExtraInputs as Plus3<NumInputs>, jsonName, className, {
+export function defineFlipflop<TName extends string, P extends t.Props>(jsonName: TName, className: string, props: P) {
+    return defineFlipflopOrLatch(jsonName, className, {
         trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         ...props,
     })
 }
 
-export type FlipflopRepr<NumInputs extends FixedArraySize> =
-    FlipflopOrLatchRepr<NumInputs> & {
-    trigger: keyof typeof EdgeTrigger | undefined
-}
+type FlipflopRepr =
+    FlipflopOrLatchRepr & {
+        trigger: keyof typeof EdgeTrigger | undefined
+    }
 
 const FlipflopDefaults = {
     trigger: EdgeTrigger.rising,
@@ -212,14 +209,13 @@ export function makeTriggerItems(currentTrigger: EdgeTrigger, handler: (trigger:
 }
 
 export abstract class Flipflop<
-    NumInputs extends FixedArraySizeNonZero,
-    Repr extends FlipflopRepr<Plus3<NumInputs>>,
-> extends FlipflopOrLatch<Plus3<NumInputs>, Repr> implements SyncComponent<[LogicValue, LogicValue]> {
+    Repr extends FlipflopRepr,
+> extends FlipflopOrLatch<Repr> implements SyncComponent<[LogicValue, LogicValue]> {
 
     protected _lastClock: LogicValue = Unknown
     protected _trigger: EdgeTrigger = FlipflopDefaults.trigger
 
-    protected constructor(editor: LogicEditor, savedData: Repr | null, nodeInOffsets: NodeVisuals<NumInputs, 0> & { clockYOffset: number }) {
+    protected constructor(editor: LogicEditor, savedData: Repr | null, nodeInOffsets: NodeVisuals<true, false> & { clockYOffset: number }) {
         super(editor, savedData, {
             ins: [
                 [S.Components.Generic.InputClockDesc, -4, nodeInOffsets.clockYOffset, "w"], // Clock
@@ -227,7 +223,7 @@ export abstract class Flipflop<
                 [S.Components.Generic.InputClearDesc, 0, +4, "s"], // Clear
                 ...nodeInOffsets.ins, // subclass
             ],
-        } as any)
+        })
         if (isNotNull(savedData)) {
             this._trigger = savedData.trigger ?? FlipflopDefaults.trigger
         }

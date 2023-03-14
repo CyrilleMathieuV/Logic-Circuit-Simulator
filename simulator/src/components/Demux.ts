@@ -4,31 +4,31 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { IconName } from "../images"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, HighImpedance, isDefined, isNotNull, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, defineComponent, NodeVisual, NodeVisuals } from "./Component"
+import { ArrayFillWith, HighImpedance, isDefined, isNotNull, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, defineComponent, NodeVisual, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { WireStyles } from "./Wire"
 
 
-type DemuxInputIndices<NumInputs extends FixedArraySize> = {
-    I: FixedReadonlyArray<number, NumInputs>, // array of input indices
-    S: ReadonlyArray<number>, // array of indices of selectors
+type DemuxInputIndices = {
+    I: number[], // array of input indices
+    S: number[], // array of indices of selectors
 }
 
-type DemuxOutputIndices<NumOutputs extends FixedArraySize> = {
-    Z: ReadonlyArray<FixedReadonlyArray<number, NumOutputs>>, // array of arrays of output indices
+type DemuxOutputIndices = {
+    Z: number[][], // array of arrays of output indices
 }
 
-export function defineDemux<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, N extends string>(numInputs: NumInputs, numOutputs: NumOutputs, jsonName: N, className: string) {
-    return defineComponent(numInputs, numOutputs, t.type({
+export function defineDemux<TName extends string>(numInputs: number, numOutputs: number, jsonName: TName, className: string) {
+    return defineComponent(true, true, t.type({
         type: t.literal(jsonName),
         showWiring: typeOrUndefined(t.boolean),
         disconnectedAsHighZ: typeOrUndefined(t.boolean),
     }, className))
 }
 
-type DemuxRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
-    ComponentRepr<NumInputs, NumOutputs> & {
+type DemuxRepr =
+    ComponentRepr<true, true> & {
         showWiring: boolean | undefined,
         disconnectedAsHighZ: boolean | undefined,
     }
@@ -38,22 +38,14 @@ const DemuxDefaults = {
     disconnectedAsHighZ: false,
 }
 
-export abstract class Demux<
-    NumInputs extends FixedArraySize,
-    NumOutputs extends FixedArraySize,
-    Repr extends DemuxRepr<NumInputs, NumOutputs>
->
-    extends ComponentBaseWithSubclassDefinedNodes<
-        DemuxInputIndices<NumInputs>,
-        DemuxOutputIndices<NumOutputs>,
-        NumInputs, NumOutputs, Repr, FixedArray<LogicValue, NumOutputs>
-    > {
+export abstract class Demux<Repr extends DemuxRepr>
+    extends ComponentBaseWithSubclassDefinedNodes<Repr, LogicValue[], DemuxInputIndices, DemuxOutputIndices, true, true> {
 
     private static generateInOffsets(numFrom: number, numSel: number, numTo: number): NodeVisual[] {
         const offsets: NodeVisual[] = []
 
         // left inputs
-        const compact = numTo >= 7
+        const compact = numFrom >= 7
         const spacing = compact ? 1 : 2
         const numGroups = numTo / numFrom
         const addByGroupSep = numFrom > 1 ? 1 : 0
@@ -74,10 +66,10 @@ export abstract class Demux<
         return offsets
     }
 
-    private static generateOutOffsets<NumOutputs extends FixedArraySize>(numFrom: number, numSel: number, numTo: NumOutputs): FixedArray<NodeVisual, NumOutputs> {
+    private static generateOutOffsets(numFrom: number, numSel: number, numTo: number): NodeVisual[] {
         const offsets: NodeVisual[] = []
 
-        const compact = numTo >= 7
+        const compact = numFrom >= 7
         const spacing = compact ? 1 : 2
         const numGroups = numTo / numFrom
         const addByGroupSep = numFrom > 1 ? 1 : 0
@@ -96,10 +88,10 @@ export abstract class Demux<
             offsets.push([groupLetter + (i % numFrom), x, y, "e", groupLetter])
             y += spacing
         }
-        return offsets as FixedArray<NodeVisual, NumOutputs>
+        return offsets
     }
 
-    protected static generateInputIndices<NumInputs extends FixedArraySize>(numFrom: NumInputs, numSel: number): DemuxInputIndices<NumInputs> {
+    protected static generateInputIndices(numFrom: number, numSel: number): DemuxInputIndices {
         let ind = 0
 
         const I: Array<number> = []
@@ -111,12 +103,12 @@ export abstract class Demux<
         for (let s = 0; s < numSel; s++) {
             S.push(ind++)
         }
-        return { I: I as FixedArray<number, NumInputs>, S }
+        return { I, S }
     }
 
-    protected static generateOutputIndices<NumOutputs extends FixedArraySize>(numFrom: number, numTo: NumOutputs): DemuxOutputIndices<NumOutputs> {
+    protected static generateOutputIndices(numFrom: number, numTo: number): DemuxOutputIndices {
         let ind = 0
-        const Z: Array<FixedArray<number, NumOutputs>> = []
+        const Z: number[][] = []
 
         const numGroups = numTo / numFrom
         for (let g = 0; g < numGroups; g++) {
@@ -124,7 +116,7 @@ export abstract class Demux<
             for (let o = 0; o < numFrom; o++) {
                 inds.push(ind++)
             }
-            Z.push(inds as FixedArray<number, NumOutputs>)
+            Z.push(inds)
         }
         return { Z }
     }
@@ -134,7 +126,7 @@ export abstract class Demux<
     }
 
     private static gridHeight(numFrom: number, numTo: number): number {
-        const compact = numTo >= 7
+        const compact = numFrom >= 7
         const spacing = compact ? 1 : 2
         const numGroups = numTo / numFrom
         const addByGroupSep = numFrom > 1 ? 1 : 0
@@ -148,18 +140,19 @@ export abstract class Demux<
     private _disconnectedAsHighZ = DemuxDefaults.disconnectedAsHighZ
 
     protected constructor(editor: LogicEditor, savedData: Repr | null,
-        public readonly numFrom: FixedArraySize,
-        public readonly numSel: FixedArraySize,
-        public readonly numTo: NumOutputs,
+        public readonly numFrom: number,
+        public readonly numSel: number,
+        public readonly numTo: number,
     ) {
         super(editor,
             Demux.gridWidth(numSel), Demux.gridHeight(numFrom, numTo),
             Demux.generateInputIndices(numFrom, numSel),
             Demux.generateOutputIndices(numFrom, numTo),
-            FixedArrayFill(false as LogicValue, numTo), savedData, {
+            ArrayFillWith(false as LogicValue, numTo), savedData,
+            {
                 ins: Demux.generateInOffsets(numFrom, numSel, numTo),
                 outs: Demux.generateOutOffsets(numFrom, numSel, numTo),
-            } as unknown as NodeVisuals<NumInputs, NumOutputs>)
+            })
         this.numGroups = this.numTo / this.numFrom
         if (isNotNull(savedData)) {
             this._showWiring = savedData.showWiring ?? DemuxDefaults.showWiring
@@ -185,12 +178,12 @@ export abstract class Demux<
         ))
     }
 
-    protected doRecalcValue(): FixedArray<LogicValue, NumOutputs> {
-        const sels = this.inputValues(this.INPUT.S as any)
+    protected doRecalcValue(): LogicValue[] {
+        const sels = this.inputValues(this.INPUT.S)
         const sel = displayValuesFromArray(sels, false)[1]
 
         if (isUnknown(sel)) {
-            return FixedArrayFill(Unknown, this.numTo)
+            return ArrayFillWith(Unknown, this.numTo)
         }
 
         const values: Array<LogicValue> = []
@@ -208,10 +201,10 @@ export abstract class Demux<
             }
         }
 
-        return values as FixedArray<LogicValue, NumOutputs>
+        return values
     }
 
-    protected override propagateValue(newValues: FixedArray<LogicValue, NumOutputs>) {
+    protected override propagateValue(newValues: LogicValue[]) {
         for (let i = 0; i < newValues.length; i++) {
             this.outputs[i].value = newValues[i]
         }
@@ -261,7 +254,7 @@ export abstract class Demux<
         // wiring
         if (this._showWiring) {
             const neutral = this.editor.options.hideWireColors
-            const sels = this.inputValues(this.INPUT.S as any)
+            const sels = this.inputValues(this.INPUT.S)
             const sel = displayValuesFromArray(sels, false)[1]
             if (!isUnknown(sel)) {
                 const from = this.INPUT.I
@@ -347,8 +340,8 @@ export abstract class Demux<
 
 
 export const Demux1To2Def = defineDemux(2, 2, "demux-1to2", "Demux1To2")
-export type Demux1To2Repr = typeof Demux1To2Def.reprType
-export class Demux1To2 extends Demux<2, 2, Demux1To2Repr> {
+type Demux1To2Repr = Repr<typeof Demux1To2Def>
+export class Demux1To2 extends Demux<Demux1To2Repr> {
 
     public constructor(editor: LogicEditor, savedData: Demux1To2Repr | null) {
         super(editor, savedData, 1, 1, 2)
@@ -363,8 +356,8 @@ export class Demux1To2 extends Demux<2, 2, Demux1To2Repr> {
 }
 
 export const Demux1To4Def = defineDemux(3, 4, "demux-1to4", "Demux1To4")
-export type Demux1To4Repr = typeof Demux1To4Def.reprType
-export class Demux1To4 extends Demux<3, 4, Demux1To4Repr> {
+type Demux1To4Repr = Repr<typeof Demux1To4Def>
+export class Demux1To4 extends Demux<Demux1To4Repr> {
 
     public constructor(editor: LogicEditor, savedData: Demux1To4Repr | null) {
         super(editor, savedData, 1, 2, 4)
@@ -379,8 +372,8 @@ export class Demux1To4 extends Demux<3, 4, Demux1To4Repr> {
 }
 
 export const Demux1To8Def = defineDemux(4, 8, "demux-1to8", "Demux1To8")
-export type Demux1To8Repr = typeof Demux1To8Def.reprType
-export class Demux1To8 extends Demux<4, 8, Demux1To8Repr> {
+type Demux1To8Repr = Repr<typeof Demux1To8Def>
+export class Demux1To8 extends Demux<Demux1To8Repr> {
 
     public constructor(editor: LogicEditor, savedData: Demux1To8Repr | null) {
         super(editor, savedData, 1, 3, 8)
@@ -395,8 +388,8 @@ export class Demux1To8 extends Demux<4, 8, Demux1To8Repr> {
 }
 
 export const Demux2To4Def = defineDemux(3, 4, "demux-2to4", "Demux2To4")
-export type Demux2To4Repr = typeof Demux2To4Def.reprType
-export class Demux2To4 extends Demux<3, 4, Demux2To4Repr> {
+type Demux2To4Repr = Repr<typeof Demux2To4Def>
+export class Demux2To4 extends Demux<Demux2To4Repr> {
 
     public constructor(editor: LogicEditor, savedData: Demux2To4Repr | null) {
         super(editor, savedData, 2, 1, 4)
@@ -411,8 +404,8 @@ export class Demux2To4 extends Demux<3, 4, Demux2To4Repr> {
 }
 
 export const Demux2To8Def = defineDemux(4, 8, "demux-2to8", "Demux2To8")
-export type Demux2To8Repr = typeof Demux2To8Def.reprType
-export class Demux2To8 extends Demux<4, 8, Demux2To8Repr> {
+type Demux2To8Repr = Repr<typeof Demux2To8Def>
+export class Demux2To8 extends Demux<Demux2To8Repr> {
 
     public constructor(editor: LogicEditor, savedData: Demux2To8Repr | null) {
         super(editor, savedData, 2, 2, 8)
@@ -427,8 +420,8 @@ export class Demux2To8 extends Demux<4, 8, Demux2To8Repr> {
 }
 
 export const Demux4To8Def = defineDemux(5, 8, "demux-4to8", "Demux4To8")
-export type Demux4To8Repr = typeof Demux4To8Def.reprType
-export class Demux4To8 extends Demux<5, 8, Demux4To8Repr> {
+type Demux4To8Repr = Repr<typeof Demux4To8Def>
+export class Demux4To8 extends Demux<Demux4To8Repr> {
 
     public constructor(editor: LogicEditor, savedData: Demux4To8Repr | null) {
         super(editor, savedData, 4, 1, 8)
@@ -443,8 +436,8 @@ export class Demux4To8 extends Demux<5, 8, Demux4To8Repr> {
 }
 
 export const Demux8To16Def = defineDemux(9, 16, "demux-8to16", "Demux8To16")
-export type Demux8To16Repr = typeof Demux8To16Def.reprType
-export class Demux8To16 extends Demux<9, 16, Demux8To16Repr> {
+type Demux8To16Repr = Repr<typeof Demux8To16Def>
+export class Demux8To16 extends Demux<Demux8To16Repr> {
 
     public constructor(editor: LogicEditor, savedData: Demux8To16Repr | null) {
         super(editor, savedData, 8, 1, 16)

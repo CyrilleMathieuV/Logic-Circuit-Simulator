@@ -1,17 +1,17 @@
 import { Bezier, Offset } from "bezier-js"
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE, dist, drawStraightWireLine, drawWaypoint, isOverWaypoint, NodeStyle, strokeAsWireLine, WAYPOINT_DIAMETER, WIRE_WIDTH } from "../drawutils"
-import { span, style, title } from "../htmlgen"
 import { DrawParams, LogicEditor } from "../LogicEditor"
-import { S } from "../strings"
 import { Timestamp } from "../Timeline"
-import { isDefined, isNotNull, isNull, isUndefined, LogicValue, Mode, typeOrUndefined } from "../utils"
-import { Component, NodeGroup, NodeID } from "./Component"
-import { ContextMenuData, Drawable, DrawableWithDraggablePosition, DrawableWithPosition, DrawContext, Orientation, Orientations_, PositionSupportRepr } from "./Drawable"
+import { COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE, NodeStyle, WAYPOINT_DIAMETER, WIRE_WIDTH, colorForBoolean, dist, drawStraightWireLine, drawWaypoint, isOverWaypoint, strokeAsWireLine } from "../drawutils"
+import { span, style, title } from "../htmlgen"
+import { S } from "../strings"
+import { LogicValue, Mode, isDefined, isNotNull, isNull, isUndefined, typeOrUndefined } from "../utils"
+import { Component, NodeGroup } from "./Component"
+import { ContextMenuData, DrawContext, Drawable, DrawableWithDraggablePosition, DrawableWithPosition, Orientation, Orientations_, PositionSupportRepr } from "./Drawable"
 import { Node, NodeIn, NodeOut, WireColor } from "./Node"
 import { Passthrough1 } from "./Passthrough"
 
-export type WaypointRepr = t.TypeOf<typeof Waypoint.Repr>
+type WaypointRepr = t.TypeOf<typeof Waypoint.Repr>
 
 export class Waypoint extends DrawableWithDraggablePosition {
 
@@ -122,14 +122,14 @@ export const WireStyles = {
 
 export type WireStyle = keyof typeof WireStyles
 
-export type WireRepr = t.TypeOf<typeof Wire.Repr>
+type WireRepr = t.TypeOf<typeof Wire.Repr>
 
 export class Wire extends Drawable {
 
     public static get Repr() {
-        const simpleRepr = t.tuple([NodeID, NodeID])
+        const simpleRepr = t.tuple([t.number, t.number])
         const fullRepr = t.tuple([
-            NodeID, NodeID,
+            t.number, t.number,
             // include an object specifying additional properties
             t.type({
                 ref: typeOrUndefined(t.string),
@@ -645,20 +645,20 @@ export class Ribbon extends Drawable {
         this.updateIndices(newNodeGroupStartIndex, newNodeGroupEndIndex)
     }
 
-    public wireWasDeleted(wire: Wire) {
+    public wireWasDeleted(__wire: Wire) {
         // TODO check ribbons here
         // const index = this._coveredWires.indexOf(wire)
         // if (index >= 0) {
         //     this._coveredWires.splice(index, 1)
         // }
         // // remove start node
-        // const startNode = wire.startNode as any
+        // const startNode = wire.startNode
         // const startNodeIndex = this._startNodes.indexOf(startNode)
         // if (startNodeIndex >= 0) {
         //     this._startNodes.splice(startNodeIndex, 1)
         // }
         // // remove end node
-        // const endNode = wire.endNode as any
+        // const endNode = wire.endNode
         // const endNodeIndex = this._endNodes.indexOf(endNode)
         // if (endNodeIndex >= 0) {
         //     this._endNodes.splice(endNodeIndex, 1)
@@ -806,10 +806,10 @@ export class Ribbon extends Drawable {
     }
 
 
-    public isOver(x: number, y: number): boolean {
+    public isOver(__x: number, __y: number): boolean {
         return false // TODO
     }
-    public isInRect(rect: DOMRect): boolean {
+    public isInRect(__rect: DOMRect): boolean {
         return false // TODO
     }
 

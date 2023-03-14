@@ -1,10 +1,10 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, drawComponentName, drawRoundValue, drawWireLineToComponent, GRID_STEP, inRect } from "../drawutils"
-import { mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, GRID_STEP, colorForBoolean, drawComponentName, drawRoundValue, drawWireLineToComponent, inRect } from "../drawutils"
+import { mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, isDefined, isNotNull, isNull, LogicValue, LogicValueRepr, Mode, toLogicValue, toLogicValueRepr, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ArrayFillWith, LogicValue, LogicValueRepr, Mode, Unknown, isDefined, isNotNull, isNull, toLogicValue, toLogicValueRepr } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { InputBit } from "./InputBit"
 
@@ -12,22 +12,22 @@ const GRID_WIDTH = 2
 const GRID_HEIGHT = 8
 
 export const InputNibbleDef =
-    defineComponent(0, 4, t.type({
+    defineComponent(false, true, t.type({
         type: t.literal("nibble"),
-        val: t.tuple([LogicValueRepr, LogicValueRepr, LogicValueRepr, LogicValueRepr]),
+        val: t.array(LogicValueRepr),
         name: ComponentNameRepr,
         // radix: typeOrUndefined(t.number),
     }, "InputNibble"))
 
-type InputNibbleRepr = typeof InputNibbleDef.reprType
+type InputNibbleRepr = Repr<typeof InputNibbleDef>
 
-export class InputNibble extends ComponentBase<0, 4, InputNibbleRepr, FixedArray<LogicValue, 4>> {
+export class InputNibble extends ComponentBase<InputNibbleRepr, LogicValue[]> {
 
-    private static savedStateFrom(savedData: { val: FixedArray<LogicValueRepr, 4> } | null): FixedArray<LogicValue, 4> {
+    private static savedStateFrom(savedData: { val: LogicValueRepr[] } | null): LogicValue[] {
         if (isNull(savedData)) {
             return [false, false, false, false]
         }
-        return savedData.val.map(v => toLogicValue(v)) as unknown as FixedArray<LogicValue, 4>
+        return savedData.val.map(v => toLogicValue(v))
     }
 
 
@@ -52,7 +52,7 @@ export class InputNibble extends ComponentBase<0, 4, InputNibbleRepr, FixedArray
         return {
             type: "nibble" as const,
             ...this.toJSONBase(),
-            val: this.value.map(v => toLogicValueRepr(v)) as unknown as FixedArray<LogicValueRepr, 4>,
+            val: this.value.map(v => toLogicValueRepr(v)),
             name: this._name,
         }
     }
@@ -81,12 +81,12 @@ export class InputNibble extends ComponentBase<0, 4, InputNibbleRepr, FixedArray
         return tooltipContent(undefined, mods(S.Components.InputNibble.tooltip))
     }
 
-    protected doRecalcValue(): FixedArray<LogicValue, 4> {
+    protected doRecalcValue(): LogicValue[] {
         // this never changes on its own, just upon user interaction
         return this.value
     }
 
-    protected override propagateValue(newValue: FixedArray<LogicValue, 4>) {
+    protected override propagateValue(newValue: LogicValue[]) {
         for (let i = 0; i < 4; i++) {
             this.outputs[i].value = newValue[i]
         }
@@ -110,7 +110,8 @@ export class InputNibble extends ComponentBase<0, 4, InputNibbleRepr, FixedArray
         g.fill()
         g.stroke()
 
-        const displayValues = this.editor.options.hideInputColors ? FixedArrayFill(Unknown, 4) : this.value
+        const displayValues = this.editor.options.hideInputColors
+            ? ArrayFillWith(Unknown, 4) : this.value
 
         g.lineWidth = 1
         const cellHeight = height / 4
@@ -176,7 +177,7 @@ export class InputNibble extends ComponentBase<0, 4, InputNibbleRepr, FixedArray
         const newValues = [...this.value]
         newValues[i] = InputBit.nextValue(newValues[i], editor.mode, e.altKey)
 
-        this.doSetValue(newValues as unknown as FixedArray<LogicValue, 4>)
+        this.doSetValue(newValues)
         return true
     }
 

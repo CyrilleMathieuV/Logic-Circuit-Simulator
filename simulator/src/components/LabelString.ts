@@ -1,27 +1,27 @@
 import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
-import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { S } from "../strings"
 import { isNotNull, isUndefined, typeOrUndefined } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ComponentBase, Repr, defineComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 export const LabelStringDef =
-    defineComponent(0, 0, t.type({
+    defineComponent(false, false, t.type({
         text: t.string,
         // align: typeOrUndefined(t.string), 
         font: typeOrUndefined(t.string),
     }, "Label"))
 
-export type LabelStringRepr = typeof LabelStringDef.reprType
+type LabelStringRepr = Repr<typeof LabelStringDef>
 
 const LabelStringDefaults = {
     text: "Label",
     // align: "center" as const,
     font: FONT_LABEL_DEFAULT,
 }
-export class LabelString extends ComponentBase<0, 0, LabelStringRepr, undefined> {
+export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
 
     private _text: string
     // private _align: CanvasTextAlign // causes issues with mouseovers and stuff

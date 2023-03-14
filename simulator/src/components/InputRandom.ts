@@ -4,12 +4,12 @@ import { tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isDefined, isNotNull, LogicValue, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 import { EdgeTrigger, Flipflop, FlipflopOrLatch } from "./FlipflopOrLatch"
 
 export const InputRandomDef =
-    defineComponent(1, 1, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("random"),
         prob1: typeOrUndefined(t.number),
         showProb: typeOrUndefined(t.boolean),
@@ -18,7 +18,7 @@ export const InputRandomDef =
     }, "InputRandom"))
 
 
-export type InputRandomRepr = typeof InputRandomDef.reprType
+type InputRandomRepr = Repr<typeof InputRandomDef>
 
 const InputRandomDefaults = {
     prob1: 0.5,
@@ -32,7 +32,7 @@ const GRID_HEIGHT = 6
 const enum INPUT { Clock }
 const enum OUTPUT { Out }
 
-export class InputRandom extends ComponentBase<1, 1, InputRandomRepr, LogicValue> {
+export class InputRandom extends ComponentBase<InputRandomRepr, LogicValue> {
 
     private _prob1: number = InputRandomDefaults.prob1
     private _showProb: boolean = InputRandomDefaults.showProb

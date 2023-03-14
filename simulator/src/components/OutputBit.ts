@@ -1,21 +1,21 @@
 import * as t from "io-ts"
-import { circle, colorForBoolean, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, dist, drawComponentName, drawRoundValueCentered, drawWireLineToComponent, GRID_STEP, INPUT_OUTPUT_DIAMETER, triangle } from "../drawutils"
-import { emptyMod, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, GRID_STEP, INPUT_OUTPUT_DIAMETER, circle, colorForBoolean, dist, drawComponentName, drawRoundValueCentered, drawWireLineToComponent, triangle } from "../drawutils"
+import { emptyMod, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { isDefined, isNotNull, isUndefined, isUnknown, LogicValue, Mode, toLogicValueRepr, Unknown } from "../utils"
-import { Component, ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { LogicValue, Mode, Unknown, isDefined, isNotNull, isUndefined, isUnknown, toLogicValueRepr } from "../utils"
+import { Component, ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 import { Node, NodeOut } from "./Node"
 
 export const OutputBitDef =
-    defineComponent(1, 0, t.type({
+    defineComponent(true, false, t.type({
         name: ComponentNameRepr,
     }, "OutputBit"))
 
-type OutputBitRepr = typeof OutputBitDef.reprType
+type OutputBitRepr = Repr<typeof OutputBitDef>
 
-export class OutputBit extends ComponentBase<1, 0, OutputBitRepr, LogicValue> {
+export class OutputBit extends ComponentBase<OutputBitRepr, LogicValue> {
 
     private _name: ComponentName = undefined
 

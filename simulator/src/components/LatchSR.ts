@@ -3,6 +3,7 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isDefined, LogicValue } from "../utils"
+import { Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { defineFlipflopOrLatch, FlipflopOrLatch, OUTPUT } from "./FlipflopOrLatch"
 
@@ -12,11 +13,11 @@ const enum INPUT {
 }
 
 export const LatchSRDef =
-    defineFlipflopOrLatch(2, "latch-sr", "LatchSR", {})
+    defineFlipflopOrLatch("latch-sr", "LatchSR", {})
 
-export type LatchSRRepr = typeof LatchSRDef.reprType
+type LatchSRRepr = Repr<typeof LatchSRDef>
 
-export class LatchSR extends FlipflopOrLatch<2, LatchSRRepr> {
+export class LatchSR extends FlipflopOrLatch<LatchSRRepr> {
 
     public constructor(editor: LogicEditor, savedData: LatchSRRepr | null) {
         super(editor, savedData, {

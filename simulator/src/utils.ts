@@ -1,3 +1,6 @@
+
+import * as t from "io-ts"
+
 export type Dict<T> = Record<string, T | undefined>
 export type TimeoutHandle = NodeJS.Timeout
 
@@ -114,85 +117,6 @@ type _PartialWhereUndefinedRecursively<T> =
     // other types
     : T
 
-// uses for statically typing the number of component inputs
-export type Plus<A extends number, B extends number> =
-    B extends 1 ? Plus1<A> :
-    B extends 2 ? Plus2<A> :
-    B extends 3 ? Plus3<A> :
-    never
-
-export type Plus1<N extends number> =
-    N extends 0 ? 1 :
-    N extends 1 ? 2 :
-    N extends 2 ? 3 :
-    N extends 3 ? 4 :
-    N extends 4 ? 5 :
-    N extends 5 ? 6 :
-    N extends 6 ? 7 :
-    N extends 7 ? 8 :
-    N extends 8 ? 9 :
-    N extends 9 ? 10 :
-    N extends 10 ? 11 :
-    N extends 11 ? 12 :
-    N extends 12 ? 13 :
-    N extends 13 ? 14 :
-    N extends 14 ? 15 :
-    N extends 15 ? 16 :
-    N extends 16 ? 17 :
-    N extends 17 ? 18 :
-    N extends 18 ? 19 :
-    N extends 19 ? 20 :
-    N extends 20 ? 21 :
-    never
-
-export type Plus2<N extends number> =
-    N extends 0 ? 2 :
-    N extends 1 ? 3 :
-    N extends 2 ? 4 :
-    N extends 3 ? 5 :
-    N extends 4 ? 6 :
-    N extends 5 ? 7 :
-    N extends 6 ? 8 :
-    N extends 7 ? 9 :
-    N extends 8 ? 10 :
-    N extends 9 ? 11 :
-    N extends 10 ? 12 :
-    N extends 11 ? 13 :
-    N extends 12 ? 14 :
-    N extends 13 ? 15 :
-    N extends 14 ? 16 :
-    N extends 15 ? 17 :
-    N extends 16 ? 18 :
-    N extends 17 ? 19 :
-    N extends 18 ? 20 :
-    N extends 19 ? 21 :
-    N extends 20 ? 22 :
-    never
-
-export type Plus3<N extends number> =
-    N extends 0 ? 3 :
-    N extends 1 ? 4 :
-    N extends 2 ? 5 :
-    N extends 3 ? 6 :
-    N extends 4 ? 7 :
-    N extends 5 ? 8 :
-    N extends 6 ? 9 :
-    N extends 7 ? 10 :
-    N extends 8 ? 11 :
-    N extends 9 ? 12 :
-    N extends 10 ? 13 :
-    N extends 11 ? 14 :
-    N extends 12 ? 15 :
-    N extends 13 ? 16 :
-    N extends 14 ? 17 :
-    N extends 15 ? 18 :
-    N extends 16 ? 19 :
-    N extends 17 ? 20 :
-    N extends 18 ? 21 :
-    N extends 19 ? 22 :
-    N extends 20 ? 23 :
-    never
-
 
 // Series of type-assertion functions
 
@@ -240,114 +164,98 @@ export function isBoolean(arg: unknown): arg is boolean {
     return typeof arg === "boolean"
 }
 
-import * as t from "io-ts"
 
-// Fixed-size arrays up to 8 to model inputs statically
+export type ArrayOrDirect<T> = T | Array<T>
 
-export type FixedArraySize = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31
-export type FixedArraySizeNonZero = Exclude<FixedArraySize, 0>
-export type FixedArraySizeSeveral = Exclude<FixedArraySizeNonZero, 1>
+// import { Add, Subtract } from "ts-arithmetic"
 
-export type FixedArray<T, N extends FixedArraySize> =
-    N extends 0 ? []
-    : N extends 1 ? [T]
-    : N extends 2 ? [T, T]
-    : N extends 3 ? [T, T, T]
-    : N extends 4 ? [T, T, T, T]
-    : N extends 5 ? [T, T, T, T, T]
-    : N extends 6 ? [T, T, T, T, T, T]
-    : N extends 7 ? [T, T, T, T, T, T, T]
-    : N extends 8 ? [T, T, T, T, T, T, T, T]
-    : N extends 9 ? [T, T, T, T, T, T, T, T, T]
-    : N extends 10 ? [T, T, T, T, T, T, T, T, T, T]
-    : N extends 11 ? [T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 12 ? [T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 13 ? [T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 14 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 15 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 16 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 17 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 18 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 19 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 20 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 21 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 22 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 23 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 24 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 25 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 26 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 27 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 28 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 29 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 30 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 31 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    :/*N >= 32 12*/ Array<T>
+// // assuming N is a number literal; non-literals filtered by main type
+// type _FixedArray<TItem, TSize extends number, TRest extends number, Acc extends TItem[], TTrueIfMutable extends boolean>
+//     = TRest extends 0 ? TTrueIfMutable extends true ? Acc : readonly [...Acc]
+//     : _FixedArray<TItem, TSize, Subtract<TRest, 1>, [TItem, ...Acc], TTrueIfMutable>
 
-export type FixedReadonlyArray<T, N extends FixedArraySize> =
-    N extends 0 ? readonly []
-    : N extends 1 ? readonly [T]
-    : N extends 2 ? readonly [T, T]
-    : N extends 3 ? readonly [T, T, T]
-    : N extends 4 ? readonly [T, T, T, T]
-    : N extends 5 ? readonly [T, T, T, T, T]
-    : N extends 6 ? readonly [T, T, T, T, T, T]
-    : N extends 7 ? readonly [T, T, T, T, T, T, T]
-    : N extends 8 ? readonly [T, T, T, T, T, T, T, T]
-    : N extends 9 ? readonly [T, T, T, T, T, T, T, T, T]
-    : N extends 10 ? readonly [T, T, T, T, T, T, T, T, T, T]
-    : N extends 11 ? readonly [T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 12 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 13 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 14 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 15 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 16 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 17 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 18 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 19 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 20 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 21 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 22 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 23 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 24 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 25 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 26 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 27 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 28 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 29 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 30 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    : N extends 31 ? readonly [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
-    :/*N >= 32 12*/ ReadonlyArray<T>
+// type _FixedArrayCommons<T> = {
+//     [Symbol.iterator](): IterableIterator<T>
+// }
 
-// type HashSize1 = { readonly HasSize1: unique symbol }
-// type H<N extends number, T> = { [K in `HasSize${N}`]: T }
-interface HasSizeNBrand<__ extends number> {
-    readonly HasSizeN: unique symbol // TODO check unique per N
+// export type FixedArray<T, N extends number> =
+//     (number extends N ? T[] : _FixedArray<T, N, N, [], true>) & _FixedArrayCommons<T>
+
+// export type ReadonlyFixedArray<T, N extends number> =
+//     (number extends N ? readonly T[] : _FixedArray<T, N, N, [], boolean>) & _FixedArrayCommons<T>
+// //  boolean and not false as 4th type param to keep assignment compatibility
+
+// // function testAssignment<N extends number>(n: N) {
+// //     const arr: number[] = []
+// //     const arrro: readonly number[] = []
+// //     const b: readonly number[] = arr
+// //     // const bb: number[] = arrro
+
+// //     const farr: FixedArray<number, N> = ArrayFillWith(0, n)
+// //     const farrro: ReadonlyFixedArray<number, N> = ArrayFillWith(0, n)
+// //     const fb: ReadonlyFixedArray<number, N> = farr
+// //     // const fbb: FixedArray<number, N> = farrro // must fail
+// // }
+
+// type _FixedArrayLength<T extends readonly any[], N extends number>
+//     = T extends [] ? N
+//     : T extends [any, ...infer U] ? _FixedArrayLength<U, Add<N, 1>>
+//     : never
+
+// export type FixedArrayLength<T extends readonly any[]> = _FixedArrayLength<T, 0>
+
+// // // type HashSize1 = { readonly HasSize1: unique symbol }
+// // // type H<N extends number, T> = { [K in `HasSize${N}`]: T }
+// // interface HasSizeNBrand<__ extends number> {
+// //     readonly HasSizeN: unique symbol // TODO check unique per N
+// // }
+
+// // export const FixedArray = <T extends t.Mixed, N extends FixedArraySize>(tpe: T, n: N) =>
+// //     t.brand(
+// //         t.array(tpe, `array of size ${n}`),
+// //         (arr): arr is t.Branded<[t.TypeOf<T>], HasSizeNBrand<N>> => arr.length === n,
+// //         "HasSizeN"
+// //     )
+
+// export function FixedArray<Arr extends any[]>(...items: Arr): FixedArray<Arr[number], Arr["length"]> {
+//     return items as any
+// }
+
+// export function FixedArrayAssert<T, N extends number>(arr: T[], n: N): FixedArray<T, N> {
+//     if (arr.length !== n) {
+//         throw new Error(`Expected array of size ${n}, got ${arr.length}`)
+//     }
+//     return arr as any
+// }
+
+// export function FixedArrayFill<T, N extends number>(val: T, n: N): FixedArray<T, N> {
+//     return Array(n).fill(val) as any
+// }
+
+// export function FixedArrayFillFactory<T, N extends number>(val: (i: number) => T, n: N): FixedArray<T, N> {
+//     const arr = Array(n)
+//     for (let i = 0; i < n; i++) {
+//         arr[i] = val(i)
+//     }
+//     return arr as any
+// }
+
+
+// export function FixedArrayMap<U, Arr extends any[]>(items: Arr, fn: (item: Arr[number]) => U): FixedArray<U, Arr["length"]> {
+//     return items.map(fn) as any
+// }
+
+export function ArrayFillWith<T>(val: T, n: number): Array<T> {
+    return Array(n).fill(val)
 }
-
-export const FixedArray = <T extends t.Mixed, N extends FixedArraySize>(tpe: T, n: N) =>
-    t.brand(
-        t.array(tpe, `array of size ${n}`),
-        (arr): arr is t.Branded<[t.TypeOf<T>], HasSizeNBrand<N>> => arr.length === n,
-        "HasSizeN"
-    )
-
-export function FixedArrayFill<T, N extends FixedArraySize>(val: T, n: N): FixedArray<T, N> {
-    return Array(n).fill(val) as FixedArray<T, N>
-}
-export function FixedArrayFillFactory<T, N extends FixedArraySize>(val: (i: number) => T, n: N): FixedArray<T, N> {
+export function ArrayFillUsing<T>(val: (i: number) => T, n: number): Array<T> {
     const arr = Array(n)
     for (let i = 0; i < n; i++) {
         arr[i] = val(i)
     }
-    return arr as FixedArray<T, N>
+    return arr
 }
 
-// This seemingly identity function allows to convert back from a fixed-size tuple
-// to a regular array. It is a safe type cast, in a way, and allows to see the
-// regular array methods as well as to use the for-of iteration on these tuples
-export function asArray<T, N extends FixedArraySize>(tuple: FixedArray<T, N>): ReadonlyArray<T> {
-    return tuple
-}
 
 export function isTruthyString(str: string | null | undefined): boolean {
     return !isNullOrUndefined(str) && (str === "1" || str.toLowerCase() === "true")
@@ -465,14 +373,6 @@ export function deepEquals(v1: any, v2: any) {
 
 
 // io-ts utils
-
-export function forceTypeOf<U, V, W>(tpe: t.Type<U, V, W>) {
-    return {
-        toMoreSpecific: function <UU extends U>() {
-            return tpe as unknown as t.Type<UU, V, W>
-        },
-    }
-}
 
 export const typeOrUndefined = <T extends t.Mixed>(tpe: T) => {
     return t.union([tpe, t.undefined], tpe.name + " | undefined")

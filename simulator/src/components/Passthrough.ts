@@ -3,8 +3,8 @@ import { COLOR_COMPONENT_BORDER, COLOR_NODE_MOUSE_OVER, COLOR_UNKNOWN, drawWireL
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArrayFill, FixedArrayFillFactory, FixedArraySize, FixedReadonlyArray, isDefined, isUndefined, LogicValue, Mode, typeOrUndefined } from "../utils"
-import { ComponentBase, ComponentRepr, defineComponent, NodeVisuals } from "./Component"
+import { ArrayFillUsing, ArrayFillWith, isDefined, isUndefined, LogicValue, Mode, typeOrUndefined } from "../utils"
+import { ComponentBase, ComponentRepr, defineComponent, NodeVisuals, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { NodeIn, NodeOut } from "./Node"
 import { WireStyle } from "./Wire"
@@ -30,25 +30,25 @@ const PassthroughDefaults = {
     slant: Slant.none,
 }
 
-type PassthroughRepr<N extends FixedArraySize> = ComponentRepr<N, N> & {
+type PassthroughRepr = ComponentRepr<true, true> & {
     slant: Slant | undefined
 }
 
-abstract class PassthroughBase<N extends FixedArraySize, Repr extends PassthroughRepr<N>> extends ComponentBase<N, N, Repr, FixedReadonlyArray<LogicValue, N>> {
+abstract class PassthroughBase<Repr extends PassthroughRepr> extends ComponentBase<Repr, LogicValue[], true, true> {
 
-    protected readonly n: N
+    protected readonly n: number
     private _slant: Slant
     private _hShift: [number, number]
 
-    protected constructor(editor: LogicEditor, n: N, savedData: Repr | null, nodeOffsets: NodeVisuals<N, N>) {
-        super(editor, FixedArrayFill(false, n), savedData, nodeOffsets)
+    protected constructor(editor: LogicEditor, n: number, savedData: Repr | null, nodeOffsets: NodeVisuals<true, true>) {
+        super(editor, ArrayFillWith(false, n), savedData, nodeOffsets)
         this.n = n
         this._hShift = [0, 0] // updated by updateNodeOffsets
         this._slant = savedData?.slant ?? PassthroughDefaults.slant
         this.updateNodeOffsets()
     }
 
-    protected override toJSONBase(): PassthroughRepr<N> {
+    protected override toJSONBase(): PassthroughRepr {
         return {
             ...super.toJSONBase(),
             slant: this._slant === PassthroughDefaults.slant ? undefined : this._slant,
@@ -110,12 +110,12 @@ abstract class PassthroughBase<N extends FixedArraySize, Repr extends Passthroug
         return GRID_WIDTH * GRID_STEP * 2
     }
 
-    protected doRecalcValue(): FixedReadonlyArray<LogicValue, N> {
-        const indices = FixedArrayFillFactory(i => i, this.n)
-        return this.inputValues<N>(indices)
+    protected doRecalcValue(): LogicValue[] {
+        const indices = ArrayFillUsing(i => i, this.n)
+        return this.inputValues(indices)
     }
 
-    protected override propagateValue(newValue: FixedReadonlyArray<LogicValue, N>): void {
+    protected override propagateValue(newValue: LogicValue[]): void {
         let i = 0
         for (const v of newValue) {
             this.outputs[i++].value = v
@@ -257,15 +257,15 @@ abstract class PassthroughBase<N extends FixedArraySize, Repr extends Passthroug
 
 
 export const Passthrough1Def =
-    defineComponent(1, 1, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("pass"),
         slant: typeOrUndefined(SlantRepr),
     }, "Passthrough1"))
 
 
-export type Passthrough1Repr = typeof Passthrough1Def.reprType
+type Passthrough1Repr = Repr<typeof Passthrough1Def>
 
-export class Passthrough1 extends PassthroughBase<1, Passthrough1Repr> {
+export class Passthrough1 extends PassthroughBase<Passthrough1Repr> {
 
     public constructor(editor: LogicEditor, savedData: Passthrough1Repr | null) {
         super(editor, 1, savedData, {
@@ -301,15 +301,15 @@ export class Passthrough1 extends PassthroughBase<1, Passthrough1Repr> {
 
 
 export const Passthrough4Def =
-    defineComponent(4, 4, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("pass-4"),
         slant: typeOrUndefined(SlantRepr),
     }, "Passthrough4"))
 
 
-export type Passthrough4Repr = typeof Passthrough4Def.reprType
+type Passthrough4Repr = Repr<typeof Passthrough4Def>
 
-export class Passthrough4 extends PassthroughBase<4, Passthrough4Repr> {
+export class Passthrough4 extends PassthroughBase<Passthrough4Repr> {
 
     public constructor(editor: LogicEditor, savedData: Passthrough4Repr | null) {
         super(editor, 4, savedData, {
@@ -348,15 +348,15 @@ export class Passthrough4 extends PassthroughBase<4, Passthrough4Repr> {
 
 
 export const Passthrough8Def =
-    defineComponent(8, 8, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("pass-8"),
         slant: typeOrUndefined(SlantRepr),
     }, "Passthrough8"))
 
 
-export type Passthrough8Repr = typeof Passthrough8Def.reprType
+type Passthrough8Repr = Repr<typeof Passthrough8Def>
 
-export class Passthrough8 extends PassthroughBase<8, Passthrough8Repr> {
+export class Passthrough8 extends PassthroughBase<Passthrough8Repr> {
 
     public constructor(editor: LogicEditor, savedData: Passthrough8Repr | null) {
         super(editor, 8, savedData, {

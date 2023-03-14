@@ -1,14 +1,14 @@
 import * as t from "io-ts"
-import { circle, colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_UNKNOWN, drawWireLineToComponent, GRID_STEP } from "../drawutils"
-import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_UNKNOWN, GRID_STEP, circle, colorForBoolean, drawWireLineToComponent } from "../drawutils"
+import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { FixedArrayFill, FixedReadonlyArray, isHighImpedance, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ArrayFillWith, LogicValue, Unknown, isHighImpedance, isUnknown } from "../utils"
+import { ComponentBase, Repr, defineComponent } from "./Component"
 import { DrawContext } from "./Drawable"
 
 export const SwitchedInverterDef =
-    defineComponent(5, 4, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("switched-inverter"),
     }, "SwitchedInverter"))
 
@@ -20,12 +20,12 @@ const INPUT = {
 const GRID_WIDTH = 4
 const GRID_HEIGHT = 8
 
-export type SwitchedInverterRepr = typeof SwitchedInverterDef.reprType
+type SwitchedInverterRepr = Repr<typeof SwitchedInverterDef>
 
-export class SwitchedInverter extends ComponentBase<5, 4, SwitchedInverterRepr, FixedReadonlyArray<LogicValue, 4>> {
+export class SwitchedInverter extends ComponentBase<SwitchedInverterRepr, LogicValue[]> {
 
     public constructor(editor: LogicEditor, savedData: SwitchedInverterRepr | null) {
-        super(editor, FixedArrayFill(false, 4), savedData, {
+        super(editor, ArrayFillWith(false, 4), savedData, {
             ins: [
                 ["I0", -3, -3, "w", "In"],
                 ["I1", -3, -1, "w", "In"],
@@ -68,22 +68,22 @@ export class SwitchedInverter extends ComponentBase<5, 4, SwitchedInverterRepr, 
         ))
     }
 
-    protected doRecalcValue(): FixedReadonlyArray<LogicValue, 4> {
-        const input = this.inputValues<4>(INPUT.I)
+    protected doRecalcValue(): LogicValue[] {
+        const input = this.inputValues(INPUT.I)
         const switch_ = this.inputs[INPUT.S].value
 
         if (isUnknown(switch_) || isHighImpedance(switch_)) {
-            return FixedArrayFill(Unknown, 4)
+            return ArrayFillWith(Unknown, 4)
         }
 
         if (!switch_) {
             return input
         }
 
-        return input.map(LogicValue.invert) as unknown as FixedReadonlyArray<LogicValue, 4>
+        return input.map(LogicValue.invert)
     }
 
-    protected override propagateValue(newValue: FixedReadonlyArray<LogicValue, 4>) {
+    protected override propagateValue(newValue: LogicValue[]) {
         for (let i = 0; i < 4; i++) {
             this.outputs[i].value = newValue[i]
         }

@@ -3,12 +3,12 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS,
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArrayFill, FixedReadonlyArray, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ArrayFillWith, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 export const DecoderBCD4Def =
-    defineComponent(4, 5, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("decoder-bcd4"),
     }, "DecoderBCD4"))
 
@@ -23,12 +23,12 @@ const INPUT = {
 const GRID_WIDTH = 5
 const GRID_HEIGHT = 12
 
-export type DecoderBCD4Repr = typeof DecoderBCD4Def.reprType
+type DecoderBCD4Repr = Repr<typeof DecoderBCD4Def>
 
-export class DecoderBCD4 extends ComponentBase<4, 5, DecoderBCD4Repr, FixedReadonlyArray<LogicValue, 5>> {
+export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr, LogicValue[]> {
 
     public constructor(editor: LogicEditor, savedData: DecoderBCD4Repr | null) {
-        super(editor, FixedArrayFill(false, 5), savedData, {
+        super(editor, ArrayFillWith(false, 5), savedData, {
             ins: [
                 ["D", -4, -3, "w", "In"],
                 ["C", -4, -1, "w", "In"],
@@ -70,33 +70,33 @@ export class DecoderBCD4 extends ComponentBase<4, 5, DecoderBCD4Repr, FixedReado
         ))
     }
 
-    protected doRecalcValue(): FixedReadonlyArray<LogicValue, 5> {
-        const input = this.inputValues<4>(INPUT.I)
+    protected doRecalcValue(): LogicValue[] {
+        const input = this.inputValues(INPUT.I)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output
         if (isUnknown(value)) {
-            output = FixedArrayFill(Unknown, 5)
+            output = ArrayFillWith(Unknown, 5)
         } else {
             output = (() => {
                 switch (value) {
-                    case 0: return [false, false, false, false, false] as const
-                    case 1: return [false, false, false, false, true] as const
-                    case 2: return [false, false, false, true, false] as const
-                    case 3: return [false, false, false, true, true] as const
-                    case 4: return [false, false, true, false, false] as const
-                    case 5: return [false, false, true, false, true] as const
-                    case 6: return [false, false, true, true, false] as const
-                    case 7: return [false, false, true, true, true] as const
-                    case 8: return [false, true, false, false, false] as const
-                    case 9: return [false, true, false, false, true] as const
-                    case 10: return [true, false, false, false, false] as const
-                    case 11: return [true, false, false, false, true] as const
-                    case 12: return [true, false, false, true, false] as const
-                    case 13: return [true, false, false, true, true] as const
-                    case 14: return [true, false, true, false, false] as const
-                    case 15: return [true, false, true, false, true] as const
-                    default: return FixedArrayFill(Unknown, 5)
+                    case 0: return [false, false, false, false, false]
+                    case 1: return [false, false, false, false, true]
+                    case 2: return [false, false, false, true, false]
+                    case 3: return [false, false, false, true, true]
+                    case 4: return [false, false, true, false, false]
+                    case 5: return [false, false, true, false, true]
+                    case 6: return [false, false, true, true, false]
+                    case 7: return [false, false, true, true, true]
+                    case 8: return [false, true, false, false, false]
+                    case 9: return [false, true, false, false, true]
+                    case 10: return [true, false, false, false, false]
+                    case 11: return [true, false, false, false, true]
+                    case 12: return [true, false, false, true, false]
+                    case 13: return [true, false, false, true, true]
+                    case 14: return [true, false, true, false, false]
+                    case 15: return [true, false, true, false, true]
+                    default: return ArrayFillWith(Unknown, 5)
                 }
             })()
         }
@@ -104,7 +104,7 @@ export class DecoderBCD4 extends ComponentBase<4, 5, DecoderBCD4Repr, FixedReado
         return output
     }
 
-    protected override propagateValue(newValue: FixedReadonlyArray<LogicValue, 5>) {
+    protected override propagateValue(newValue: LogicValue[]) {
         this.outputs.forEach((output, i) => {
             output.value = newValue[5 - i - 1]
         })

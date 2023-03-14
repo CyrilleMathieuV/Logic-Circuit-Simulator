@@ -4,7 +4,7 @@ import { asValue, Modifier, mods, span, style, title, tooltipContent } from "../
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { HighImpedance, isDefined, isHighImpedance, isNotNull, isUnknown, LogicValue, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 
@@ -33,7 +33,7 @@ export function ledColorForLogicValue(v: LogicValue, onColor: LedColor) {
 }
 
 export const OutputBarDef =
-    defineComponent(1, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("bar"),
         display: t.keyof(OutputBarTypes, "OutputBarType"),
         color: typeOrUndefined(t.keyof(LedColors, "LedColor")),
@@ -41,7 +41,7 @@ export const OutputBarDef =
         name: ComponentNameRepr,
     }, "OutputBar"))
 
-type OutputBarRepr = typeof OutputBarDef.reprType
+type OutputBarRepr = Repr<typeof OutputBarDef>
 
 const OutputBarDefaults = {
     display: "h" as OutputBarType,
@@ -52,7 +52,7 @@ const GRID_WIDTH = 10
 const GRID_HEIGHT = 2
 
 
-export class OutputBar extends ComponentBase<1, 0, OutputBarRepr, LogicValue> {
+export class OutputBar extends ComponentBase<OutputBarRepr, LogicValue> {
 
     private _display = OutputBarDefaults.display
     private _color = OutputBarDefaults.color

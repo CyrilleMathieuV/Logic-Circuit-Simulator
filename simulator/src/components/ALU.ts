@@ -3,8 +3,8 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS,
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedReadonlyArray, HighImpedance, isBoolean, isDefined, isHighImpedance, isNotNull, isUndefined, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ArrayFillWith, HighImpedance, isBoolean, isDefined, isHighImpedance, isNotNull, isUndefined, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 
 const GRID_WIDTH = 6
@@ -24,14 +24,14 @@ const OUTPUT = {
     Cout: 6,
 }
 
-
 export const ALUDef =
-    defineComponent(11, 7, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("alu"),
         showOp: typeOrUndefined(t.boolean),
     }, "ALU"))
 
-export type ALURepr = typeof ALUDef.reprType
+type ALURepr = Repr<typeof ALUDef>
+
 
 export type ALUOp = "add" | "sub" | "and" | "or"
 export const ALUOp = {
@@ -47,7 +47,7 @@ const ALUDefaults = {
     showOp: true,
 }
 
-export class ALU extends ComponentBase<11, 7, ALURepr, [FixedArray<LogicValue, 4>, LogicValue, LogicValue, LogicValue]> {
+export class ALU extends ComponentBase<ALURepr, [LogicValue[], LogicValue, LogicValue, LogicValue]> {
 
     private _showOp = ALUDefaults.showOp
 
@@ -144,21 +144,21 @@ export class ALU extends ComponentBase<11, 7, ALURepr, [FixedArray<LogicValue, 4
         }
     }
 
-    protected doRecalcValue(): [FixedArray<LogicValue, 4>, LogicValue, LogicValue, LogicValue] {
+    protected doRecalcValue(): [LogicValue[], LogicValue, LogicValue, LogicValue] {
         const op = this.op
 
         if (isUnknown(op)) {
             return [[Unknown, Unknown, Unknown, Unknown], Unknown, Unknown, Unknown]
         }
 
-        const a = this.inputValues<4>(INPUT.A)
-        const b = this.inputValues<4>(INPUT.B)
+        const a = this.inputValues(INPUT.A)
+        const b = this.inputValues(INPUT.B)
         const cin = this.inputs[INPUT.Cin].value
 
         return doALUOp(op, a, b, cin)
     }
 
-    protected override propagateValue(newValue: [FixedArray<LogicValue, 4>, LogicValue, LogicValue, LogicValue]) {
+    protected override propagateValue(newValue: [[LogicValue, LogicValue, LogicValue, LogicValue], LogicValue, LogicValue, LogicValue]) {
         for (let i = 0; i < OUTPUT.S.length; i++) {
             this.outputs[OUTPUT.S[i]].value = newValue[0][i]
         }
@@ -286,7 +286,8 @@ export class ALU extends ComponentBase<11, 7, ALURepr, [FixedArray<LogicValue, 4
 }
 
 
-export function doALUOp(op: string, a: FixedReadonlyArray<LogicValue, 4>, b: FixedReadonlyArray<LogicValue, 4>, cin: LogicValue): [FixedArray<LogicValue, 4>, LogicValue, LogicValue, LogicValue] {
+export function doALUOp(op: string, a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue):
+    [res: LogicValue[], v: LogicValue, z: LogicValue, cout: LogicValue] {
 
     function allZeros(vals: LogicValue[]): LogicValue {
         for (const v of vals) {
@@ -300,7 +301,8 @@ export function doALUOp(op: string, a: FixedReadonlyArray<LogicValue, 4>, b: Fix
         return true
     }
 
-    const y: LogicValue[] = [Unknown, Unknown, Unknown, Unknown]
+    const width = a.length
+    const y: LogicValue[] = ArrayFillWith(Unknown, width)
     let v: LogicValue = Unknown
     let cout: LogicValue = Unknown
 
@@ -323,22 +325,21 @@ export function doALUOp(op: string, a: FixedReadonlyArray<LogicValue, 4>, b: Fix
                 return [Unknown, Unknown]
 
             }
-            const cins: FixedArray<LogicValue, 5> = [cin, Unknown, Unknown, Unknown, Unknown]
-            for (let i = 0; i < a.length; i++) {
+            const cins: LogicValue[] = ArrayFillWith(Unknown, width + 1)
+            cins[0] = cin
+            for (let i = 0; i < width; i++) {
                 const [s, cout] = sum3bits(cins[i], a[i], b[i])
                 y[i] = s
                 cins[i + 1] = cout
             }
-            cout = cins[4]
-            if (isBoolean(cout) && isBoolean(cins[2])) {
-                v = cout !== cins[3]
+            cout = cins[width]
+            if (isBoolean(cout) && isBoolean(cins[width - 2])) {
+                v = cout !== cins[width - 1]
             }
             break
         }
 
         case "sub": {
-            // TODO set oVerflow for subtraction!
-            // TODO use Cin as borrow in!
             const toInt = (vs: readonly LogicValue[]): number | undefined => {
                 let s = 0
                 let col = 1
@@ -361,19 +362,20 @@ export function doALUOp(op: string, a: FixedReadonlyArray<LogicValue, 4>, b: Fix
                 // we can get anything from (max - (-min)) = 7 - (-8) = 15
                 // to (min - max) = -8 - 7 = -15
                 if (yInt < 0) {
-                    yInt += 16
+                    yInt += Math.pow(2, width)
                 }
                 // now we have everything between 0 and 15
-                const yBinStr = (yInt >>> 0).toString(2).padStart(4, '0')
-                for (let i = 0; i < 4; i++) {
-                    y[i] = yBinStr[3 - i] === '1'
+                const yBinStr = (yInt >>> 0).toString(2).padStart(width, '0')
+                const lastIdx = width - 1
+                for (let i = 0; i < width; i++) {
+                    y[i] = yBinStr[lastIdx - i] === '1'
                 }
 
                 cout = bInt > (aInt - (cin ? 1 : 0))
 
-                const aNeg = a[3] === true // NOT redundant comparison
-                const bNeg = b[3] === true
-                const yNeg = y[3] === true
+                const aNeg = a[lastIdx] === true // NOT redundant comparison
+                const bNeg = b[lastIdx] === true
+                const yNeg = y[lastIdx] === true
 
                 // see https://stackoverflow.com/a/34547815/390581
                 // Signed integer overflow of the expression x-y-c (where c is again 0 or 1)
@@ -387,7 +389,7 @@ export function doALUOp(op: string, a: FixedReadonlyArray<LogicValue, 4>, b: Fix
         // below, we need the '=== true' and '=== false' parts
         // to distinguish also the Unset case
         case "and": {
-            for (let i = 0; i < a.length; i++) {
+            for (let i = 0; i < width; i++) {
                 if (a[i] === false || b[i] === false) {
                     y[i] = false
                 } else if (a[i] === true && b[i] === true) {
@@ -402,7 +404,7 @@ export function doALUOp(op: string, a: FixedReadonlyArray<LogicValue, 4>, b: Fix
         }
 
         case "or": {
-            for (let i = 0; i < a.length; i++) {
+            for (let i = 0; i < width; i++) {
                 if (a[i] === true || b[i] === true) {
                     y[i] = true
                 } else if (a[i] === false && b[i] === false) {
@@ -418,5 +420,6 @@ export function doALUOp(op: string, a: FixedReadonlyArray<LogicValue, 4>, b: Fix
     }
 
     const z = allZeros(y)
-    return [y as any as FixedArray<LogicValue, 4>, v, z, cout]
+    return [y, v, z, cout]
 }
+

@@ -3,8 +3,8 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS,
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, isDefined, isNotNull, isNull, isUndefined, isUnknown, LogicValue, typeOrNull, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ArrayFillWith, isDefined, isNotNull, isNull, isUndefined, isUnknown, LogicValue, typeOrNull, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { EdgeTrigger, Flipflop, FlipflopOrLatch, makeTriggerItems } from "./FlipflopOrLatch"
 
@@ -22,45 +22,45 @@ const COUNTER_WIDTH = OUTPUT.Q.length
 const COUNTER_RESET_VALUE = Math.pow(2, COUNTER_WIDTH)
 
 export const CounterDef =
-    defineComponent(2, 5, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("counter"),
         count: typeOrUndefined(t.number),
         trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         displayRadix: typeOrUndefined(typeOrNull(t.number)), // undefined means default, null means no display
     }, "Counter"))
 
-export type CounterRepr = typeof CounterDef.reprType
+type CounterRepr = Repr<typeof CounterDef>
 
 const CounterDefaults = {
     trigger: EdgeTrigger.rising,
     displayRadix: 10,
 }
 
-export class Counter extends ComponentBase<2, 5, CounterRepr, [FixedArray<LogicValue, 4>, LogicValue]> {
+export class Counter extends ComponentBase<CounterRepr, [LogicValue[], LogicValue]> {
 
     private _trigger: EdgeTrigger = CounterDefaults.trigger
     private _lastClock: LogicValue = Unknown
     private _displayRadix: number | undefined = CounterDefaults.displayRadix
 
-    private static savedStateFrom(savedData: { count: number | undefined } | null): [FixedArray<LogicValue, 4>, LogicValue] {
+    private static savedStateFrom(savedData: { count: number | undefined } | null, width: number): [LogicValue[], LogicValue] {
         if (isNull(savedData) || isUndefined(savedData.count)) {
             return [[false, false, false, false], false]
         }
-        return [Counter.decimalToFourBits(savedData.count), false]
+        return [Counter.decimalToNBits(savedData.count, width), false]
     }
 
-    private static decimalToFourBits(value: number): FixedArray<LogicValue, 4> {
+    private static decimalToNBits(value: number, width: number): LogicValue[] {
         value = value % COUNTER_RESET_VALUE
-        const binStr = value.toString(2).padStart(COUNTER_WIDTH, "0")
-        const fourBits = FixedArrayFill(false, COUNTER_WIDTH)
-        for (let i = 0; i < COUNTER_WIDTH; i++) {
-            fourBits[i] = binStr[COUNTER_WIDTH - i - 1] === "1"
+        const binStr = value.toString(2).padStart(width, "0")
+        const asBits = ArrayFillWith(false, width)
+        for (let i = 0; i < width; i++) {
+            asBits[i] = binStr[width - i - 1] === "1"
         }
-        return fourBits
+        return asBits
     }
 
     public constructor(editor: LogicEditor, savedData: CounterRepr | null) {
-        super(editor, Counter.savedStateFrom(savedData), savedData, {
+        super(editor, Counter.savedStateFrom(savedData, COUNTER_WIDTH), savedData, {
             ins: [
                 [S.Components.Generic.InputClockDesc, -4, +4, "w"],
                 [S.Components.Generic.InputClearDesc, 0, +6, "s"],
@@ -117,10 +117,10 @@ export class Counter extends ComponentBase<2, 5, CounterRepr, [FixedArray<LogicV
         ))
     }
 
-    protected doRecalcValue(): [FixedArray<LogicValue, 4>, LogicValue] {
+    protected doRecalcValue(): [LogicValue[], LogicValue] {
         const clear = this.inputs[INPUT.Clear].value
         if (clear === true) {
-            return [FixedArrayFill(false, COUNTER_WIDTH), false]
+            return [ArrayFillWith(false, COUNTER_WIDTH), false]
         }
 
         const prevClock = this._lastClock
@@ -134,17 +134,17 @@ export class Counter extends ComponentBase<2, 5, CounterRepr, [FixedArray<LogicV
             }
             const newValue = value + 1
             if (newValue >= COUNTER_RESET_VALUE) {
-                return [FixedArrayFill(false, COUNTER_WIDTH), activeOverflowValue]
+                return [ArrayFillWith(false, COUNTER_WIDTH), activeOverflowValue]
             }
 
-            return [Counter.decimalToFourBits(newValue), !activeOverflowValue]
+            return [Counter.decimalToNBits(newValue, COUNTER_WIDTH), !activeOverflowValue]
 
         } else {
             return [this.value[0], !activeOverflowValue]
         }
     }
 
-    protected override propagateValue(newValue: [FixedArray<LogicValue, 4>, LogicValue]) {
+    protected override propagateValue(newValue: [LogicValue[], LogicValue]) {
         for (let i = 0; i < newValue[0].length; i++) {
             this.outputs[OUTPUT.Q[i]].value = newValue[0][i]
         }

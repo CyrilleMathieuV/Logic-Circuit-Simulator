@@ -3,12 +3,12 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS,
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArrayFill, FixedReadonlyArray, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ArrayFillWith, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 export const Decoder16SegDef =
-    defineComponent(7, 17, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("decoder-16seg"),
     }, "Decoder16Seg"))
 
@@ -23,12 +23,12 @@ const INPUT = {
 const GRID_WIDTH = 4
 const GRID_HEIGHT = 10
 
-export type Decoder16SegRepr = typeof Decoder16SegDef.reprType
+type Decoder16SegRepr = Repr<typeof Decoder16SegDef>
 
-export class Decoder16Seg extends ComponentBase<7, 17, Decoder16SegRepr, FixedReadonlyArray<LogicValue, 17>> {
+export class Decoder16Seg extends ComponentBase<Decoder16SegRepr, LogicValue[]> {
 
     public constructor(editor: LogicEditor, savedData: Decoder16SegRepr | null) {
-        super(editor, FixedArrayFill(false, 17), savedData, {
+        super(editor, ArrayFillWith(false, 17), savedData, {
             ins: [
                 ["I0", -3, -3, "w", "In"],
                 ["I1", -3, -2, "w", "In"],
@@ -85,19 +85,19 @@ export class Decoder16Seg extends ComponentBase<7, 17, Decoder16SegRepr, FixedRe
         ))
     }
 
-    protected doRecalcValue(): FixedReadonlyArray<LogicValue, 17> {
-        const input = this.inputValues<7>(INPUT.I)
+    protected doRecalcValue(): LogicValue[] {
+        const input = this.inputValues(INPUT.I)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output
         if (isUnknown(value)) {
-            output = FixedArrayFill(Unknown, 17)
+            output = ArrayFillWith(Unknown, 17)
         } else if (value < 32) {
             // control chars
-            output = FixedArrayFill(false, 17)
+            output = ArrayFillWith(false, 17)
         } else {
             const line = DECODER_MAPPING[value - 32]
-            output = FixedArrayFill<LogicValue, 17>(false, 17)
+            output = ArrayFillWith(false, 17)
             for (let i = 0; i < line.length; i++) {
                 output[i] = line.charAt(i) === "1"
             }
@@ -106,7 +106,7 @@ export class Decoder16Seg extends ComponentBase<7, 17, Decoder16SegRepr, FixedRe
         return output
     }
 
-    protected override propagateValue(newValue: FixedReadonlyArray<LogicValue, 17>) {
+    protected override propagateValue(newValue: LogicValue[]) {
         for (let i = 0; i < 17; i++) {
             this.outputs[i].value = newValue[i]
         }

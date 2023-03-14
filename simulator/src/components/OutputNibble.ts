@@ -1,29 +1,29 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, drawComponentName, drawRoundValue, drawWireLineToComponent, GRID_STEP } from "../drawutils"
-import { mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, GRID_STEP, colorForBoolean, drawComponentName, drawRoundValue, drawWireLineToComponent } from "../drawutils"
+import { mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, isDefined, isNotNull, LogicValue, Mode, toLogicValueRepr, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ArrayFillWith, LogicValue, Mode, Unknown, isDefined, isNotNull, toLogicValueRepr } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 const GRID_WIDTH = 2
 const GRID_HEIGHT = 8
 
 export const OutputNibbleDef =
-    defineComponent(4, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("nibble"),
         name: ComponentNameRepr,
     }, "OutputNibble"))
 
-type OutputNibbleRepr = typeof OutputNibbleDef.reprType
+type OutputNibbleRepr = Repr<typeof OutputNibbleDef>
 
-export class OutputNibble extends ComponentBase<4, 0, OutputNibbleRepr, FixedArray<LogicValue, 4>> {
+export class OutputNibble extends ComponentBase<OutputNibbleRepr, LogicValue[]> {
 
     private _name: ComponentName = undefined
 
     public constructor(editor: LogicEditor, savedData: OutputNibbleRepr | null) {
-        super(editor, FixedArrayFill(false, 4), savedData, {
+        super(editor, ArrayFillWith(false, 4), savedData, {
             ins: [
                 [undefined, -2, -3, "w", "In"],
                 [undefined, -2, -1, "w", "In"],
@@ -60,9 +60,9 @@ export class OutputNibble extends ComponentBase<4, 0, OutputNibbleRepr, FixedArr
         return tooltipContent(undefined, mods(S.Components.OutputNibble.tooltip))
     }
     
-    protected doRecalcValue(): FixedArray<LogicValue, 4> {
+    protected doRecalcValue(): LogicValue[] {
         // this never changes on its own, just upon user interaction
-        return this.inputValues<4>([0, 1, 2, 3])
+        return this.inputValues([0, 1, 2, 3])
     }
 
     protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
@@ -83,7 +83,7 @@ export class OutputNibble extends ComponentBase<4, 0, OutputNibbleRepr, FixedArr
         g.fill()
         g.stroke()
 
-        const displayValues = this.editor.options.hideOutputColors ? FixedArrayFill(Unknown, 4) : this.value
+        const displayValues = this.editor.options.hideOutputColors ? ArrayFillWith(Unknown, 4) : this.value
 
         g.lineWidth = 1
         const cellHeight = height / 4

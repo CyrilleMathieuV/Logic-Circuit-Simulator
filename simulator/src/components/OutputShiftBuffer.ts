@@ -4,7 +4,7 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isNotNull, isNull, isUndefined, isUnknown, LogicValue, repeatString, RichStringEnum, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { EdgeTrigger, Flipflop, makeTriggerItems } from "./FlipflopOrLatch"
 import { OutputAscii } from "./OutputAscii"
@@ -45,7 +45,7 @@ export const ShiftBufferDecoders =
 export type ShiftBufferDecoder = keyof typeof ShiftBufferDecoders_
 
 export const OutputShiftBufferDef =
-    defineComponent(3, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("shiftbuffer"),
         state: typeOrUndefined(t.string),
         decodeAs: typeOrUndefined(t.keyof(ShiftBufferDecoders_)),
@@ -54,7 +54,7 @@ export const OutputShiftBufferDef =
         trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
     }, "OutputShiftBuffer"))
 
-export type OutputShiftBufferRepr = typeof OutputShiftBufferDef.reprType
+type OutputShiftBufferRepr = Repr<typeof OutputShiftBufferDef>
 
 const OutputShiftBufferDefaults = {
     decodeAs: "raw" as ShiftBufferDecoder,
@@ -66,7 +66,7 @@ type OutputShiftBufferState = {
     decoded: [string, LogicValue[]][]
 }
 
-export class OutputShiftBuffer extends ComponentBase<3, 0, OutputShiftBufferRepr, OutputShiftBufferState> {
+export class OutputShiftBuffer extends ComponentBase<OutputShiftBufferRepr, OutputShiftBufferState> {
 
     protected _decodeAs: ShiftBufferDecoder = OutputShiftBufferDefaults.decodeAs
     protected _groupEvery: number | undefined = undefined

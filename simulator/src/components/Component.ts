@@ -2,114 +2,100 @@ import * as t from "io-ts"
 import { GRID_STEP } from "../drawutils"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { asArray, deepEquals, Expand, FixedArray, FixedArraySize, FixedArraySizeNonZero, FixedReadonlyArray, forceTypeOf, HighImpedance, isArray, isDefined, isNotNull, isNumber, isString, isUndefined, LogicValue, LogicValueRepr, Mode, RichStringEnum, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
+import { ArrayFillUsing, ArrayOrDirect, deepEquals, HighImpedance, isArray, isDefined, isNotNull, isNumber, isString, isUndefined, LogicValue, LogicValueRepr, Mode, RichStringEnum, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawableWithDraggablePosition, Orientation, PositionSupportRepr } from "./Drawable"
 import { DEFAULT_WIRE_COLOR, Node, NodeIn, NodeOut, WireColor } from "./Node"
 
 
-// Node IDs are just represented by a non-negative number
-export const NodeID = t.number
-export type NodeID = t.TypeOf<typeof NodeID>
+type NodeSeqRepr<TFullNodeRepr> =
+    ArrayOrDirect<number | string | TFullNodeRepr>
 
-// Input nodes are represented by just the ID; output nodes can be forced
-// to a given value to bypass their naturally computed value
-export const InputNodeRepr = t.type({ id: NodeID }, "InputNode")
+export const NodeSeqRepr = <T>(fullNodeRepr: t.Type<T>) =>
+    t.union([
+        t.number, // just the ID
+        t.string,
+        fullNodeRepr,
+        t.array(t.union([
+            t.number,
+            t.string,
+            fullNodeRepr,
+        ])),
+    ], "NodeSeqRepr")
+
+export const InputNodeRepr = t.type({
+    id: t.number,
+}, "InputNode")
 export type InputNodeRepr = t.TypeOf<typeof InputNodeRepr>
-export const OutputNodeRepr = t.intersection([t.type({ id: NodeID }), t.partial({
-    force: LogicValueRepr,
-    initialValue: LogicValueRepr,
-    color: typeOrUndefined(t.keyof(WireColor)),
-})], "OutputNode")
+
+export const OutputNodeRepr = t.intersection([
+    t.type({ id: t.number }),
+    t.partial({
+        force: LogicValueRepr,
+        initialValue: LogicValueRepr,
+        color: t.keyof(WireColor),
+    })], "OutputNode")
 export type OutputNodeRepr = t.TypeOf<typeof OutputNodeRepr>
 
-// Allows collapsing an array of 1 element into the element itself,
-// used for compact JSON representation. Does not work well if T itself is
-// an array
-export const FixedArrayOrDirect = <T extends t.Mixed, N extends FixedArraySizeNonZero>(tpe: T, n: N) =>
-    (n === 1) ? tpe : FixedArray<T, N>(tpe, n)
-export type FixedArrayOrDirect<T, N extends FixedArraySizeNonZero> =
-    N extends 1 ? T : FixedArray<T, N>
+export const InputNodeSeqRepr = NodeSeqRepr(InputNodeRepr)
+type InputNodeSeqRepr = t.TypeOf<typeof InputNodeSeqRepr>
 
+export const OutputNodeSeqRepr = NodeSeqRepr(OutputNodeRepr)
+type OutputNodeSeqRepr = t.TypeOf<typeof OutputNodeSeqRepr>
 
 // Defines how the JSON looks like depending on the number of inputs and outputs.
 // If only inputs or only outputs, all IDs are put into an "id" field.
 // If both inputs and outputs are present, we have separate "in" and "out" fields.
 
 // These are just 3 intermediate types
-const OnlyInNodeIds = <N extends FixedArraySizeNonZero>(n: N) =>
-    t.type({ id: FixedArrayOrDirect(t.union([NodeID, InputNodeRepr]), n) })
-type OnlyInNodeIds<N extends FixedArraySizeNonZero> =
-    { id: FixedArrayOrDirect<NodeID | InputNodeRepr, N> }
+const OnlyInNodeIds = t.type({ id: InputNodeSeqRepr })
+type OnlyInNodeIds = t.TypeOf<typeof OnlyInNodeIds>
 
-const OnlyOutNodeIds = <N extends FixedArraySizeNonZero>(n: N) =>
-    t.type({ id: FixedArrayOrDirect(t.union([NodeID, OutputNodeRepr]), n) })
-type OnlyOutNodeIds<N extends FixedArraySizeNonZero> =
-    { id: FixedArrayOrDirect<NodeID | OutputNodeRepr, N> }
+const OnlyOutNodeIds = t.type({ id: OutputNodeSeqRepr })
+type OnlyOutNodeIds = t.TypeOf<typeof OnlyOutNodeIds>
 
-const InAndOutNodeIds = <N extends FixedArraySizeNonZero, M extends FixedArraySizeNonZero>(n: N, m: M) =>
-    t.type({
-        in: FixedArrayOrDirect(t.union([NodeID, InputNodeRepr]), n),
-        out: FixedArrayOrDirect(t.union([NodeID, OutputNodeRepr]), m),
-    })
-type InAndOutNodeIds<N extends FixedArraySizeNonZero, M extends FixedArraySizeNonZero> = {
-    in: FixedArrayOrDirect<NodeID | InputNodeRepr, N>
-    out: FixedArrayOrDirect<NodeID | OutputNodeRepr, M>
-}
+const InAndOutNodeIds = t.type({
+    in: InputNodeSeqRepr,
+    out: OutputNodeSeqRepr,
+})
+type InAndOutNodeIds = t.TypeOf<typeof InAndOutNodeIds>
+
+const NoNodeIds = t.type({})
+type NoNodeIds = t.TypeOf<typeof NoNodeIds>
+
 
 // This is the final conditional type showing what the JSON representation
 // will look like depending on number of inputs and outputs
-export const NodeIDsRepr = <NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize>(numInputs: NumInputs, numOutputs: NumOutputs) =>
-    numInputs > 0
-        ? /* NumInputs != 0 */ (
-            numOutputs > 0
-                ? /* NumInputs != 0, NumOutputs != 0 */ InAndOutNodeIds(numInputs as FixedArraySizeNonZero, numOutputs as FixedArraySizeNonZero)
-                : /* NumInputs != 0, NumOutputs == 0 */ OnlyInNodeIds(numInputs as FixedArraySizeNonZero)
-        )
-        : /* NumInputs == 0 */  (
-            numOutputs > 0
-                ? /* NumInputs == 0, NumOutputs != 0 */ OnlyOutNodeIds(numOutputs as FixedArraySizeNonZero)
-                // eslint-disable-next-line @typescript-eslint/ban-types
-                : /* NumInputs == 0, NumOutputs == 0 */ t.type({})
-        )
-export type NodeIDsRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
-    NumInputs extends FixedArraySizeNonZero
-    ? /* NumInputs != 0 */ (
-        NumOutputs extends FixedArraySizeNonZero
-        ? /* NumInputs != 0, NumOutputs != 0 */ InAndOutNodeIds<NumInputs, NumOutputs>
-        : /* NumInputs != 0, NumOutputs == 0 */ OnlyInNodeIds<NumInputs>
-    )
-    : /* NumInputs == 0 */  (
-        NumOutputs extends FixedArraySizeNonZero
-        ? /* NumInputs == 0, NumOutputs != 0 */ OnlyOutNodeIds<NumOutputs>
-        // eslint-disable-next-line @typescript-eslint/ban-types
-        : /* NumInputs == 0, NumOutputs == 0 */ {}
-    )
+export const NodeIDsRepr = <THasIn extends boolean, THasOut extends boolean>(hasIn: THasIn, hasOut: THasOut)
+    : THasIn extends true
+    ? (THasOut extends true ? typeof InAndOutNodeIds : typeof OnlyInNodeIds)
+    : (THasOut extends true ? typeof OnlyOutNodeIds : typeof NoNodeIds) => (
+        hasIn ? (hasOut ? InAndOutNodeIds : OnlyInNodeIds)
+            : (hasOut ? OnlyOutNodeIds : NoNodeIds)
+    ) as any
+
+type NodeIDsRepr<THasIn extends boolean, THasOut extends boolean>
+    = THasIn extends true
+    ? THasOut extends true ? InAndOutNodeIds : OnlyInNodeIds
+    : THasOut extends true ? OnlyOutNodeIds : NoNodeIds
 
 // Tests
+// type IDs_00 = Expand<NodeIDsRepr<false, false>>
+// type IDs_01 = Expand<NodeIDsRepr<false, true>>
+// type IDs_10 = Expand<NodeIDsRepr<true, false>>
+// type IDs_11 = Expand<NodeIDsRepr<true, true>>
+// type Comp_00 = Expand<ComponentRepr<false, false>>
+// type Comp_01 = Expand<ComponentRepr<false, true>>
+// type Comp_10 = Expand<ComponentRepr<true, false>>
+// type Comp_11 = Expand<ComponentRepr<true, true>>
 
-// type IDs_00 = Expand<NodeIDsRepr<0, 0>>
-// type IDs_01 = Expand<NodeIDsRepr<0, 1>>
-// type IDs_10 = Expand<NodeIDsRepr<1, 0>>
-// type IDs_11 = Expand<NodeIDsRepr<1, 1>>
-// type IDs_02 = Expand<NodeIDsRepr<0, 2>>
-// type IDs_20 = Expand<NodeIDsRepr<2, 0>>
-// type IDs_12 = Expand<NodeIDsRepr<1, 2>>
-// type IDs_21 = Expand<NodeIDsRepr<2, 1>>
-// type IDs_22 = Expand<NodeIDsRepr<2, 2>>
 
 // A generic component is represented by its position
 // and the representation of its nodes
-export type ComponentRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
-    PositionSupportRepr & NodeIDsRepr<NumInputs, NumOutputs>
+export type ComponentRepr<THasIn extends boolean, THasOut extends boolean> =
+    PositionSupportRepr & NodeIDsRepr<THasIn, THasOut>
 
-export const ComponentRepr = <NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize>(numInputs: NumInputs, numOutputs: NumOutputs) =>
-    forceTypeOf(
-        t.intersection([PositionSupportRepr, NodeIDsRepr(numInputs, numOutputs)], `Component(numInputs=${numInputs}, numOutputs=${numOutputs})`)
-    ).toMoreSpecific<ComponentRepr<NumInputs, NumOutputs>>()
-
-export function ExtendComponentRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, T extends t.Mixed>(n: NumInputs, m: NumOutputs, savedData: T) {
-    return t.intersection([ComponentRepr(n, m), savedData], savedData.name)
-}
+export const ComponentRepr = <THasIn extends boolean, THasOut extends boolean>(hasIn: THasIn, hasOut: THasOut) =>
+    t.intersection([PositionSupportRepr, NodeIDsRepr(hasIn, hasOut)], "Component")
 
 export type NodeVisualNoGroup = readonly [name: string | undefined, xShift: number, yShift: number, orient: Orientation]
 export type NodeVisualWithGroup = readonly [name: string | undefined, xShift: number, yShift: number, orient: Orientation, groupName: string]
@@ -151,13 +137,12 @@ export class NodeGroup<N extends Node> {
 
 // Node visuals are not stored in JSON, but provided by the concrete
 // subclasses to the Component superclass to indicate where to place
-// the input and output nodes. Strong typing allows us to check the
-// size of the passed arrays in the super() call.
-export type NodeVisuals<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize>
+// the input and output nodes.
+export type NodeVisuals<THasIn extends boolean, THasOut extends boolean>
     // eslint-disable-next-line @typescript-eslint/ban-types
-    = (NumInputs extends 0 ? {} : { ins: FixedArray<NodeVisual, NumInputs> })
+    = (THasIn extends false ? {} : { ins: Array<NodeVisual> })
     // eslint-disable-next-line @typescript-eslint/ban-types
-    & (NumOutputs extends 0 ? {} : { outs: FixedArray<NodeVisual, NumOutputs> })
+    & (THasOut extends false ? {} : { outs: Array<NodeVisual> })
 
 // Given an "as const" variable with NodeVisuals for in or out, this allows stuff like
 //   type OutName = NodeNamesFrom<typeof outs>
@@ -171,7 +156,7 @@ export enum ComponentState {
 }
 
 // Simplified, generics-free representation of a component
-export type Component = ComponentBase<FixedArraySize, FixedArraySize, ComponentRepr<FixedArraySize, FixedArraySize>, unknown>
+export type Component = ComponentBase<ComponentRepr<boolean, boolean>, unknown>
 
 export const JsonFieldsComponents = ["in", "out", "gates", "components", "labels", "layout"] as const
 export type JsonFieldComponent = typeof JsonFieldsComponents[number]
@@ -215,33 +200,37 @@ export const ComponentNameRepr = typeOrUndefined(
     ])
 )
 
+type ExtractHasIn<Repr> = Repr extends { _META?: { hasIn: infer THasIn } } ? THasIn : boolean
+type ExtractHasOut<Repr> = Repr extends { _META?: { hasOut: infer THasOut } } ? THasOut : boolean
+
+
 export abstract class ComponentBase<
-    NumInputs extends FixedArraySize, // statically know the number of inputs
-    NumOutputs extends FixedArraySize, // statically know the number of outputs
-    Repr extends ComponentRepr<NumInputs, NumOutputs>, // JSON representation, varies according to input/output number
-    Value // usually LogicValue or number
-    > extends DrawableWithDraggablePosition {
+    Repr extends ComponentRepr<THasIn, THasOut>, // JSON representation
+    Value, // internal value recomputed when inputs change
+    THasIn extends boolean = ExtractHasIn<Repr>,
+    THasOut extends boolean = ExtractHasOut<Repr>, // in-out node presence
+> extends DrawableWithDraggablePosition {
 
     private _state: ComponentState
-    private readonly _inputs: FixedArray<NodeIn, NumInputs>
+    private readonly _inputs: Array<NodeIn>
     private readonly _inputGroups: Map<string, NodeGroup<NodeIn>> | undefined
-    private readonly _outputs: FixedArray<NodeOut, NumOutputs>
+    private readonly _outputs: Array<NodeOut>
     private readonly _outputGroups: Map<string, NodeGroup<NodeOut>> | undefined
 
     protected constructor(
         editor: LogicEditor,
         private _value: Value,
         savedData: Repr | null,
-        nodeOffsets: NodeVisuals<NumInputs, NumOutputs>) {
+        nodeOffsets: NodeVisuals<THasIn, THasOut>) {
         super(editor, savedData)
 
         // hack to get around the inOffsets and outOffsets properties
         // being inferred as nonexistant (basically, the '"key" in savedData'
         // check fails to provide enough info for type narrowing)
-        type NodeOffsetsKey = keyof NodeVisuals<1, 0> | keyof NodeVisuals<0, 1>
+        type NodeOffsetsKey = keyof NodeVisuals<true, false> | keyof NodeVisuals<false, true>
         function get(key: NodeOffsetsKey): ReadonlyArray<NodeVisual> {
             if (key in nodeOffsets) {
-                return (nodeOffsets as any as NodeVisuals<1, 1>)[key]
+                return (nodeOffsets as NodeVisuals<true, true>)[key]
             } else {
                 return [] as const
             }
@@ -249,21 +238,21 @@ export abstract class ComponentBase<
 
         const inOffsets = get("ins")
         const outOffsets = get("outs")
-        const numInputs = inOffsets.length as NumInputs
-        const numOutputs = outOffsets.length as NumOutputs
+        const numInputs = inOffsets.length
+        const numOutputs = outOffsets.length
 
         if (isNotNull(savedData)) {
             // restoring
             this._state = ComponentState.SPAWNED
-
         } else {
             // newly placed
             this._state = ComponentState.SPAWNING
-            editor.moveMgr.setDrawableMoving(this)
+            editor.moveMgr.setDrawableMoving(this) // TODO this is BS; state (moving or not) should be determined from ctor params
         }
 
         // build node specs either from scratch if new or from saved data
-        const [inputSpecs, outputSpecs, hasAnyPrecomputedInitialValues] = this.nodeSpecsFromRepr(savedData, numInputs, numOutputs);
+        const [inputSpecs, outputSpecs, hasAnyPrecomputedInitialValues] =
+            this.nodeSpecsFromRepr(savedData, numInputs, numOutputs);
 
         // so, hasAnyPrecomputedInitialValues is true if ANY of the outputs was built
         // with "initialValue" in the JSON. This is used to stabilize circuits (such as
@@ -273,8 +262,8 @@ export abstract class ComponentBase<
         // to set all of them.
 
         // generate the input and output nodes
-        [this._inputs, this._inputGroups] = this.makeNodes<NodeIn, NumInputs>(inOffsets, inputSpecs, NodeIn);
-        [this._outputs, this._outputGroups] = this.makeNodes<NodeOut, NumOutputs>(outOffsets, outputSpecs, NodeOut)
+        [this._inputs, this._inputGroups] = this.makeNodes(inOffsets, inputSpecs, NodeIn);
+        [this._outputs, this._outputGroups] = this.makeNodes(outOffsets, outputSpecs, NodeOut)
 
         // setNeedsRecalc with a force propadation is needed:
         // * the forced propagation allows the current value (e.g. for InputBits)
@@ -296,7 +285,7 @@ export abstract class ComponentBase<
 
     // typically used by subclasses to provide only their specific JSON,
     // splatting in the result of super.toJSONBase() in the object
-    protected override toJSONBase(): ComponentRepr<NumInputs, NumOutputs> {
+    protected override toJSONBase(): ComponentRepr<THasIn, THasOut> {
         return {
             ...super.toJSONBase(),
             ...this.buildNodesRepr(),
@@ -305,7 +294,7 @@ export abstract class ComponentBase<
 
     // creates the input/output nodes based on array of offsets (provided
     // by subclass) and spec (either loaded from JSON repr or newly generated)
-    private makeNodes<N extends Node, Num extends FixedArraySize>(
+    private makeNodes<N extends Node>(
         nodeVisuals: readonly NodeVisual[],
         specs: readonly (InputNodeRepr | OutputNodeRepr)[], node: new (
             editor: LogicEditor,
@@ -316,7 +305,7 @@ export abstract class ComponentBase<
             _gridOffsetX: number,
             _gridOffsetY: number,
             relativePosition: Orientation,
-        ) => N): [FixedArray<N, Num>, Map<string, NodeGroup<N>> | undefined] {
+        ) => N): [Array<N>, Map<string, NodeGroup<N>> | undefined] {
 
         const nodes: N[] = []
         let groupMap: Map<string, NodeGroup<N>> | undefined = undefined
@@ -344,108 +333,96 @@ export abstract class ComponentBase<
             }
         }
 
-        return [nodes as FixedArray<N, Num>, groupMap]
+        return [nodes, groupMap]
     }
 
     // generates two arrays of normalized node specs either as loaded from
     // JSON or obtained with default values when _repr is null and we're
     // creating a new component from scratch
-    private nodeSpecsFromRepr(_repr: NodeIDsRepr<NumInputs, NumOutputs> | null, numInputs: number, numOutputs: number): [InputNodeRepr[], OutputNodeRepr[], boolean] {
-        const inputSpecs: InputNodeRepr[] = []
-        const outputSpecs: OutputNodeRepr[] = []
+    private nodeSpecsFromRepr(_repr: NodeIDsRepr<THasIn, THasOut> | null, numInputs: number, numOutputs: number): [
+        inputSpecs: Array<InputNodeRepr>,
+        outputSpecs: Array<OutputNodeRepr>,
+        hasAnyPrecomputedInitialValues: boolean
+    ] {
         const nodeMgr = this.editor.nodeMgr
-        let hasAnyPrecomputedInitialValues = false
 
         if (_repr === null) {
-            // build default spec for nodes
-            for (let i = 0; i < numInputs; i++) {
-                inputSpecs.push({ id: nodeMgr.newID() })
-            }
-            for (let i = 0; i < numOutputs; i++) {
-                outputSpecs.push({ id: nodeMgr.newID() })
+            const makeDefaultSpec = () =>
+                ({ id: nodeMgr.newID() })
+            return [
+                ArrayFillUsing(makeDefaultSpec, numInputs),
+                ArrayFillUsing(makeDefaultSpec, numOutputs),
+                false,
+            ]
+        }
+
+        const inputSpecs: InputNodeRepr[] = []
+        const outputSpecs: OutputNodeRepr[] = []
+
+        const makeNormalizedSpecs = <TNodeNormized extends InputNodeRepr | OutputNodeRepr>(
+            specs: Array<TNodeNormized>,
+            seqRepr: ArrayOrDirect<string | number | TNodeNormized>,
+        ) => {
+            function pushId(id: number) {
+                specs.push({ id } as TNodeNormized)
+                nodeMgr.markIDUsed(id)
             }
 
-        } else {
-            // parse from cast repr according to cases
-
-            // the next two functions take either a single ID or an array of them and
-            // generate the corresponding node specs from it
-            const genOutSpecs = function (outReprs: FixedArrayOrDirect<NodeID | OutputNodeRepr, FixedArraySizeNonZero>) {
-                const pushOne = (outRepr: NodeID | OutputNodeRepr) => {
-                    const fullOutRepr = isNumber(outRepr)
-                        ? { id: outRepr }
-                        : { id: outRepr.id, force: outRepr.force, color: outRepr.color, initialValue: outRepr.initialValue }
-                    hasAnyPrecomputedInitialValues ||= isDefined(fullOutRepr.initialValue)
-                    outputSpecs.push(fullOutRepr)
-                }
-                if (isArray(outReprs)) {
-                    for (const outRepr of outReprs) {
-                        pushOne(outRepr)
+            for (const spec of (isArray(seqRepr) ? seqRepr : [seqRepr])) {
+                if (isNumber(spec)) {
+                    pushId(spec)
+                } else if (isString(spec)) {
+                    const [start, end] = spec.split('-').map(s => parseInt(s))
+                    for (let i = start; i <= end; i++) {
+                        pushId(i)
                     }
                 } else {
-                    pushOne(outReprs)
-                }
-            }
-            const genInSpecs = function (inReprs: FixedArrayOrDirect<NodeID | InputNodeRepr, FixedArraySizeNonZero>) {
-                const pushOne = (inRepr: NodeID | InputNodeRepr) =>
-                    inputSpecs.push({ id: isNumber(inRepr) ? inRepr : inRepr.id })
-                if (isArray(inReprs)) {
-                    for (const inRepr of inReprs) {
-                        pushOne(inRepr)
-                    }
-                } else {
-                    pushOne(inReprs)
-                }
-            }
-
-            // manually distinguishing the cases where we have no inputs or no
-            // outputs as we then have a more compact JSON representation
-            if (numInputs !== 0) {
-                if (numOutputs !== 0) {
-                    // NumInputs != 0, NumOutputs != 0
-                    const repr: InAndOutNodeIds<FixedArraySizeNonZero, FixedArraySizeNonZero> = _repr as any
-                    genInSpecs(repr.in)
-                    genOutSpecs(repr.out)
-                } else {
-                    // NumInputs != 0, NumOutputs == 0
-                    const repr: OnlyInNodeIds<FixedArraySizeNonZero> = _repr as any
-                    genInSpecs(repr.id)
-                }
-            } else if (numOutputs !== 0) {
-                // NumInputs == 0, NumOutputs != 0
-                const repr: OnlyOutNodeIds<FixedArraySizeNonZero> = _repr as any
-                genOutSpecs(repr.id)
-            }
-
-            // id availability check
-            for (const specs of [inputSpecs, outputSpecs]) {
-                for (const spec of specs) {
+                    specs.push(spec)
                     nodeMgr.markIDUsed(spec.id)
                 }
             }
         }
+
+        // manually distinguishing the cases where we have no inputs or no
+        // outputs as we then have a more compact JSON representation
+        if (numInputs !== 0) {
+            if (numOutputs !== 0) {
+                const repr = _repr as InAndOutNodeIds
+                makeNormalizedSpecs(inputSpecs, repr.in)
+                makeNormalizedSpecs(outputSpecs, repr.out)
+            } else {
+                const repr = _repr as OnlyInNodeIds
+                makeNormalizedSpecs(inputSpecs, repr.id)
+            }
+        } else if (numOutputs !== 0) {
+            const repr = _repr as OnlyOutNodeIds
+            makeNormalizedSpecs(outputSpecs, repr.id)
+        }
+
+        const hasAnyPrecomputedInitialValues =
+            outputSpecs.some(spec => isDefined(spec.initialValue))
 
         return [inputSpecs, outputSpecs, hasAnyPrecomputedInitialValues]
     }
 
     // from the known nodes, builds the JSON representation of them,
     // using the most compact form available
-    private buildNodesRepr(): NodeIDsRepr<NumInputs, NumOutputs> {
-        const numInputs = this.inputs.length as NumInputs
-        const numOutputs = this.outputs.length as NumOutputs
+    private buildNodesRepr(): NodeIDsRepr<THasIn, THasOut> {
+        const numInputs = this.inputs.length
+        const numOutputs = this.outputs.length
 
         // these two functions return either an array of JSON
         // representations, or just the element skipping the array
         // if there is only one
-        function inNodeReprs(nodes: readonly Node[]): FixedArrayOrDirect<NodeID, FixedArraySizeNonZero> {
+        function inNodeReprs(nodes: readonly Node[]): ArrayOrDirect<number | string> {
             const reprOne = (node: Node) => node.id
             if (nodes.length === 1) {
                 return reprOne(nodes[0])
             } else {
-                return nodes.map(reprOne) as any
+                return compactRepr(nodes.map(reprOne))
             }
         }
-        function outNodeReprs(nodes: readonly Node[]): FixedArrayOrDirect<NodeID | OutputNodeRepr, FixedArraySizeNonZero> {
+        function outNodeReprs(nodes: readonly Node[]): ArrayOrDirect<number | string | OutputNodeRepr> {
             const reprOne = (node: Node) => {
                 const valueNotForced = isUndefined(node.forceValue)
                 const noInitialValue = isUndefined(node.initialValue)
@@ -464,37 +441,59 @@ export abstract class ComponentBase<
             if (nodes.length === 1) {
                 return reprOne(nodes[0])
             } else {
-                return nodes.map(reprOne) as any
+                return compactRepr(nodes.map(reprOne))
             }
         }
 
-        let result: any = {}
-
-        // manually distinguishing the cases where we have no inputs or no
-        // outputs as we then have a more compact JSON representation
-        if (numInputs !== 0) {
-            const inRepr = inNodeReprs(this.inputs)
-
-            if (numOutputs !== 0) {
-                // NumInputs != 0, NumOutputs != 0
-                const outRepr = outNodeReprs(this.outputs)
-                const repr: InAndOutNodeIds<FixedArraySizeNonZero, FixedArraySizeNonZero> =
-                    { in: inRepr as any, out: outRepr as any }
-                result = repr
-
-            } else {
-                // NumInputs != 0, NumOutputs == 0
-                const repr: OnlyOutNodeIds<FixedArraySizeNonZero> = { id: inRepr as any }
-                result = repr
+        function compactRepr<TFullNodeRepr>(reprs: Array<number | TFullNodeRepr>): ArrayOrDirect<number | string | TFullNodeRepr> {
+            // collapses consecutive numbers intro a string of the form "start-end" to save JSON space
+            const newArray: Array<number | string | TFullNodeRepr> = []
+            let currentRangeStart: number | undefined = undefined
+            let currentRangeEnd: number | undefined = undefined
+            function pushRange() {
+                if (isDefined(currentRangeStart) && isDefined(currentRangeEnd)) {
+                    if (currentRangeStart === currentRangeEnd) {
+                        newArray.push(currentRangeStart)
+                    } else if (currentRangeEnd === currentRangeStart + 1) {
+                        newArray.push(currentRangeStart)
+                        newArray.push(currentRangeEnd)
+                    } else {
+                        newArray.push(`${currentRangeStart}-${currentRangeEnd}`)
+                    }
+                    currentRangeStart = undefined
+                    currentRangeEnd = undefined
+                }
             }
-        } else if (numOutputs !== 0) {
-            // NumInputs == 0, NumOutputs != 0
-            const outRepr = outNodeReprs(this.outputs)
-            const repr: OnlyOutNodeIds<FixedArraySizeNonZero> = { id: outRepr as any }
-            result = repr
+            for (const repr of reprs) {
+                if (isNumber(repr)) {
+                    if (isDefined(currentRangeStart) && repr - 1 === currentRangeEnd) {
+                        currentRangeEnd = repr
+                    } else {
+                        pushRange()
+                        currentRangeStart = currentRangeEnd = repr
+                    }
+                } else {
+                    pushRange()
+                    newArray.push(repr)
+                }
+            }
+            pushRange()
+
+            if (newArray.length === 1) {
+                return newArray[0]
+            }
+            return newArray
         }
 
-        return result
+        return (
+            numInputs !== 0
+                ? numOutputs !== 0
+                    ? { in: inNodeReprs(this.inputs), out: outNodeReprs(this.outputs) }
+                    : { id: inNodeReprs(this.inputs) }
+                : numOutputs !== 0
+                    ? { id: outNodeReprs(this.outputs) }
+                    : {}
+        ) as NodeIDsRepr<THasIn, THasOut>
     }
 
     protected setInputsPreferSpike(...inputs: number[]) {
@@ -517,11 +516,11 @@ export abstract class ComponentBase<
         return false
     }
 
-    public get inputs(): FixedReadonlyArray<NodeIn, NumInputs> {
+    public get inputs(): ReadonlyArray<NodeIn> {
         return this._inputs
     }
 
-    public get outputs(): FixedReadonlyArray<NodeOut, NumOutputs> {
+    public get outputs(): ReadonlyArray<NodeOut> {
         return this._outputs
     }
 
@@ -567,8 +566,8 @@ export abstract class ComponentBase<
         // by default, do nothing
     }
 
-    protected inputValues<N extends FixedArraySize>(inds: FixedReadonlyArray<number, N>): FixedArray<LogicValue, N> {
-        return inds.map(i => this.inputs[i].value) as any as FixedArray<LogicValue, N>
+    protected inputValues(inds: ReadonlyArray<number>): Array<LogicValue> {
+        return inds.map(i => this.inputs[i].value)
     }
 
     public setNeedsRecalc(forcePropagate = false) {
@@ -782,7 +781,7 @@ export abstract class ComponentBase<
 
         } else {
             return ContextMenuData.submenu("force", s.ForceOutputMultiple, [
-                ...asArray(this._outputs).map((out) => {
+                ...this._outputs.map((out) => {
                     const icon = isDefined(out.forceValue) ? "force" : "none"
                     return ContextMenuData.submenu(icon, s.Output + " " + out.name,
                         makeOutputItems(out)
@@ -836,14 +835,15 @@ export abstract class ComponentBase<
 }
 
 
+
 export abstract class ComponentBaseWithSubclassDefinedNodes<
+    Repr extends ComponentRepr<THasIn, THasOut>,
+    Value,
     InputIndices,
     OutputIndices,
-    NumInputs extends FixedArraySize,
-    NumOutputs extends FixedArraySize,
-    Repr extends ComponentRepr<NumInputs, NumOutputs>,
-    Value,
-    > extends ComponentBase<NumInputs, NumOutputs, Repr, Value> {
+    THasIn extends boolean = ExtractHasIn<Repr>,
+    THasOut extends boolean = ExtractHasOut<Repr>,
+> extends ComponentBase<Repr, Value, THasIn, THasOut> {
 
     protected constructor(
         editor: LogicEditor,
@@ -853,7 +853,7 @@ export abstract class ComponentBaseWithSubclassDefinedNodes<
         protected readonly OUTPUT: OutputIndices,
         _value: Value,
         savedData: Repr | null,
-        nodeOffsets: NodeVisuals<NumInputs, NumOutputs>) {
+        nodeOffsets: NodeVisuals<THasIn, THasOut>) {
         super(editor, _value, savedData, nodeOffsets)
     }
 
@@ -868,24 +868,36 @@ export abstract class ComponentBaseWithSubclassDefinedNodes<
 }
 
 
-type ReprType<Repr extends t.Mixed> = Expand<t.TypeOf<Repr>>
-
-export function defineComponent<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, T extends t.Mixed>(numInputs: NumInputs, numOutputs: NumOutputs, type: T) {
-    const repr = t.intersection([ComponentRepr(numInputs, numOutputs), type], type.name)
-    return {
-        numInputs,
-        numOutputs,
-        repr,
-        get reprType(): ReprType<typeof repr> { throw new Error() },
-    } as const
+export type ComponentDef<THasIn extends boolean, THasOut extends boolean, TComp extends t.Mixed> = {
+    repr: TComp,
+    hasIn: THasIn,
+    hasOut: THasOut,
 }
 
-export function extendComponent<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, T extends t.Mixed, U extends t.Mixed>(superDef: { numInputs: NumInputs, numOutputs: NumOutputs, repr: T }, subType: U) {
+export type Repr<TDef>
+    = TDef extends ComponentDef<infer THasIn, infer THasOut, infer TRepr>
+    ? {
+        _META?: {
+            hasIn: THasIn,
+            hasOut: THasOut,
+        }
+    } & t.TypeOf<TRepr>
+    : never
+
+export function defineComponent<THasIn extends boolean, THasOut extends boolean, TComp extends t.Mixed>(hasIn: THasIn, hasOut: THasOut, type: TComp) {
+    const repr = t.intersection([ComponentRepr(hasIn, hasOut), type], type.name)
+    return {
+        repr,
+        hasIn,
+        hasOut,
+    } as const //satisfies ComponentDef<THasIn, THasOut, t.Mixed> // TODO uncomment when the bundler handles the new TS version
+}
+
+export function extendComponent<THasIn extends boolean, THasOut extends boolean, TSuperComp extends t.Mixed, TSubComp extends t.Mixed>(superDef: ComponentDef<THasIn, THasOut, TSuperComp>, subType: TSubComp) {
     const repr = t.intersection([superDef.repr, subType], subType.name)
     return {
-        numInputs: superDef.numInputs,
-        numOutputs: superDef.numOutputs,
         repr,
-        get reprType(): ReprType<typeof repr> { throw new Error() },
-    } as const
+        hasIn: superDef.hasIn,
+        hasOut: superDef.hasOut,
+    } as const //satisfies ComponentDef<THasIn, THasOut, t.Mixed> // TODO uncomment when the bundler handles the new TS version
 }

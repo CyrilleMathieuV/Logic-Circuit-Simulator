@@ -1,10 +1,10 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, drawComponentName, drawRoundValue, drawWireLineToComponent, GRID_STEP, inRect } from "../drawutils"
-import { mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, GRID_STEP, colorForBoolean, drawComponentName, drawRoundValue, drawWireLineToComponent, inRect } from "../drawutils"
+import { mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, isDefined, isNotNull, isNull, isUndefined, LogicValue, Mode, toLogicValueFromChar, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ArrayFillWith, LogicValue, Mode, Unknown, isDefined, isNotNull, isNull, isUndefined, toLogicValueFromChar, toLogicValueRepr, typeOrUndefined } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { InputBit } from "./InputBit"
 
@@ -13,20 +13,20 @@ const GRID_UPPER_HEIGHT = 4.5
 const GRID_LOWER_HEIGHT = 3.5
 
 export const InputByteDef =
-    defineComponent(0, 8, t.type({
+    defineComponent(false, true, t.type({
         type: t.literal("byte"),
         val: typeOrUndefined(t.string),
         name: ComponentNameRepr,
         // radix: typeOrUndefined(t.number),
     }, "InputByte"))
 
-type InputByteRepr = typeof InputByteDef.reprType
+type InputByteRepr = Repr<typeof InputByteDef>
 
 // TODO merge with InputNibble
-export class InputByte extends ComponentBase<0, 8, InputByteRepr, FixedArray<LogicValue, 8>> {
+export class InputByte extends ComponentBase<InputByteRepr, LogicValue[]> {
 
-    private static savedStateFrom(savedData: { val: string | undefined } | null): FixedArray<LogicValue, 8> {
-        const inputs = FixedArrayFill(false as LogicValue, 8)
+    private static savedStateFrom(savedData: { val: string | undefined } | null): LogicValue[] {
+        const inputs = ArrayFillWith(false as LogicValue, 8)
         if (isNull(savedData) || isUndefined(savedData.val)) {
             return inputs
         }
@@ -114,12 +114,12 @@ export class InputByte extends ComponentBase<0, 8, InputByteRepr, FixedArray<Log
         return tooltipContent(undefined, mods(S.Components.InputNibble.tooltip))
     }
 
-    protected doRecalcValue(): FixedArray<LogicValue, 8> {
+    protected doRecalcValue(): LogicValue[] {
         // this never changes on its own, just upon user interaction
         return this.value
     }
 
-    protected override propagateValue(newValue: FixedArray<LogicValue, 8>) {
+    protected override propagateValue(newValue: LogicValue[]) {
         for (let i = 0; i < 8; i++) {
             this.outputs[i].value = newValue[i]
         }
@@ -144,7 +144,7 @@ export class InputByte extends ComponentBase<0, 8, InputByteRepr, FixedArray<Log
         g.fill()
         g.stroke()
 
-        const displayValues = this.editor.options.hideInputColors ? FixedArrayFill(Unknown, 8) : this.value
+        const displayValues = this.editor.options.hideInputColors ? ArrayFillWith(Unknown, 8) : this.value
 
         g.lineWidth = 1
         const cellHeight = GRID_STEP
@@ -208,7 +208,7 @@ export class InputByte extends ComponentBase<0, 8, InputByteRepr, FixedArray<Log
         if (i >= 0 && i < 8) {
             const newValues = [...this.value]
             newValues[i] = InputBit.nextValue(newValues[i], editor.mode, e.altKey)
-            this.doSetValue(newValues as unknown as FixedArray<LogicValue, 8>)
+            this.doSetValue(newValues)
         }
 
         return true

@@ -1,10 +1,10 @@
 import * as t from "io-ts"
+import { LogicEditor } from "../LogicEditor"
 import { COLOR_COMPONENT_BORDER } from "../drawutils"
 import { br, emptyMod, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isDefined, isNotNull, LogicValue, typeOrUndefined } from "../utils"
-import { ComponentState, extendComponent } from "./Component"
+import { LogicValue, isDefined, isNotNull, typeOrUndefined } from "../utils"
+import { ComponentState, Repr, extendComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { InputBitBase, InputBitBaseDef } from "./InputBit"
 
@@ -18,7 +18,7 @@ export const ClockDef =
         showLabel: typeOrUndefined(t.boolean),
     }, "Clock"))
 
-export type ClockRepr = typeof ClockDef.reprType
+type ClockRepr = Repr<typeof ClockDef>
 
 const ClockDefaults = {
     period: 2000,

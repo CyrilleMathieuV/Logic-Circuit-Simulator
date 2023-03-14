@@ -1,10 +1,10 @@
 import * as t from "io-ts"
-import { colorComps, colorForFraction, ColorString, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_UNKNOWN, displayValuesFromArray, drawComponentName, drawWireLineToComponent, formatWithRadix, GRID_STEP } from "../drawutils"
-import { b, div, emptyMod, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_UNKNOWN, ColorString, GRID_STEP, colorComps, colorForFraction, displayValuesFromArray, drawComponentName, drawWireLineToComponent, formatWithRadix } from "../drawutils"
+import { b, div, emptyMod, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { isDefined, isNotNull, isUnknown, Mode, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { Mode, Unknown, isDefined, isNotNull, isUnknown, typeOrUndefined } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 
 const GRID_WIDTH = 6
@@ -13,17 +13,17 @@ const GRID_LOWER_HEIGHT = 3.5
 const DEFAULT_RADIX = 10
 
 export const OutputByteDisplayDef =
-    defineComponent(8, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("byte-display"),
         name: ComponentNameRepr,
         radix: typeOrUndefined(t.number),
         showAsUnknown: typeOrUndefined(t.boolean),
     }, "OutputByteDisplay"))
 
-type OutputByteDisplayRepr = typeof OutputByteDisplayDef.reprType
+type OutputByteDisplayRepr = Repr<typeof OutputByteDisplayDef>
 
 // TODO this should be an easy merge with OutputNibbleDisplay
-export class OutputByteDisplay extends ComponentBase<8, 0, OutputByteDisplayRepr, [string, number | Unknown]> {
+export class OutputByteDisplay extends ComponentBase<OutputByteDisplayRepr, [string, number | Unknown]> {
 
     private _name: ComponentName = undefined
     private _radix = DEFAULT_RADIX

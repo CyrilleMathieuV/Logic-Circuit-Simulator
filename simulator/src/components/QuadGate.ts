@@ -3,8 +3,8 @@ import { circle, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COL
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, isDefined, isNotNull, LogicValue, Mode, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ArrayFillWith, isDefined, isNotNull, LogicValue, Mode, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { Gate2Type, Gate2Types_ } from "./Gate"
 
@@ -22,26 +22,26 @@ const OUTPUT = {
 
 
 export const QuadGateDef =
-    defineComponent(8, 4, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("quad-gate"),
         subtype: t.keyof(Gate2Types_),
         showAsUnknown: typeOrUndefined(t.boolean),
     }, "QuadGate"))
 
-export type QuadGateRepr = typeof QuadGateDef.reprType
+type QuadGateRepr = Repr<typeof QuadGateDef>
 
 const QuadGateDefaults = {
     subtype: "AND",
     showAsUnknown: false,
 } as const
 
-export class QuadGate extends ComponentBase<8, 4, QuadGateRepr, FixedArray<LogicValue, 4>> {
+export class QuadGate extends ComponentBase<QuadGateRepr, LogicValue[]> {
 
     private _subtype: Gate2Type
     private _showAsUnknown: boolean
 
     public constructor(editor: LogicEditor, savedData: QuadGateRepr | null) {
-        super(editor, FixedArrayFill(false, 4), savedData, {
+        super(editor, ArrayFillWith(false, 4), savedData, {
             ins: [
                 // A
                 ["A0", -3, -8, "w", "A"],
@@ -99,13 +99,13 @@ export class QuadGate extends ComponentBase<8, 4, QuadGateRepr, FixedArray<Logic
         ))
     }
 
-    protected doRecalcValue(): FixedArray<LogicValue, 4> {
+    protected doRecalcValue(): LogicValue[] {
         const out = Gate2Types_[this._subtype].out
 
-        const a = this.inputValues<4>(INPUT.A)
-        const b = this.inputValues<4>(INPUT.B)
+        const a = this.inputValues(INPUT.A)
+        const b = this.inputValues(INPUT.B)
 
-        const s = FixedArrayFill(Unknown as LogicValue, 4)
+        const s = ArrayFillWith(Unknown as LogicValue, 4)
         for (let i = 0; i < 4; i++) {
             const ai = a[i]
             const bi = b[i]
@@ -116,7 +116,7 @@ export class QuadGate extends ComponentBase<8, 4, QuadGateRepr, FixedArray<Logic
         return s
     }
 
-    protected override propagateValue(newValue: FixedArray<LogicValue, 4>) {
+    protected override propagateValue(newValue: LogicValue[]) {
         for (let i = 0; i < OUTPUT.S.length; i++) {
             this.outputs[OUTPUT.S[i]].value = newValue[i]
         }

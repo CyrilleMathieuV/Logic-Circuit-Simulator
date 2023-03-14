@@ -4,7 +4,7 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isHighImpedance, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 const GRID_WIDTH = 5
@@ -19,13 +19,13 @@ const enum OUTPUT {
 }
 
 export const ComparatorDef =
-    defineComponent(3, 2, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("comparator"),
     }, "Compatator"))
 
-export type ComparatorRepr = typeof ComparatorDef.reprType
+type ComparatorRepr = Repr<typeof ComparatorDef>
 
-export class Comparator extends ComponentBase<3, 2, ComparatorRepr, [LogicValue, LogicValue]> {
+export class Comparator extends ComponentBase<ComparatorRepr, [LogicValue, LogicValue]> {
 
     public constructor(editor: LogicEditor, savedData: ComparatorRepr | null) {
         super(editor, [false, false], savedData, {

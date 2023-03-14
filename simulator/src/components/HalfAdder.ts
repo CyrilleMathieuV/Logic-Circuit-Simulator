@@ -4,7 +4,7 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isHighImpedance, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 const GRID_WIDTH = 4
@@ -19,13 +19,13 @@ const enum OUTPUT {
 }
 
 export const HalfAdderDef =
-    defineComponent(2, 2, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("halfadder"),
     }, "HalfAdder"))
 
-export type HalfAdderRepr = typeof HalfAdderDef.reprType
+type HalfAdderRepr = Repr<typeof HalfAdderDef>
 
-export class HalfAdder extends ComponentBase<2, 2, HalfAdderRepr, [LogicValue, LogicValue]> {
+export class HalfAdder extends ComponentBase<HalfAdderRepr, [LogicValue, LogicValue]> {
 
     public constructor(editor: LogicEditor, savedData: HalfAdderRepr | null) {
         super(editor, [false, false], savedData, {

@@ -3,6 +3,7 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { LogicValue } from "../utils"
+import { Repr } from "./Component"
 import { DrawContext } from "./Drawable"
 import { defineFlipflop, Flipflop } from "./FlipflopOrLatch"
 
@@ -15,11 +16,11 @@ const enum INPUT {
 }
 
 export const FlipflopDDef =
-    defineFlipflop(1, "flipflop-d", "FlipflopD", {})
+    defineFlipflop("flipflop-d", "FlipflopD", {})
 
-export type FlipflopDRepr = typeof FlipflopDDef.reprType
+type FlipflopDRepr = Repr<typeof FlipflopDDef>
 
-export class FlipflopD extends Flipflop<1, FlipflopDRepr> {
+export class FlipflopD extends Flipflop<FlipflopDRepr> {
 
     public constructor(editor: LogicEditor, savedData: FlipflopDRepr | null) {
         super(editor, savedData, {

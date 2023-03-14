@@ -3,19 +3,21 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS,
 import { div, mods, span, style, title, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArrayFill, FixedReadonlyArray, isDefined, isNotNull, LogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ArrayFillWith, isDefined, isNotNull, LogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { LedColor, ledColorForLogicValue, LedColors } from "./OutputBar"
 
 
 export const Output16SegDef =
-    defineComponent(17, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("16seg"),
         color: typeOrUndefined(t.keyof(LedColors, "LedColor")),
         transparent: typeOrUndefined(t.boolean),
         name: ComponentNameRepr,
     }, "Ouput16Seg"))
+
+type Output16SegRepr = Repr<typeof Output16SegDef>
 
 const enum INPUT {
     a1, a2, b, c, d2, d1, e, f, g1, g2, h, i, j, k, l, m, p
@@ -29,16 +31,14 @@ const Output16SegDefaults = {
 const GRID_WIDTH = 8
 const GRID_HEIGHT = 10
 
-export type Output16SegRepr = typeof Output16SegDef.reprType
-
-export class Output16Seg extends ComponentBase<17, 0, Output16SegRepr, FixedReadonlyArray<LogicValue, 17>> {
+export class Output16Seg extends ComponentBase<Output16SegRepr, LogicValue[]> {
 
     private _color = Output16SegDefaults.color
     private _transparent = Output16SegDefaults.transparent
     private _name: ComponentName = undefined
 
     public constructor(editor: LogicEditor, savedData: Output16SegRepr | null) {
-        super(editor, FixedArrayFill(false, 17), savedData, {
+        super(editor, ArrayFillWith(false, 17), savedData, {
             ins: [
                 ["a1", -5, -4, "w", "In"],
                 ["a2", -6, -3.5, "w", "In"],
@@ -94,8 +94,8 @@ export class Output16Seg extends ComponentBase<17, 0, Output16SegRepr, FixedRead
         ))
     }
 
-    protected doRecalcValue(): FixedReadonlyArray<LogicValue, 17> {
-        return this.inputValues<17>([INPUT.a1, INPUT.a2, INPUT.b, INPUT.c, INPUT.d2, INPUT.d1, INPUT.e, INPUT.f, INPUT.g1, INPUT.g2, INPUT.h, INPUT.i, INPUT.j, INPUT.k, INPUT.l, INPUT.m, INPUT.p])
+    protected doRecalcValue(): LogicValue[] {
+        return this.inputValues([INPUT.a1, INPUT.a2, INPUT.b, INPUT.c, INPUT.d2, INPUT.d1, INPUT.e, INPUT.f, INPUT.g1, INPUT.g2, INPUT.h, INPUT.i, INPUT.j, INPUT.k, INPUT.l, INPUT.m, INPUT.p])
     }
 
     protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {

@@ -3,14 +3,14 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS,
 import { div, mods, span, style, title, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArrayFill, FixedReadonlyArray, isDefined, isNotNull, LogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ArrayFillWith, isDefined, isNotNull, LogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { LedColor, ledColorForLogicValue, LedColors } from "./OutputBar"
 
 
 export const Output7SegDef =
-    defineComponent(8, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("7seg"),
         color: typeOrUndefined(t.keyof(LedColors, "LedColor")),
         transparent: typeOrUndefined(t.boolean),
@@ -29,16 +29,16 @@ const Output7SegDefaults = {
 const GRID_WIDTH = 8
 const GRID_HEIGHT = 10
 
-export type Output7SegRepr = typeof Output7SegDef.reprType
+type Output7SegRepr = Repr<typeof Output7SegDef>
 
-export class Output7Seg extends ComponentBase<8, 0, Output7SegRepr, FixedReadonlyArray<LogicValue, 8>> {
+export class Output7Seg extends ComponentBase<Output7SegRepr, LogicValue[]> {
 
     private _color = Output7SegDefaults.color
     private _transparent = Output7SegDefaults.transparent
     private _name: ComponentName = undefined
 
     public constructor(editor: LogicEditor, savedData: Output7SegRepr | null) {
-        super(editor, FixedArrayFill(false, 8), savedData, {
+        super(editor, ArrayFillWith(false, 8), savedData, {
             ins: [
                 ["a", -5, -4, "w", "In"],
                 ["b", -5, -3, "w", "In"],
@@ -85,8 +85,8 @@ export class Output7Seg extends ComponentBase<8, 0, Output7SegRepr, FixedReadonl
         ))
     }
 
-    protected doRecalcValue(): FixedReadonlyArray<LogicValue, 8> {
-        return this.inputValues<8>([INPUT.a, INPUT.b, INPUT.c, INPUT.d, INPUT.e, INPUT.f, INPUT.g, INPUT.p])
+    protected doRecalcValue(): LogicValue[] {
+        return this.inputValues([INPUT.a, INPUT.b, INPUT.c, INPUT.d, INPUT.e, INPUT.f, INPUT.g, INPUT.p])
     }
 
     protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {

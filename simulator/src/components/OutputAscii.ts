@@ -4,7 +4,7 @@ import { b, div, emptyMod, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isDefined, isNotNull, isUnknown, Mode, typeOrUndefined } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 
 const GRID_WIDTH = 4
@@ -12,16 +12,16 @@ const GRID_HEIGHT = 8
 
 
 export const OutputAsciiDef =
-    defineComponent(7, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("ascii"),
         name: ComponentNameRepr,
         additionalReprRadix: typeOrUndefined(t.number),
         showAsUnknown: typeOrUndefined(t.boolean),
     }, "OutputAscii"))
 
-type OutputAsciiRepr = typeof OutputAsciiDef.reprType
+type OutputAsciiRepr = Repr<typeof OutputAsciiDef>
 
-export class OutputAscii extends ComponentBase<7, 0, OutputAsciiRepr, [string, number | "?"]> {
+export class OutputAscii extends ComponentBase<OutputAsciiRepr, [string, number | "?"]> {
 
     private _name: ComponentName = undefined
     private _additionalReprRadix: number | undefined = undefined

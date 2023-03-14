@@ -3,12 +3,12 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS,
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArrayFill, FixedReadonlyArray, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent } from "./Component"
+import { ArrayFillWith, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 export const Decoder7SegDef =
-    defineComponent(4, 7, t.type({
+    defineComponent(true, true, t.type({
         type: t.literal("decoder-7seg"),
     }, "Decoder7Seg"))
 
@@ -23,12 +23,12 @@ const enum OUTPUT {
 const GRID_WIDTH = 4
 const GRID_HEIGHT = 8
 
-export type Decoder7SegRepr = typeof Decoder7SegDef.reprType
+type Decoder7SegRepr = Repr<typeof Decoder7SegDef>
 
-export class Decoder7Seg extends ComponentBase<4, 7, Decoder7SegRepr, FixedReadonlyArray<LogicValue, 7>> {
+export class Decoder7Seg extends ComponentBase<Decoder7SegRepr, LogicValue[]> {
 
     public constructor(editor: LogicEditor, savedData: Decoder7SegRepr | null) {
-        super(editor, FixedArrayFill(false, 7), savedData, {
+        super(editor, ArrayFillWith(false, 7), savedData, {
             ins: [
                 ["A", -3, -3, "w", "In"],
                 ["B", -3, -1, "w", "In"],
@@ -72,33 +72,33 @@ export class Decoder7Seg extends ComponentBase<4, 7, Decoder7SegRepr, FixedReado
         ))
     }
 
-    protected doRecalcValue(): FixedReadonlyArray<LogicValue, 7> {
-        const input = this.inputValues<4>(INPUT.I)
+    protected doRecalcValue(): LogicValue[] {
+        const input = this.inputValues(INPUT.I)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output
         if (isUnknown(value)) {
-            output = FixedArrayFill(Unknown, 7)
+            output = ArrayFillWith(Unknown, 7)
         } else {
             output = (() => {
                 switch (value) {
-                    case 0: return [true, true, true, true, true, true, false] as const
-                    case 1: return [false, true, true, false, false, false, false] as const
-                    case 2: return [true, true, false, true, true, false, true] as const
-                    case 3: return [true, true, true, true, false, false, true] as const
-                    case 4: return [false, true, true, false, false, true, true] as const
-                    case 5: return [true, false, true, true, false, true, true] as const
-                    case 6: return [true, false, true, true, true, true, true] as const
-                    case 7: return [true, true, true, false, false, false, false] as const
-                    case 8: return [true, true, true, true, true, true, true] as const
-                    case 9: return [true, true, true, true, false, true, true] as const
-                    case 10: return [true, true, true, false, true, true, true] as const
-                    case 11: return [false, false, true, true, true, true, true] as const
-                    case 12: return [true, false, false, true, true, true, false] as const
-                    case 13: return [false, true, true, true, true, false, true] as const
-                    case 14: return [true, false, false, true, true, true, true] as const
-                    case 15: return [true, false, false, false, true, true, true] as const
-                    default: return FixedArrayFill(Unknown, 7)
+                    case 0: return [true, true, true, true, true, true, false]
+                    case 1: return [false, true, true, false, false, false, false]
+                    case 2: return [true, true, false, true, true, false, true]
+                    case 3: return [true, true, true, true, false, false, true]
+                    case 4: return [false, true, true, false, false, true, true]
+                    case 5: return [true, false, true, true, false, true, true]
+                    case 6: return [true, false, true, true, true, true, true]
+                    case 7: return [true, true, true, false, false, false, false]
+                    case 8: return [true, true, true, true, true, true, true]
+                    case 9: return [true, true, true, true, false, true, true]
+                    case 10: return [true, true, true, false, true, true, true]
+                    case 11: return [false, false, true, true, true, true, true]
+                    case 12: return [true, false, false, true, true, true, false]
+                    case 13: return [false, true, true, true, true, false, true]
+                    case 14: return [true, false, false, true, true, true, true]
+                    case 15: return [true, false, false, false, true, true, true]
+                    default: return ArrayFillWith(Unknown, 7)
                 }
             })()
         }
@@ -106,7 +106,7 @@ export class Decoder7Seg extends ComponentBase<4, 7, Decoder7SegRepr, FixedReado
         return output
     }
 
-    protected override propagateValue(newValue: FixedReadonlyArray<LogicValue, 7>) {
+    protected override propagateValue(newValue: LogicValue[]) {
         this.outputs[OUTPUT.a].value = newValue[0]
         this.outputs[OUTPUT.b].value = newValue[1]
         this.outputs[OUTPUT.c].value = newValue[2]

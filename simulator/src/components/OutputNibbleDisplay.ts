@@ -1,10 +1,10 @@
 import * as t from "io-ts"
-import { colorComps, colorForFraction, ColorString, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_UNKNOWN, displayValuesFromArray, drawComponentName, drawWireLineToComponent, formatWithRadix, GRID_STEP } from "../drawutils"
-import { b, div, emptyMod, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_UNKNOWN, ColorString, GRID_STEP, colorComps, colorForFraction, displayValuesFromArray, drawComponentName, drawWireLineToComponent, formatWithRadix } from "../drawutils"
+import { b, div, emptyMod, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { isDefined, isNotNull, isUnknown, Mode, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent } from "./Component"
+import { Mode, Unknown, isDefined, isNotNull, isUnknown, typeOrUndefined } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
 
 const GRID_WIDTH = 4
@@ -12,16 +12,16 @@ const GRID_HEIGHT = 8
 const DEFAULT_RADIX = 10
 
 export const OutputNibbleDisplayDef =
-    defineComponent(4, 0, t.type({
+    defineComponent(true, false, t.type({
         type: t.literal("nibble-display"),
         name: ComponentNameRepr,
         radix: typeOrUndefined(t.number),
         showAsUnknown: typeOrUndefined(t.boolean),
     }, "OutputNibbleDisplay"))
 
-type OutputNibbleDisplayRepr = typeof OutputNibbleDisplayDef.reprType
+type OutputNibbleDisplayRepr = Repr<typeof OutputNibbleDisplayDef>
 
-export class OutputNibbleDisplay extends ComponentBase<4, 0, OutputNibbleDisplayRepr, [string, number | Unknown]> {
+export class OutputNibbleDisplay extends ComponentBase<OutputNibbleDisplayRepr, [string, number | Unknown]> {
 
     private _name: ComponentName = undefined
     private _radix = DEFAULT_RADIX

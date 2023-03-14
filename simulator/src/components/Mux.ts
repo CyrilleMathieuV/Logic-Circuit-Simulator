@@ -3,21 +3,21 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, displayValu
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFill, FixedArraySize, FixedReadonlyArray, isDefined, isNotNull, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, defineComponent, NodeVisual, NodeVisuals } from "./Component"
+import { ArrayFillWith, isDefined, isNotNull, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBaseWithSubclassDefinedNodes, ComponentRepr, defineComponent, NodeVisual, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 import { WireStyles } from "./Wire"
 
 
-function defineMux<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize, N extends string>(numInputs: NumInputs, numOutputs: NumOutputs, jsonName: N, className: string) {
-    return defineComponent(numInputs, numOutputs, t.type({
+function defineMux<TName extends string>(jsonName: TName, className: string) {
+    return defineComponent(true, true, t.type({
         type: t.literal(jsonName),
         showWiring: typeOrUndefined(t.boolean),
     }, className))
 }
 
-type MuxRepr<NumInputs extends FixedArraySize, NumOutputs extends FixedArraySize> =
-    ComponentRepr<NumInputs, NumOutputs> & {
+type MuxRepr =
+    ComponentRepr<true, true> & {
         showWiring: boolean | undefined,
     }
 
@@ -25,24 +25,22 @@ const MuxDefaults = {
     showWiring: true,
 }
 
-type MuxInputIndices<NumInputs extends FixedArraySize> = {
-    I: ReadonlyArray<FixedReadonlyArray<number, NumInputs>>, // array of arrays of input indices
-    S: ReadonlyArray<number>, // array of indices of selectors
+type MuxInputIndices = {
+    I: number[][], // array of arrays of input indices
+    S: number[], // array of indices of selectors
 }
 
-type MuxOutputIndices<NumOutputs extends FixedArraySize> = {
-    Z: FixedReadonlyArray<number, NumOutputs>, // array of output indices
+type MuxOutputIndices = {
+    Z: number[], // array of output indices
 }
 
-abstract class Mux<
-    NumInputs extends FixedArraySize,
-    NumOutputs extends FixedArraySize,
-    Repr extends MuxRepr<NumInputs, NumOutputs>
-    >
+abstract class Mux<Repr extends MuxRepr>
     extends ComponentBaseWithSubclassDefinedNodes<
-    MuxInputIndices<NumOutputs>,
-    MuxOutputIndices<NumOutputs>,
-    NumInputs, NumOutputs, Repr, FixedArray<LogicValue, NumOutputs>
+        Repr,
+        LogicValue[],
+        MuxInputIndices,
+        MuxOutputIndices,
+        true, true
     > {
 
     private static generateInOffsets(numFrom: number, numSel: number, numTo: number): NodeVisual[] {
@@ -76,7 +74,7 @@ abstract class Mux<
         return offsets
     }
 
-    private static generateOutOffsets<NumOutputs extends FixedArraySize>(numSel: number, numTo: NumOutputs): FixedArray<NodeVisual, NumOutputs> {
+    private static generateOutOffsets(numSel: number, numTo: number): NodeVisual[] {
         const offsets: NodeVisual[] = []
 
         // right outputs
@@ -87,19 +85,19 @@ abstract class Mux<
         for (let i = 0; i < numTo; i++) {
             offsets.push([`Z${i}`, x, topOffset + spacing * i, "e", "Z"])
         }
-        return offsets as FixedArray<NodeVisual, NumOutputs>
+        return offsets
     }
 
-    protected static generateInputIndices<NumOutputs extends FixedArraySize>(numFrom: number, numSel: number, numTo: NumOutputs): MuxInputIndices<NumOutputs> {
+    protected static generateInputIndices(numFrom: number, numSel: number, numTo: number): MuxInputIndices {
         let ind = 0
-        const I: Array<FixedArray<number, NumOutputs>> = []
+        const I: number[][] = []
         const numGroups = Math.ceil(numFrom / numTo)
         for (let g = 0; g < numGroups; g++) {
             const inds: Array<number> = []
             for (let o = 0; o < numTo; o++) {
                 inds.push(ind++)
             }
-            I.push(inds as FixedArray<number, NumOutputs>)
+            I.push(inds)
         }
         const S: Array<number> = []
         for (let s = 0; s < numSel; s++) {
@@ -108,13 +106,13 @@ abstract class Mux<
         return { I, S }
     }
 
-    protected static generateOutputIndices<NumOutputs extends FixedArraySize>(numTo: NumOutputs): MuxOutputIndices<NumOutputs> {
+    protected static generateOutputIndices(numTo: number): MuxOutputIndices {
         let ind = 0
         const Z: Array<number> = []
         for (let o = 0; o < numTo; o++) {
             Z.push(ind++)
         }
-        return { Z: Z as FixedArray<number, NumOutputs> }
+        return { Z }
     }
 
     private static gridWidth(numSel: number): number {
@@ -133,18 +131,18 @@ abstract class Mux<
     private _showWiring = MuxDefaults.showWiring
 
     protected constructor(editor: LogicEditor, savedData: Repr | null,
-        public readonly numFrom: FixedArraySize,
-        public readonly numSel: FixedArraySize,
-        public readonly numTo: NumOutputs,
+        public readonly numFrom: number,
+        public readonly numSel: number,
+        public readonly numTo: number,
     ) {
         super(editor, Mux.gridWidth(numSel), Mux.gridHeight(numFrom, numTo),
             Mux.generateInputIndices(numFrom, numSel, numTo),
             Mux.generateOutputIndices(numTo),
-            FixedArrayFill(false as LogicValue, numTo),
+            ArrayFillWith(false as LogicValue, numTo),
             savedData, {
-                ins: Mux.generateInOffsets(numFrom, numSel, numTo),
-                outs: Mux.generateOutOffsets(numSel, numTo),
-            } as unknown as NodeVisuals<NumInputs, NumOutputs>)
+            ins: Mux.generateInOffsets(numFrom, numSel, numTo),
+            outs: Mux.generateOutOffsets(numSel, numTo),
+        })
         if (isNotNull(savedData)) {
             this._showWiring = savedData.showWiring ?? MuxDefaults.showWiring
         }
@@ -167,17 +165,17 @@ abstract class Mux<
         ))
     }
 
-    protected doRecalcValue(): FixedArray<LogicValue, NumOutputs> {
-        const sels = this.inputValues(this.INPUT.S as any)
+    protected doRecalcValue(): LogicValue[] {
+        const sels = this.inputValues(this.INPUT.S)
         const sel = displayValuesFromArray(sels, false)[1]
 
         if (isUnknown(sel)) {
-            return FixedArrayFill(Unknown, this.numTo)
+            return ArrayFillWith(Unknown, this.numTo)
         }
-        return this.inputValues<NumOutputs>(this.INPUT.I[sel])
+        return this.inputValues(this.INPUT.I[sel])
     }
 
-    protected override propagateValue(newValues: FixedArray<LogicValue, NumOutputs>) {
+    protected override propagateValue(newValues: LogicValue[]) {
         const Z = this.OUTPUT.Z
         for (let i = 0; i < Z.length; i++) {
             this.outputs[Z[i]].value = newValues[i]
@@ -298,9 +296,9 @@ abstract class Mux<
 }
 
 
-export const Mux2To1Def = defineMux(3, 1, "mux-2to1", "Mux2To1")
-export type Mux2To1Repr = typeof Mux2To1Def.reprType
-export class Mux2To1 extends Mux<3, 1, Mux2To1Repr> {
+export const Mux2To1Def = defineMux("mux-2to1", "Mux2To1")
+type Mux2To1Repr = Repr<typeof Mux2To1Def>
+export class Mux2To1 extends Mux<Mux2To1Repr> {
 
     public constructor(editor: LogicEditor, savedData: Mux2To1Repr | null) {
         super(editor, savedData, 2, 1, 1)
@@ -314,9 +312,9 @@ export class Mux2To1 extends Mux<3, 1, Mux2To1Repr> {
     }
 }
 
-export const Mux4To1Def = defineMux(6, 1, "mux-4to1", "Mux4To1")
-export type Mux4To1Repr = typeof Mux4To1Def.reprType
-export class Mux4To1 extends Mux<6, 1, Mux4To1Repr> {
+export const Mux4To1Def = defineMux("mux-4to1", "Mux4To1")
+type Mux4To1Repr = Repr<typeof Mux4To1Def>
+export class Mux4To1 extends Mux<Mux4To1Repr> {
 
     public constructor(editor: LogicEditor, savedData: Mux4To1Repr | null) {
         super(editor, savedData, 4, 2, 1)
@@ -330,9 +328,9 @@ export class Mux4To1 extends Mux<6, 1, Mux4To1Repr> {
     }
 }
 
-export const Mux8To1Def = defineMux(11, 1, "mux-8to1", "Mux8To1")
-export type Mux8To1Repr = typeof Mux8To1Def.reprType
-export class Mux8To1 extends Mux<11, 1, Mux8To1Repr> {
+export const Mux8To1Def = defineMux("mux-8to1", "Mux8To1")
+type Mux8To1Repr = Repr<typeof Mux8To1Def>
+export class Mux8To1 extends Mux<Mux8To1Repr> {
 
     public constructor(editor: LogicEditor, savedData: Mux8To1Repr | null) {
         super(editor, savedData, 8, 3, 1)
@@ -346,9 +344,9 @@ export class Mux8To1 extends Mux<11, 1, Mux8To1Repr> {
     }
 }
 
-export const Mux4To2Def = defineMux(5, 2, "mux-4to2", "Mux4To2")
-export type Mux4To2Repr = typeof Mux4To2Def.reprType
-export class Mux4To2 extends Mux<5, 2, Mux4To2Repr> {
+export const Mux4To2Def = defineMux("mux-4to2", "Mux4To2")
+type Mux4To2Repr = Repr<typeof Mux4To2Def>
+export class Mux4To2 extends Mux<Mux4To2Repr> {
 
     public constructor(editor: LogicEditor, savedData: Mux4To2Repr | null) {
         super(editor, savedData, 4, 1, 2)
@@ -362,9 +360,9 @@ export class Mux4To2 extends Mux<5, 2, Mux4To2Repr> {
     }
 }
 
-export const Mux8To2Def = defineMux(10, 2, "mux-8to2", "Mux8To2")
-export type Mux8To2Repr = typeof Mux8To2Def.reprType
-export class Mux8To2 extends Mux<10, 2, Mux8To2Repr> {
+export const Mux8To2Def = defineMux("mux-8to2", "Mux8To2")
+type Mux8To2Repr = Repr<typeof Mux8To2Def>
+export class Mux8To2 extends Mux<Mux8To2Repr> {
 
     public constructor(editor: LogicEditor, savedData: Mux8To2Repr | null) {
         super(editor, savedData, 8, 2, 2)
@@ -378,9 +376,9 @@ export class Mux8To2 extends Mux<10, 2, Mux8To2Repr> {
     }
 }
 
-export const Mux8To4Def = defineMux(9, 4, "mux-8to4", "Mux8To4")
-export type Mux8To4Repr = typeof Mux8To4Def.reprType
-export class Mux8To4 extends Mux<9, 4, Mux8To4Repr> {
+export const Mux8To4Def = defineMux("mux-8to4", "Mux8To4")
+type Mux8To4Repr = Repr<typeof Mux8To4Def>
+export class Mux8To4 extends Mux<Mux8To4Repr> {
 
     public constructor(editor: LogicEditor, savedData: Mux8To4Repr | null) {
         super(editor, savedData, 8, 1, 4)
@@ -395,9 +393,9 @@ export class Mux8To4 extends Mux<9, 4, Mux8To4Repr> {
 }
 
 
-export const Mux16To8Def = defineMux(17, 8, "mux-16to8", "Mux16To8")
-export type Mux16To8Repr = typeof Mux16To8Def.reprType
-export class Mux16To8 extends Mux<17, 8, Mux16To8Repr> {
+export const Mux16To8Def = defineMux("mux-16to8", "Mux16To8")
+type Mux16To8Repr = Repr<typeof Mux16To8Def>
+export class Mux16To8 extends Mux<Mux16To8Repr> {
 
     public constructor(editor: LogicEditor, savedData: Mux16To8Repr | null) {
         super(editor, savedData, 16, 1, 8)
