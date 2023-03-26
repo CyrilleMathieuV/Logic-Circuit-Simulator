@@ -101,6 +101,7 @@
       <workItem from="1678737321105" duration="13000" />
       <workItem from="1678836162700" duration="1214000" />
       <workItem from="1679091952253" duration="61000" />
+      <workItem from="1679853609816" duration="268000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -232,7 +233,19 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="upstream/HEAD" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
