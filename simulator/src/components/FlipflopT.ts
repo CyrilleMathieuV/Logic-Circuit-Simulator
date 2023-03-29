@@ -1,32 +1,33 @@
-import { COLOR_COMPONENT_INNER_LABELS, drawLabel, drawWireLineToComponent } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isHighImpedance, isUnknown, LogicValue, Unknown } from "../utils"
-import { Repr } from "./Component"
-import { DrawContext } from "./Drawable"
-import { defineFlipflop, Flipflop, OUTPUT } from "./FlipflopOrLatch"
+import { defineComponent, Repr } from "./Component"
+import { Flipflop, FlipflopBaseDef } from "./FlipflopOrLatch"
 
-
-const enum INPUT {
-    Clock,
-    Preset,
-    Clear,
-    T,
-}
 
 export const FlipflopTDef =
-    defineFlipflop("flipflop-t", "FlipflopT", {})
+    defineComponent("ic", "flipflop-t", {
+        ...FlipflopBaseDef,
+        makeNodes: () => {
+            const base = FlipflopBaseDef.makeNodes(2)
+            const s = S.Components.FlipflopT
+            return {
+                ins: {
+                    ...base.ins,
+                    T: [-4, -2, "w", s.InputTDesc],
+                },
+                outs: base.outs,
+            }
+        },
+    })
 
 type FlipflopTRepr = Repr<typeof FlipflopTDef>
 
 export class FlipflopT extends Flipflop<FlipflopTRepr> {
 
-    public constructor(editor: LogicEditor, savedData: FlipflopTRepr | null) {
-        super(editor, savedData, {
-            ins: [[S.Components.FlipflopT.InputTDesc, -4, -2, "w"]],
-            clockYOffset: 2,
-        })
+    public constructor(editor: LogicEditor, saved?: FlipflopTRepr) {
+        super(editor, FlipflopTDef, saved)
     }
 
     public toJSON() {
@@ -44,25 +45,13 @@ export class FlipflopT extends Flipflop<FlipflopTRepr> {
     }
 
     protected doRecalcValueAfterClock(): LogicValue {
-        const t = this.inputs[INPUT.T].value
+        const t = this.inputs.T.value
         if (isUnknown(t) || isHighImpedance(t)) {
             return Unknown
         }
-        const q = this.outputs[OUTPUT.Q].value
+        const q = this.outputs.Q.value
         return t ? LogicValue.invert(q) : q
     }
 
-    protected override doDrawLatchOrFlipflop(g: CanvasRenderingContext2D, ctx: DrawContext, width: number, height: number, left: number, right: number) {
-        super.doDrawLatchOrFlipflop(g, ctx, width, height, left, right)
-
-        drawWireLineToComponent(g, this.inputs[INPUT.T], left - 2, this.inputs[INPUT.T].posYInParentTransform, false)
-
-        ctx.inNonTransformedFrame(ctx => {
-            g.fillStyle = COLOR_COMPONENT_INNER_LABELS
-            g.font = "12px sans-serif"
-
-            drawLabel(ctx, this.orient, "T", "w", left, this.inputs[INPUT.T])
-        })
-    }
-
 }
+FlipflopTDef.impl = FlipflopT

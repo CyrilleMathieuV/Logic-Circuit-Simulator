@@ -1,50 +1,46 @@
-import * as t from "io-ts"
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_MOUSE_OVER, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP } from "../drawutils"
+import { displayValuesFromArray } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { ArrayFillWith, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent, Repr } from "./Component"
-import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { FixedArray, FixedArrayFillWith, isUnknown, LogicValue, Unknown } from "../utils"
+import { ComponentBase, defineComponent, group, Repr } from "./Component"
+import { MenuItems } from "./Drawable"
 
 export const Decoder7SegDef =
-    defineComponent(true, true, t.type({
-        type: t.literal("decoder-7seg"),
-    }, "Decoder7Seg"))
-
-const INPUT = {
-    I: [0, 1, 2, 3] as const,
-}
-
-const enum OUTPUT {
-    a, b, c, d, e, f, g
-}
-
-const GRID_WIDTH = 4
-const GRID_HEIGHT = 8
+    defineComponent("ic", "decoder-7seg", {
+        button: { imgWidth: 50 },
+        valueDefaults: {},
+        size: { gridWidth: 4, gridHeight: 8 },
+        makeNodes: () => ({
+            ins: {
+                I: group("w", [
+                    [-3, -3, "A"],
+                    [-3, -1, "B"],
+                    [-3, +1, "C"],
+                    [-3, +3, "D"],
+                ]),
+            },
+            outs: {
+                Out: group("e", [
+                    [+3, -3, "a"],
+                    [+3, -2, "b"],
+                    [+3, -1, "c"],
+                    [+3, 0, "d"],
+                    [+3, +1, "e"],
+                    [+3, +2, "f"],
+                    [+3, +3, "g"],
+                ]),
+            },
+        }),
+        initialValue: () => FixedArrayFillWith(false as LogicValue, 7),
+    })
 
 type Decoder7SegRepr = Repr<typeof Decoder7SegDef>
 
-export class Decoder7Seg extends ComponentBase<Decoder7SegRepr, LogicValue[]> {
+export class Decoder7Seg extends ComponentBase<Decoder7SegRepr> {
 
-    public constructor(editor: LogicEditor, savedData: Decoder7SegRepr | null) {
-        super(editor, ArrayFillWith(false, 7), savedData, {
-            ins: [
-                ["A", -3, -3, "w", "In"],
-                ["B", -3, -1, "w", "In"],
-                ["C", -3, +1, "w", "In"],
-                ["D", -3, +3, "w", "In"],
-            ],
-            outs: [
-                ["a", +3, -3, "e", "Out"],
-                ["b", +3, -2, "e", "Out"],
-                ["c", +3, -1, "e", "Out"],
-                ["d", +3, 0, "e", "Out"],
-                ["e", +3, +1, "e", "Out"],
-                ["f", +3, +2, "e", "Out"],
-                ["g", +3, +3, "e", "Out"],
-            ],
-        })
+    public constructor(editor: LogicEditor, saved?: Decoder7SegRepr) {
+        super(editor, Decoder7SegDef, saved)
     }
 
     public toJSON() {
@@ -54,33 +50,21 @@ export class Decoder7Seg extends ComponentBase<Decoder7SegRepr, LogicValue[]> {
         }
     }
 
-    public get componentType() {
-        return "ic" as const
-    }
-
-    public get unrotatedWidth() {
-        return GRID_WIDTH * GRID_STEP
-    }
-
-    public get unrotatedHeight() {
-        return GRID_HEIGHT * GRID_STEP
-    }
-
     public override makeTooltip() {
         return tooltipContent(undefined, mods(
             div(S.Components.Decoder7Seg.tooltip) // TODO better info
         ))
     }
 
-    protected doRecalcValue(): LogicValue[] {
-        const input = this.inputValues(INPUT.I)
+    protected doRecalcValue(): FixedArray<LogicValue, 7> {
+        const input = this.inputValues(this.inputs.I)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output
         if (isUnknown(value)) {
-            output = ArrayFillWith(Unknown, 7)
+            output = FixedArrayFillWith(Unknown, 7)
         } else {
-            output = (() => {
+            output = ((): FixedArray<LogicValue, 7> => {
                 switch (value) {
                     case 0: return [true, true, true, true, true, true, false]
                     case 1: return [false, true, true, false, false, false, false]
@@ -98,7 +82,7 @@ export class Decoder7Seg extends ComponentBase<Decoder7SegRepr, LogicValue[]> {
                     case 13: return [false, true, true, true, true, false, true]
                     case 14: return [true, false, false, true, true, true, true]
                     case 15: return [true, false, false, false, true, true, true]
-                    default: return ArrayFillWith(Unknown, 7)
+                    default: return FixedArrayFillWith(Unknown, 7)
                 }
             })()
         }
@@ -106,63 +90,13 @@ export class Decoder7Seg extends ComponentBase<Decoder7SegRepr, LogicValue[]> {
         return output
     }
 
-    protected override propagateValue(newValue: LogicValue[]) {
-        this.outputs[OUTPUT.a].value = newValue[0]
-        this.outputs[OUTPUT.b].value = newValue[1]
-        this.outputs[OUTPUT.c].value = newValue[2]
-        this.outputs[OUTPUT.d].value = newValue[3]
-        this.outputs[OUTPUT.e].value = newValue[4]
-        this.outputs[OUTPUT.f].value = newValue[5]
-        this.outputs[OUTPUT.g].value = newValue[6]
+    protected override propagateValue(newValue: FixedArray<LogicValue, 7>) {
+        this.outputValues(this.outputs.Out, newValue)
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
-
-        g.fillStyle = COLOR_BACKGROUND
-        g.strokeStyle = ctx.isMouseOver ? COLOR_MOUSE_OVER : COLOR_COMPONENT_BORDER
-        g.lineWidth = 4
-
-        const width = GRID_WIDTH * GRID_STEP
-        const height = GRID_HEIGHT * GRID_STEP
-        const left = this.posX - width / 2
-        const right = left + width
-
-        g.beginPath()
-        g.rect(this.posX - width / 2, this.posY - height / 2, width, height)
-        g.fill()
-        g.stroke()
-
-        for (const input of this.inputs) {
-            drawWireLineToComponent(g, input, left - 2, input.posYInParentTransform)
-        }
-
-        for (const output of this.outputs) {
-            drawWireLineToComponent(g, output, right + 2, output.posYInParentTransform)
-        }
-
-        ctx.inNonTransformedFrame(ctx => {
-            g.fillStyle = COLOR_COMPONENT_INNER_LABELS
-            g.font = "12px sans-serif"
-
-            this.inputs.forEach(input => {
-                drawLabel(ctx, this.orient, input.name, "w", left, input)
-            })
-            this.outputs.forEach(output => {
-                drawLabel(ctx, this.orient, output.name, "e", right, output)
-            })
-
-        })
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        return this.makeForceOutputsContextMenuItem()
     }
-
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const forceOutputItem = this.makeForceOutputsContextMenuItem()
-        if (isUndefined(forceOutputItem)) {
-            return []
-        }
-        return [
-            ["mid", forceOutputItem],
-        ]
-    }
-
 
 }
+Decoder7SegDef.impl = Decoder7Seg

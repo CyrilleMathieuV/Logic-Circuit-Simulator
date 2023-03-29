@@ -1,32 +1,34 @@
-import { COLOR_COMPONENT_BORDER, drawLabel, drawWireLineToComponent } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isDefined, LogicValue } from "../utils"
-import { Repr } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
-import { defineFlipflopOrLatch, FlipflopOrLatch, OUTPUT } from "./FlipflopOrLatch"
+import { LogicValue } from "../utils"
+import { defineComponent, Repr } from "./Component"
+import { ContextMenuData, MenuItems } from "./Drawable"
+import { FlipflopOrLatch, FlipflopOrLatchDef } from "./FlipflopOrLatch"
 
-const enum INPUT {
-    Set,
-    Reset,
-}
 
 export const LatchSRDef =
-    defineFlipflopOrLatch("latch-sr", "LatchSR", {})
+    defineComponent("ic", "latch-sr", {
+        ...FlipflopOrLatchDef,
+        makeNodes: () => {
+            const base = FlipflopOrLatchDef.makeNodes()
+            const s = S.Components.Generic
+            return {
+                ins: {
+                    S: [-4, -2, "w", s.InputSetDesc, { prefersSpike: true }],
+                    R: [-4, 2, "w", s.InputResetDesc, { prefersSpike: true }],
+                },
+                outs: base.outs,
+            }
+        },
+    })
 
 type LatchSRRepr = Repr<typeof LatchSRDef>
 
 export class LatchSR extends FlipflopOrLatch<LatchSRRepr> {
 
-    public constructor(editor: LogicEditor, savedData: LatchSRRepr | null) {
-        super(editor, savedData, {
-            ins: [
-                [S.Components.Generic.InputSetDesc, -4, -2, "w"],
-                [S.Components.Generic.InputResetDesc, -4, 2, "w"],
-            ],
-        })
-        this.setInputsPreferSpike(INPUT.Set, INPUT.Reset)
+    public constructor(editor: LogicEditor, saved?: LatchSRRepr) {
+        super(editor, LatchSRDef, saved)
     }
 
     public toJSON() {
@@ -44,8 +46,8 @@ export class LatchSR extends FlipflopOrLatch<LatchSRRepr> {
     }
 
     protected doRecalcValue(): [LogicValue, LogicValue] {
-        const s = this.inputs[INPUT.Set].value
-        const r = this.inputs[INPUT.Reset].value
+        const s = this.inputs.S.value
+        const r = this.inputs.R.value
 
         // assume this state is valid
         this._isInInvalidState = false
@@ -66,43 +68,21 @@ export class LatchSR extends FlipflopOrLatch<LatchSRRepr> {
         }
 
         // no change
-        const q = this.outputs[OUTPUT.Q].value
+        const q = this.outputs.Q.value
         return [q, LogicValue.invert(q)]
     }
 
-    protected doDrawLatchOrFlipflop(g: CanvasRenderingContext2D, ctx: DrawContext, width: number, height: number, left: number, __right: number) {
-
-        drawWireLineToComponent(g, this.inputs[INPUT.Set], left - 2, this.inputs[INPUT.Set].posYInParentTransform, false)
-        drawWireLineToComponent(g, this.inputs[INPUT.Reset], left - 2, this.inputs[INPUT.Reset].posYInParentTransform, false)
-
-        ctx.inNonTransformedFrame(ctx => {
-            g.fillStyle = COLOR_COMPONENT_BORDER
-            g.font = "12px sans-serif"
-
-            drawLabel(ctx, this.orient, "S", "w", left, this.inputs[INPUT.Set])
-            drawLabel(ctx, this.orient, "R", "w", left, this.inputs[INPUT.Reset])
-        })
-    }
-
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
         const icon = this._showContent ? "check" : "none"
-        const toggleShowOpItem = ContextMenuData.item(icon, S.Components.Generic.contextMenu.ShowContent, () => {
+        const toggleShowContentItem = ContextMenuData.item(icon, S.Components.Generic.contextMenu.ShowContent, () => {
             this.doSetShowContent(!this._showContent)
         })
 
-        const items: [ContextMenuItemPlacement, ContextMenuItem][] = [
-            ["mid", toggleShowOpItem],
+        return [
+            ["mid", toggleShowContentItem],
+            ...this.makeForceOutputsContextMenuItem(true),
         ]
-
-        const forceOutputItem = this.makeForceOutputsContextMenuItem()
-        if (isDefined(forceOutputItem)) {
-            items.push(
-                ["mid", forceOutputItem]
-            )
-        }
-
-        return items
-
     }
 
 }
+LatchSRDef.impl = LatchSR

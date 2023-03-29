@@ -464,26 +464,6 @@ export class RAM64x8 extends RAM<RAM64x8Repr> {
 }
 
 
-export const RAM32x12Def =
-    defineRAM("ram-32x12", "RAM32x12")
-
-type RAM32x12Repr = Repr<typeof RAM32x12Def>
-
-export class RAM32x12 extends RAM<RAM32x12Repr> {
-
-    public constructor(editor: LogicEditor, savedData: RAM32x12Repr | null) {
-        super(editor, savedData, 32, 12, 5)
-    }
-
-    public toJSON() {
-        return {
-            type: "ram-32x12" as const,
-            ...this.toJSONBase(),
-        }
-    }
-
-}
-
 function isAllZeros(s: string) {
     for (let i = 0; i < s.length; i++) {
         if (s[i] !== "0") {

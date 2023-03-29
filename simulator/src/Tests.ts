@@ -39,8 +39,8 @@ export class Tests {
 
                     a.reverse()
                     b.reverse()
-                    const [sum, v_sum, /*z*/, c_sum] = doALUOp("add", a, b, cin)
-                    const [diff, v_diff, /*z*/, c_diff] = doALUOp("sub", a, b, cin)
+                    const { s: sum, v: v_sum, cout: c_sum } = doALUOp("add", a, b, cin)
+                    const { s: diff, v: v_diff, cout: c_diff } = doALUOp("sub", a, b, cin)
                     a.reverse()
                     b.reverse()
                     sum.reverse()

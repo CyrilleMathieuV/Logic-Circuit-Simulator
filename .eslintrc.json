@@ -48,6 +48,8 @@
         // "no-unexpected-multiline": "error",
         // "i18n-text/no-en": 2,
         "@typescript-eslint/strict-boolean-expressions": "error",
-        "@typescript-eslint/explicit-member-accessibility": "error"
+        "@typescript-eslint/explicit-member-accessibility": "error",
+        "@typescript-eslint/ban-types": "off",
+        "@typescript-eslint/no-inferrable-types": "off"
     }
 }

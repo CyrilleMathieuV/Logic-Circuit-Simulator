@@ -3,28 +3,23 @@
 
 ## High priority
 
- * Correct register display when horizontal
- * 8-bit register
+ * Get key events also when multiple editors are on the same page
  * Copy-paste
  * Hide mouseover when mouse leaves web component boundaries
  * High-Z bus logic
- * prevent clock "backlog" from running like crazy
  * Adder orientation
- * Add waypoint by dragging; add wire by alt-dragging from existing wire
  * Lock position
- * Prevent click event if right-click
- * 4-bit adder with carry in and out
+ * Prevent click event if right-click and when dragging
  * More consistently set things dirty
- * Replace input with clock and conversely
- * 8-bit adder, ALU, register, ROM, display, counter
 
 
 ## Medium priority
 
- * Add contextual menu to clock
- * Edge detector
- * Component creation
+ * ROM
+ * Undo/redo as buttons
+ * Custom component creation
  * (Address) decoder: 2, 3, 4 bit versions
+ * Add mouseovers to new components
  * Save/restore using browser's storage
     * standalone
       * no long term storage
@@ -36,26 +31,35 @@
       * only with sessionstorage
 
 
-
 ## Low priority
 
- * Mux/Demux 16:8, 8:16
+ * Allow repeating deletions with Cmd+Y
+ * Edge detector?
  * Highlight only nodes when dragging
- * Get key events also when multiple editors are on the same pagex
  * Don't store Z in memory cells, but unknown instead
- * Add rich HTML annotation
+ * Add rich HTML annotations
  * Disable/hide input of component (e.g., to make exercise to prevent alu from knowing how to do a subtraction)
- * Add mouseovers to new components
- * Switch to https://www.floating-ui.com for tooltips?
  * Lock component to some "parent" to move them more intuitively?
- * Lock component to prevent them from being moveable/selectable
  * Add external component by drag-and-drop from file
  * Implement Quine–McCluskey algorithm for function normalization
- * Menu item to replace 4-bit component with 8-bit version and inversely
 
 
 ### DONE
 
+ * Replace input with clock and conversely
+ * Make left buttons honor dark mode
+ * Generic shared drawing code
+ * Move width and height computation to component's def
+ * 8-bit counter
+ * Replace with component with different params (e.g. 4-bit to 8-bit)
+ * prevent clock "backlog" from running like crazy
+ * 8-bit adder, ALU, register, ROM, display
+ * 4-bit adder with carry in and out
+ * Add waypoint by dragging; add wire by alt-dragging from existing wire
+ * Correct register display when horizontal
+ * 8-bit register
+ * ShiftRegister
+ * Mux/Demux 16:8, 8:16
  * Zoom
  * Undo/redo
  * 4-bit and 8-bit display without interpretation

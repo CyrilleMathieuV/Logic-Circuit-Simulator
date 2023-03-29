@@ -1,15 +1,15 @@
 import { Bezier, Offset } from "bezier-js"
 import * as t from "io-ts"
-import { DrawParams, LogicEditor } from "../LogicEditor"
-import { Timestamp } from "../Timeline"
-import { COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE, NodeStyle, WAYPOINT_DIAMETER, WIRE_WIDTH, colorForBoolean, dist, drawStraightWireLine, drawWaypoint, isOverWaypoint, strokeAsWireLine } from "../drawutils"
+import { colorForBoolean, COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE, dist, drawStraightWireLine, drawWaypoint, isOverWaypoint, NodeStyle, strokeAsWireLine, WAYPOINT_DIAMETER, WIRE_WIDTH } from "../drawutils"
 import { span, style, title } from "../htmlgen"
+import { DrawParams, LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { LogicValue, Mode, isDefined, isNotNull, isNull, isUndefined, typeOrUndefined } from "../utils"
+import { Timestamp } from "../Timeline"
+import { InteractionResult, isArray, isDefined, isUndefined, LogicValue, Mode, typeOrUndefined } from "../utils"
 import { Component, NodeGroup } from "./Component"
-import { ContextMenuData, DrawContext, Drawable, DrawableWithDraggablePosition, DrawableWithPosition, Orientation, Orientations_, PositionSupportRepr } from "./Drawable"
+import { ContextMenuData, Drawable, DrawableWithDraggablePosition, DrawableWithPosition, DrawContext, Orientation, Orientations_, PositionSupportRepr } from "./Drawable"
 import { Node, NodeIn, NodeOut, WireColor } from "./Node"
-import { Passthrough1 } from "./Passthrough"
+import { Passthrough, PassthroughDef } from "./Passthrough"
 
 type WaypointRepr = t.TypeOf<typeof Waypoint.Repr>
 
@@ -22,9 +22,9 @@ export class Waypoint extends DrawableWithDraggablePosition {
         ], "Wire")
     }
 
-    public static toSuperRepr(saved: WaypointRepr | null): PositionSupportRepr | null {
-        if (isNull(saved)) {
-            return null
+    public static toSuperRepr(saved?: WaypointRepr | undefined): PositionSupportRepr | undefined {
+        if (isUndefined(saved)) {
+            return undefined
         }
         return {
             pos: [saved[0], saved[1]],
@@ -35,10 +35,10 @@ export class Waypoint extends DrawableWithDraggablePosition {
 
     public constructor(
         editor: LogicEditor,
-        savedData: WaypointRepr | null,
+        saved: WaypointRepr | undefined,
         public readonly parent: Wire,
     ) {
-        super(editor, Waypoint.toSuperRepr(savedData))
+        super(editor, Waypoint.toSuperRepr(saved))
     }
 
     public toJSON(): WaypointRepr {
@@ -100,7 +100,7 @@ export class Waypoint extends DrawableWithDraggablePosition {
     }
 
     public override mouseUp(__: MouseEvent | TouchEvent) {
-        return this.tryStopMoving()
+        return InteractionResult.fromBoolean(this.tryStopMoving())
     }
 
     public override makeContextMenu(): ContextMenuData {
@@ -141,6 +141,7 @@ export class Wire extends Drawable {
         return t.union([fullRepr, simpleRepr], "Wire")
     }
 
+    private _startNode: Node // not NodeOut since we can start from the end
     private _endNode: NodeIn | null = null
     private _waypoints: Waypoint[] = []
     private _style: WireStyle | undefined = undefined
@@ -149,13 +150,12 @@ export class Wire extends Drawable {
     public customPropagationDelay: number | undefined = undefined
     public ribbon: Ribbon | undefined = undefined
 
-    public constructor(
-        private _startNode: Node // not NodeOut since we can start from the end
-    ) {
-        super(_startNode.editor)
-        const editor = _startNode.editor
+    public constructor(startNode: Node) {
+        super(startNode.editor)
+        this._startNode = startNode
+        const editor = startNode.editor
         const longAgo = -1 - editor.options.propagationDelay // make sure it is fully propagated no matter what
-        this._propagatingValues.push([_startNode.value, longAgo])
+        this._propagatingValues.push([startNode.value, longAgo])
     }
 
     public toJSON(): WireRepr {
@@ -221,14 +221,14 @@ export class Wire extends Drawable {
 
         if (!Node.isOutput(secondNode)) {
             if (!Node.isOutput(this._startNode)) {
-                console.log("WARN connecting two input nodes")
+                console.warn("Connecting two input nodes")
                 return
             }
             this._endNode = secondNode
 
         } else {
             if (Node.isOutput(this._startNode)) {
-                console.log("WARN connecting two output nodes")
+                console.warn("Connecting two output nodes")
                 return
             }
 
@@ -246,6 +246,19 @@ export class Wire extends Drawable {
         this._endNode.doSetColor(this._startNode.color)
     }
 
+    public changeStartNode(startNode: NodeOut, now: Timestamp) {
+        if (Node.isOutput(this._startNode)) {
+            this._startNode.removeOutgoingWire(this)
+        } else {
+            // should never happen
+            console.warn("Start node is not an output node")
+        }
+
+        this._startNode = startNode
+        this._startNode.addOutgoingWire(this)
+        this.propageNewValue(this._startNode.value, now)
+    }
+
     public propageNewValue(newValue: LogicValue, now: Timestamp) {
         if (this._propagatingValues[this._propagatingValues.length - 1][0] !== newValue) {
             this._propagatingValues.push([newValue, now])
@@ -256,7 +269,7 @@ export class Wire extends Drawable {
         if (Node.isOutput(this._startNode)) {
             this._startNode.removeOutgoingWire(this)
         }
-        if (isNotNull(this._endNode)) {
+        if (this._endNode !== null) {
             this._endNode.incomingWire = null
         }
         // for (const waypoint of this._waypoints) {
@@ -269,31 +282,30 @@ export class Wire extends Drawable {
         // should either be null (wire being drawn) or alive
         // (wire set) for the wire to be alive
         return this.startNode.isAlive &&
-            (isNull(this.endNode) || this.endNode.isAlive)
+            (this.endNode === null || this.endNode.isAlive)
     }
 
-    public addPassthroughFrom(e: MouseEvent | TouchEvent): Passthrough1 | undefined {
+    public addPassthroughFrom(e: MouseEvent | TouchEvent): Passthrough | undefined {
         const editor = this.editor
         const [x, y] = editor.offsetXYForContextMenu(e, true)
         const endNode = this.endNode
-        if (isNull(endNode)) {
+        if (endNode === null) {
             return undefined
         }
 
-        const passthrough = new Passthrough1(editor, null)
-        editor.components.add(passthrough)
+        const passthrough = PassthroughDef.make<Passthrough>(editor, { bits: 1 })
+        passthrough.setSpawned()
         passthrough.setPosition(x, y)
-        editor.moveMgr.setDrawableStoppedMoving(passthrough)
 
         // modify this wire to go to the passthrough
-        this.setSecondNode(passthrough.inputs[0])
+        this.setSecondNode(passthrough.inputs.I[0])
 
         // create a new wire from the passthrough to the end node
         const wireMgr = editor.wireMgr
-        wireMgr.addNode(passthrough.outputs[0])
+        wireMgr.addNode(passthrough.outputs.O[0])
         const newWire = wireMgr.addNode(endNode)
         if (isUndefined(newWire)) {
-            console.log("WARN: couldn't create new wire")
+            console.warn("Couldn't create new wire")
             return
         }
         newWire.doSetStyle(this.style)
@@ -383,7 +395,7 @@ export class Wire extends Drawable {
         const drawTime = ctx.drawParams.drawTime
         const wireValue = this.prunePropagatingValues(drawTime, propagationDelay)
 
-        if (isNull(this.endNode)) {
+        if (this.endNode === null) {
             // draw to mouse position
             drawStraightWireLine(g, this.startNode.posX, this.startNode.posY, this.editor.mouseX, this.editor.mouseY, wireValue, this._startNode.color, neutral)
 
@@ -495,7 +507,7 @@ export class Wire extends Drawable {
         if (e.altKey && this.editor.mode >= Mode.DESIGN) {
             const passthrough = this.addPassthroughFrom(e)
             if (isDefined(passthrough)) {
-                return passthrough.outputs[0].mouseDown(e)
+                return passthrough.outputs.O[0].mouseDown(e)
             }
         }
         return super.mouseDown(e)
@@ -519,9 +531,9 @@ export class Wire extends Drawable {
         if (isDefined(this._waypointBeingDragged)) {
             this._waypointBeingDragged.mouseUp(e)
             this._waypointBeingDragged = undefined
-            return true
+            return InteractionResult.SimpleChange
         }
-        return false
+        return InteractionResult.NoChange
     }
 
     public override makeContextMenu(): ContextMenuData {
@@ -731,7 +743,7 @@ export class Ribbon extends Drawable {
         }
 
         const drawBeziers = (bs: Offset | Bezier[]) => {
-            if (Array.isArray(bs)) {
+            if (isArray(bs)) {
                 g.beginPath()
                 for (const bb of bs) {
                     addBezierToPath(bb)

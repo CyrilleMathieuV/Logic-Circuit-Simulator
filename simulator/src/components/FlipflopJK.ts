@@ -1,35 +1,34 @@
-import { COLOR_COMPONENT_INNER_LABELS, drawLabel, drawWireLineToComponent } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { LogicValue } from "../utils"
-import { Repr } from "./Component"
-import { DrawContext } from "./Drawable"
-import { defineFlipflop, Flipflop, OUTPUT } from "./FlipflopOrLatch"
+import { defineComponent, Repr } from "./Component"
+import { Flipflop, FlipflopBaseDef } from "./FlipflopOrLatch"
 
-const enum INPUT {
-    Clock,
-    Preset,
-    Clear,
-    J,
-    K,
-}
 
 export const FlipflopJKDef =
-    defineFlipflop("flipflop-jk", "FlipflopJK", {})
+    defineComponent("ic", "flipflop-jk", {
+        ...FlipflopBaseDef,
+        makeNodes: () => {
+            const base = FlipflopBaseDef.makeNodes(0)
+            const s = S.Components.FlipflopJK
+            return {
+                ins: {
+                    ...base.ins,
+                    J: [-4, -2, "w", s.InputJDesc],
+                    K: [-4, 2, "w", s.InputKDesc],
+                },
+                outs: base.outs,
+            }
+        },
+    })
 
 type FlipflopJKRepr = Repr<typeof FlipflopJKDef>
 
 export class FlipflopJK extends Flipflop<FlipflopJKRepr> {
 
-    public constructor(editor: LogicEditor, savedData: FlipflopJKRepr | null) {
-        super(editor, savedData, {
-            ins: [
-                [S.Components.FlipflopJK.InputJDesc, -4, -2, "w"],
-                [S.Components.FlipflopJK.InputKDesc, -4, 2, "w"],
-            ],
-            clockYOffset: 0,
-        })
+    public constructor(editor: LogicEditor, saved?: FlipflopJKRepr) {
+        super(editor, FlipflopJKDef, saved)
     }
 
     public toJSON() {
@@ -47,9 +46,9 @@ export class FlipflopJK extends Flipflop<FlipflopJKRepr> {
     }
 
     protected doRecalcValueAfterClock(): LogicValue {
-        const j = this.inputs[INPUT.J].value
-        const k = this.inputs[INPUT.K].value
-        const q = this.outputs[OUTPUT.Q].value
+        const j = this.inputs.J.value
+        const k = this.inputs.K.value
+        const q = this.outputs.Q.value
 
         if (j === true) {
             if (k === true) {
@@ -65,19 +64,5 @@ export class FlipflopJK extends Flipflop<FlipflopJKRepr> {
         }
     }
 
-    protected override doDrawLatchOrFlipflop(g: CanvasRenderingContext2D, ctx: DrawContext, width: number, height: number, left: number, right: number) {
-        super.doDrawLatchOrFlipflop(g, ctx, width, height, left, right)
-
-        drawWireLineToComponent(g, this.inputs[INPUT.J], left - 2, this.inputs[INPUT.J].posYInParentTransform, false)
-        drawWireLineToComponent(g, this.inputs[INPUT.K], left - 2, this.inputs[INPUT.K].posYInParentTransform, false)
-
-        ctx.inNonTransformedFrame(ctx => {
-            g.fillStyle = COLOR_COMPONENT_INNER_LABELS
-            g.font = "12px sans-serif"
-
-            drawLabel(ctx, this.orient, "J", "w", left, this.inputs[INPUT.J])
-            drawLabel(ctx, this.orient, "K", "w", left, this.inputs[INPUT.K])
-        })
-    }
-
 }
+FlipflopJKDef.impl = FlipflopJK

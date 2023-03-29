@@ -1,23 +1,26 @@
 import dialogPolyfill from 'dialog-polyfill'
+import * as LZString from "lz-string"
+import * as pngMeta from 'png-metadata-writer'
+import { ComponentList, DrawZIndex } from "./ComponentList"
 import { Component, ComponentBase, ComponentState } from "./components/Component"
 import { Drawable, DrawableWithPosition, Orientation } from "./components/Drawable"
+import { LabelRect, LabelRectDef } from "./components/LabelRect"
 import { Waypoint, Wire, WireManager, WireStyle, WireStyles } from "./components/Wire"
 import { CursorMovementManager, EditorSelection } from "./CursorMovementManager"
 import { clampZoom, COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, setColors, strokeSingleLine } from "./drawutils"
-import { gallery } from "./gallery"
 import { a, applyModifierTo, attr, attrBuilder, button, cls, div, emptyMod, href, input, label, mods, option, raw, select, span, style, target, title, type } from "./htmlgen"
+import { IconName, inlineIconSvgFor, isIconName, makeIcon } from "./images"
 import { makeComponentMenuInto } from "./menuutils"
 import { MoveManager } from "./MoveManager"
 import { NodeManager } from "./NodeManager"
 import { PersistenceManager, Workspace } from "./PersistenceManager"
 import { RecalcManager, RedrawManager } from "./RedrawRecalcManager"
+import { DefaultLang, isLang, S, setLang } from "./strings"
+import { Tests } from "./Tests"
 import { Timeline, TimelineState } from "./Timeline"
-import { copyToClipboard, downloadBlob as downloadDataUrl, formatString, getURLParameter, isDefined, isEmbeddedInIframe, isFalsyString, isNotNull, isNull, isNullOrUndefined, isString, isTruthyString, isUndefined, KeysOfByType, RichStringEnum, setVisible, showModal, targetIsFieldOrOtherInput } from "./utils"
+import { UndoManager } from './UndoManager'
+import { copyToClipboard, downloadBlob as downloadDataUrl, formatString, getURLParameter, isArray, isDefined, isEmbeddedInIframe, isFalsyString, isString, isTruthyString, isUndefined, isUndefinedOrNull, KeysOfByType, RichStringEnum, setVisible, showModal, targetIsFieldOrOtherInput } from "./utils"
 
-import * as LZString from "lz-string"
-import * as pngMeta from 'png-metadata-writer'
-// import * as QRCode from "qrcode"
-// import * as C2S from "canvas2svg"
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -30,14 +33,7 @@ import LogicEditorCSS from "../css/LogicEditor.css"
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import DialogPolyfillCSS from "../../node_modules/dialog-polyfill/dist/dialog-polyfill.css"
-import { ComponentFactory } from "./ComponentFactory"
-import { ComponentList, DrawZIndex } from "./ComponentList"
-import { LabelRect } from "./components/LabelRect"
-import { IconName, inlineSvgFor, isIconName, makeIcon } from "./images"
-import { DefaultLang, isLang, S, setLang } from "./strings"
-import { Tests } from "./Tests"
-import { UndoManager } from './UndoManager'
-
+import { gallery } from './gallery'
 
 enum Mode {
     STATIC,  // cannot interact in any way
@@ -307,12 +303,12 @@ export class LogicEditor extends HTMLElement {
 
     public setActiveTool(toolElement: HTMLElement) {
         const tool = toolElement.getAttribute("tool")
-        if (isNullOrUndefined(tool)) {
+        if (isUndefinedOrNull(tool)) {
             return
         }
 
         // Main edit buttons on the right
-        if (MouseActions.isValue(tool)) {
+        if (MouseActions.includes(tool)) {
             this.wrapHandler(() => {
                 this.setCurrentMouseAction(tool)
             })()
@@ -364,7 +360,7 @@ export class LogicEditor extends HTMLElement {
         const { rootDiv, mainCanvas } = this.html
 
         const parentStyles = this.getAttribute("style")
-        if (isNotNull(parentStyles)) {
+        if (parentStyles !== null) {
             rootDiv.setAttribute("style", rootDiv.getAttribute("style") + parentStyles)
         }
 
@@ -379,7 +375,7 @@ export class LogicEditor extends HTMLElement {
             return false
         }
         mainCanvas.ondrop = e => {
-            if (isNull(e.dataTransfer)) {
+            if (e.dataTransfer === null) {
                 return false
             }
 
@@ -404,10 +400,6 @@ export class LogicEditor extends HTMLElement {
             }
             return false
         }
-
-        // TODO clear all redrawmanager
-        // TODO add initial reason to redraw
-        // draw
 
         this.cursorMovementMgr.registerCanvasListenersOn(this.html.mainCanvas)
         if (LogicEditor._allConnectedEditors.length === 0) {
@@ -496,7 +488,7 @@ export class LogicEditor extends HTMLElement {
                         }
                         if (key in this.userdata) {
                             const oldValue = this.userdata[key]
-                            if (Array.isArray(oldValue)) {
+                            if (isArray(oldValue)) {
                                 oldValue.push(value)
                             } else {
                                 this.userdata[key] = [oldValue, value]
@@ -513,7 +505,7 @@ export class LogicEditor extends HTMLElement {
         }
 
         if (this._isSingleton) {
-            console.log("LogicEditor is in singleton mode")
+            // console.log("LogicEditor is in singleton mode")
 
             // singletons manage their dark mode according to system settings
             const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)")
@@ -537,13 +529,18 @@ export class LogicEditor extends HTMLElement {
                     case "Delete": {
                         let selComp
                         if (isDefined(selComp = this.cursorMovementMgr.currentSelection?.previouslySelectedElements) && selComp.size !== 0) {
+                            let anyDeleted = false
                             for (const comp of selComp) {
-                                this.tryDeleteDrawable(comp)
+                                anyDeleted = this.tryDeleteDrawable(comp) || anyDeleted
                             }
-                            this.undoMgr.takeSnapshot()
+                            if (anyDeleted) {
+                                this.undoMgr.takeSnapshot()
+                            }
                         } else if ((selComp = this.cursorMovementMgr.currentMouseOverComp) !== null) {
-                            this.tryDeleteDrawable(selComp)
-                            this.undoMgr.takeSnapshot()
+                            const deleted = this.tryDeleteDrawable(selComp)
+                            if (deleted) {
+                                this.undoMgr.takeSnapshot()
+                            }
                         }
                         e.preventDefault()
                         return
@@ -605,7 +602,7 @@ export class LogicEditor extends HTMLElement {
                     case "z":
                         if (ctrlOrCommand && !targetIsFieldOrOtherInput(e)) {
                             if (shift) {
-                                this.undoMgr.redo()
+                                this.undoMgr.redoOrRepeat()
                             } else {
                                 this.undoMgr.undo()
                             }
@@ -614,7 +611,7 @@ export class LogicEditor extends HTMLElement {
                         return
                     case "y":
                         if (ctrlOrCommand && !targetIsFieldOrOtherInput(e)) {
-                            this.undoMgr.redo()
+                            this.undoMgr.redoOrRepeat()
                             e.preventDefault()
                         }
                         return
@@ -658,8 +655,8 @@ export class LogicEditor extends HTMLElement {
             }
 
             this.html.canvasContainer.appendChild(
-                div(style("user-select: none; position: absolute; bottom: 0; right: 0; padding: 5px 3px 2px 5px; background-color: rgba(255,255,255,0.3); color: rgba(0,0,0,0.2); border-radius: 10px 0 0 0; font-size: 69%; font-style: italic;"),
-                    "Développé par ",
+                div(style("user-select: none; position: absolute; bottom: 0; right: 0; padding: 5px 3px 2px 5px; color: rgba(128,128,128,0.2); border-radius: 10px 0 0 0; font-size: 69%; font-style: italic;"),
+                    S.Messages.DevelopedBy + " ",
                     a(style("color: inherit"),
                         href("https://github.com/jppellet/Logic-Circuit-Simulator"), target("_blank"),
                         "Jean-Philippe Pellet"
@@ -744,7 +741,14 @@ export class LogicEditor extends HTMLElement {
             })
         }
 
-        const setCaption = (buttonId: string, name: string) => this.elemWithId(buttonId).insertAdjacentText("beforeend", name)
+        const setCaption = (buttonId: string, strings: string | [string, string]) => {
+            const elem = this.elemWithId(buttonId)
+            const [name, tooltip] = isString(strings) ? [strings, undefined] : strings
+            elem.insertAdjacentText("beforeend", name)
+            if (isDefined(tooltip)) {
+                elem.setAttribute("title", tooltip)
+            }
+        }
 
         {
             // set strings in the UI
@@ -771,7 +775,8 @@ export class LogicEditor extends HTMLElement {
 
         makeComponentMenuInto(this.html.leftToolbar, this._options.showOnly)
 
-        const groupButton = this.html.leftToolbar.querySelector("button.sim-component-button[data-component=label][data-type=rect]")
+        // TODO move this to the Def of LabelRect to be cleaner
+        const groupButton = this.html.leftToolbar.querySelector("button.sim-component-button[data-category=label][data-type=rect]")
         if (groupButton === null) {
             console.log("ERROR: Could not find group button")
         } else {
@@ -780,8 +785,8 @@ export class LogicEditor extends HTMLElement {
                 if (selectedComps.size !== 0) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
-                    const factory = ComponentFactory.makeFactoryForButton(groupButton as HTMLElement)
-                    const newGroup = factory(this)
+
+                    const newGroup = LabelRectDef.make<LabelRect>(this)
                     newGroup.setSpawned()
 
                     if (newGroup instanceof LabelRect) {
@@ -1295,24 +1300,23 @@ export class LogicEditor extends HTMLElement {
             let decodedData
             try {
                 decodedData = LZString.decompressFromEncodedURIComponent(this._initialData.str)
-                error = PersistenceManager.doLoadFromJson(this, decodedData!)
-            } catch (e) {
-                error = String(e) + " (LZString)"
-            }
+            } catch (err) {
+                error = String(err) + " (LZString)"
 
-            if (isDefined(error)) {
                 // try the old, uncompressed way of storing the data in the URL
                 try {
-                    decodedData = atob(this._initialData.str.replace(/-/g, "+").replace(/_/g, "/").replace(/%3D/g, "="))
-                    error = PersistenceManager.doLoadFromJson(this, decodeURIComponent(decodedData))
+                    decodedData = decodeURIComponent(atob(this._initialData.str.replace(/-/g, "+").replace(/_/g, "/").replace(/%3D/g, "=")))
                 } catch (e) {
-                    error = String(e) + " (atob)"
+                    // swallow error from old format
                 }
             }
 
             if (isUndefined(error) && isString(decodedData)) {
                 // remember the decompressed/decoded value
-                this._initialData = { _type: "json", json: decodedData }
+                error = PersistenceManager.doLoadFromJson(this, decodedData!)
+                if (isUndefined(error)) {
+                    this._initialData = { _type: "json", json: decodedData }
+                }
             }
         }
 
@@ -1336,9 +1340,14 @@ export class LogicEditor extends HTMLElement {
         }
     }
 
+    public setDark(dark: boolean) {
+        this.html.rootDiv.classList.toggle("dark", dark)
+    }
+
     public tryDeleteDrawable(comp: Drawable): boolean {
         if (comp instanceof ComponentBase) {
-            return this.tryDeleteComponentsWhere(c => c === comp, true) !== 0
+            const numDeleted = this.tryDeleteComponentsWhere(c => c === comp, true)
+            return numDeleted !== 0
         } else if (comp instanceof Wire) {
             this.wireMgr.deleteWire(comp)
             return true
@@ -1368,7 +1377,7 @@ export class LogicEditor extends HTMLElement {
 
     public setCurrentMouseAction(action: MouseAction) {
         this._currentMouseAction = action
-        this.setToolCursor(MouseActions.propsOf(action).cursor)
+        this.setToolCursor(MouseActions.props[action].cursor)
 
         const toolButtons = this.root.querySelectorAll(".sim-modification-tool")
         for (let i = 0; i < toolButtons.length; i++) {
@@ -1578,7 +1587,7 @@ export class LogicEditor extends HTMLElement {
 
     public saveCurrentStateToUrl() {
         const [fullJson, compressedUriSafeJson] = this.fullJsonStateAndCompressedForUri()
-        console.log(fullJson)
+        console.log("Saved to URL:\n" + fullJson)
         this.saveToUrl(compressedUriSafeJson)
     }
 
@@ -1832,14 +1841,15 @@ export class LogicEditor extends HTMLElement {
         if (isMovingComponent) {
             const widthAdjusted = width / this._actualZoomFactor
             const heightAdjusted = height / this._actualZoomFactor
+            const step = GRID_STEP //* 2
             g.strokeStyle = COLOR_GRID_LINES
             g.lineWidth = 1
             g.beginPath()
-            for (let x = GRID_STEP; x < widthAdjusted; x += GRID_STEP) {
+            for (let x = step; x < widthAdjusted; x += step) {
                 g.moveTo(x, 0)
                 g.lineTo(x, height)
             }
-            for (let y = GRID_STEP; y < heightAdjusted; y += GRID_STEP) {
+            for (let y = step; y < heightAdjusted; y += step) {
                 g.moveTo(0, y)
                 g.lineTo(width, y)
             }
@@ -1895,10 +1905,9 @@ export class LogicEditor extends HTMLElement {
         drawParams.currentSelection = currentSelection
         const drawComp = (comp: Component) => {
             comp.draw(g, drawParams)
-            comp.forEachNode((node) => {
+            for (const node of comp.allNodes()) {
                 node.draw(g, drawParams) // never show nodes as selected
-                return true
-            })
+            }
         }
 
         // draw background components
@@ -2001,9 +2010,9 @@ const template = (() => {
 
     template.content.querySelectorAll("i.svgicon").forEach((_iconElem) => {
         const iconElem = _iconElem as HTMLElement
-        const iconName = iconElem.dataset["icon"] ?? "question"
+        const iconName = iconElem.dataset.icon ?? "question"
         if (isIconName(iconName)) {
-            iconElem.innerHTML = inlineSvgFor(iconName)
+            iconElem.innerHTML = inlineIconSvgFor(iconName)
         } else {
             console.log(`Unknown icon name '${iconName}'`)
         }

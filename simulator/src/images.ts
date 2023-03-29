@@ -18,10 +18,13 @@ import edit from '../img/icons/edit.icon.svg'; // @ts-ignore
 import eye from '../img/icons/eye.icon.svg'; // @ts-ignore
 import font from '../img/icons/font.icon.svg'; // @ts-ignore
 import force from '../img/icons/force.icon.svg'; // @ts-ignore
+import inputs from '../img/icons/inputs.icon.svg'; // @ts-ignore
 import link from '../img/icons/link.icon.svg'; // @ts-ignore
+import memlines from '../img/icons/memlines.icon.svg'; // @ts-ignore
 import move from '../img/icons/move.icon.svg'; // @ts-ignore
 import none from '../img/icons/none.icon.svg'; // @ts-ignore
 import open from '../img/icons/open.icon.svg'; // @ts-ignore
+import outputs from '../img/icons/outputs.icon.svg'; // @ts-ignore
 import palette from '../img/icons/palette.icon.svg'; // @ts-ignore
 import pause from '../img/icons/pause.icon.svg'; // @ts-ignore
 import pen from '../img/icons/pen.icon.svg'; // @ts-ignore
@@ -44,6 +47,7 @@ import wirestyle from '../img/icons/wirestyle.icon.svg'; // @ts-ignore
 
 // images
 import Adder from '../img/Adder.svg'; // @ts-ignore
+import AdderArray from '../img/AdderArray.svg'; // @ts-ignore
 import ALU from '../img/ALU.svg'; // @ts-ignore
 import AND from '../img/AND.svg'; // @ts-ignore
 import AND3 from '../img/AND3.svg'; // @ts-ignore
@@ -59,11 +63,12 @@ import Demux from '../img/Demux.svg'; // @ts-ignore
 import FlipflopD from '../img/FlipflopD.svg'; // @ts-ignore
 import FlipflopJK from '../img/FlipflopJK.svg'; // @ts-ignore
 import FlipflopT from '../img/FlipflopT.svg'; // @ts-ignore
+import GateArray from '../img/GateArray.svg'; // @ts-ignore
 import HalfAdder from '../img/HalfAdder.svg'; // @ts-ignore
 import IMPLY from '../img/IMPLY.svg'; // @ts-ignore
-import InputBit from '../img/InputBit.svg'; // @ts-ignore
-import InputByte from '../img/InputByte.svg'; // @ts-ignore
-import InputNibble from '../img/InputNibble.svg'; // @ts-ignore
+import Input1 from '../img/Input1.svg'; // @ts-ignore
+import Input4 from '../img/Input4.svg'; // @ts-ignore
+import Input8 from '../img/Input8.svg'; // @ts-ignore
 import InputRandom from '../img/InputRandom.svg'; // @ts-ignore
 import LabelRectangle from '../img/LabelRectangle.svg'; // @ts-ignore
 import LabelString from '../img/LabelString.svg'; // @ts-ignore
@@ -80,28 +85,24 @@ import NOT from '../img/NOT.svg'; // @ts-ignore
 import OR from '../img/OR.svg'; // @ts-ignore
 import OR3 from '../img/OR3.svg'; // @ts-ignore
 import OR4 from '../img/OR4.svg'; // @ts-ignore
+import Output1 from '../img/Output1.svg'; // @ts-ignore
 import Output16Seg from '../img/Output16Seg.svg'; // @ts-ignore
+import Output4 from '../img/Output4.svg'; // @ts-ignore
 import Output7Seg from '../img/Output7Seg.svg'; // @ts-ignore
+import Output8 from '../img/Output8.svg'; // @ts-ignore
 import OutputAscii from '../img/OutputAscii.svg'; // @ts-ignore
 import OutputBar from '../img/OutputBar.svg'; // @ts-ignore
-import OutputBit from '../img/OutputBit.svg'; // @ts-ignore
-import OutputByte from '../img/OutputByte.svg'; // @ts-ignore
-import OutputByteDisplay from '../img/OutputByteDisplay.svg'; // @ts-ignore
-import OutputNibble from '../img/OutputNibble.svg'; // @ts-ignore
-import OutputNibbleDisplay from '../img/OutputNibbleDisplay.svg'; // @ts-ignore
+import OutputDisplay4 from '../img/OutputDisplay4.svg'; // @ts-ignore
+import OutputDisplay8 from '../img/OutputDisplay8.svg'; // @ts-ignore
 import OutputShiftBuffer from '../img/OutputShiftBuffer.svg'; // @ts-ignore
 import Passthrough1 from '../img/Passthrough1.svg'; // @ts-ignore
-import Passthrough4 from '../img/Passthrough4.svg'; // @ts-ignore
-import Passthrough8 from '../img/Passthrough8.svg'; // @ts-ignore
-import QuadGate from '../img/QuadGate.svg'; // @ts-ignore
-import QuadTriState from '../img/QuadTriState.svg'; // @ts-ignore
-import RAM16x4 from '../img/RAM16x4.svg'; // @ts-ignore
-import RAM16x8 from '../img/RAM16x8.svg'; // @ts-ignore
-import RAM64x8 from '../img/RAM64x8.svg'; // @ts-ignore
-import RAM32x12 from '../img/RAM32x12.svg' // @ts-ignore
+import PassthroughN from '../img/PassthroughN.svg'; // @ts-ignore
+import RAM from '../img/RAM.svg'; // @ts-ignore
 import Register from '../img/Register.svg'; // @ts-ignore
+import ShiftRegister from '../img/ShiftRegister.svg'; // @ts-ignore
 import SwitchedInverter from '../img/SwitchedInverter.svg'; // @ts-ignore
 import TRI from '../img/TRI.svg'; // @ts-ignore
+import TriStateBufferArray from '../img/TriStateBufferArray.svg'; // @ts-ignore
 import TXA from '../img/TXA.svg'; // @ts-ignore
 import XNOR from '../img/XNOR.svg'; // @ts-ignore
 import XNOR3 from '../img/XNOR3.svg'; // @ts-ignore
@@ -127,10 +128,13 @@ const icons = {
     eye,
     font,
     force,
+    inputs,
     link,
+    memlines,
     move,
     none,
     open,
+    outputs,
     palette,
     pause,
     pen,
@@ -154,6 +158,7 @@ const icons = {
 
 const images = {
     Adder,
+    AdderArray,
     ALU,
     AND,
     AND3,
@@ -169,11 +174,12 @@ const images = {
     FlipflopD,
     FlipflopJK,
     FlipflopT,
+    GateArray,
     HalfAdder,
     IMPLY,
-    InputBit,
-    InputByte,
-    InputNibble,
+    Input1,
+    Input4,
+    Input8,
     InputRandom,
     LabelRectangle,
     LabelString,
@@ -190,28 +196,24 @@ const images = {
     OR,
     OR3,
     OR4,
+    Output1,
+    Output4,
+    Output8,
     Output7Seg,
     Output16Seg,
     OutputAscii,
     OutputBar,
-    OutputBit,
-    OutputByte,
-    OutputByteDisplay,
-    OutputNibble,
-    OutputNibbleDisplay,
+    OutputDisplay4,
+    OutputDisplay8,
     OutputShiftBuffer,
     Passthrough1,
-    Passthrough4,
-    Passthrough8,
-    QuadGate,
-    QuadTriState,
-    RAM16x4,
-    RAM16x8,
-    RAM64x8,
-    RAM32x12,
+    PassthroughN,
+    RAM,
     Register,
+    ShiftRegister,
     SwitchedInverter,
     TRI,
+    TriStateBufferArray,
     TXA,
     XNOR,
     XNOR3,
@@ -231,26 +233,34 @@ export function isImageName(name: string): name is ImageName {
     return name in images
 }
 
-export function makeImage(name: ImageName, width?: number, height?: number): HTMLImageElement {
-    const htmlImg = new Image(width, height)
-    htmlImg.src = images[name]
-    return htmlImg
+export function makeImage(name: ImageName, width?: number, height?: number): HTMLElement {
+    return makeSvgHolder("svgimg", images, name, width, height)
 }
 
 export function makeIcon(name: IconName, width?: number, height?: number): HTMLElement {
+    return makeSvgHolder("svgicon", icons, name, width, height)
+}
+
+function makeSvgHolder<TImages extends Record<string, string>>(className: string, svgData: TImages, name: string & keyof TImages, width?: number, height?: number): HTMLElement {
     const elem = document.createElement('i')
-    elem.classList.add("svgicon")
+    elem.classList.add(className)
     if (isDefined(width)) {
         elem.style.width = `${width}px`
     }
     if (isDefined(height)) {
         elem.style.height = `${height}px`
     }
-    elem.dataset["icon"] = name
-    elem.innerHTML = inlineSvgFor(name)
+    elem.dataset.icon = name
+    elem.innerHTML = inlineSvgFor(svgData, name)
     return elem
 }
 
-export function inlineSvgFor(name: IconName): string {
-    return icons[name]
+function inlineSvgFor<TImages extends Record<string, string>>(svgData: TImages, name: keyof TImages): string {
+    return svgData[name]
 }
+
+export function inlineIconSvgFor(name: IconName): string {
+    return inlineSvgFor(icons, name)
+}
+
+

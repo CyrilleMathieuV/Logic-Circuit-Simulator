@@ -1,429 +1,180 @@
-import { a, button, cls, dataClassId, dataComponent, dataType, div, emptyMod, raw, span, style, title, type } from "./htmlgen"
+import { Branded } from "io-ts"
+import { ButtonDataset } from "./ComponentFactory"
+import { AdderDef } from "./components/Adder"
+import { AdderArrayDef } from "./components/AdderArray"
+import { ALUDef } from "./components/ALU"
+import { ClockDef } from "./components/Clock"
+import { ComparatorDef } from "./components/Comparator"
+import { ComponentCategory, ParamDef, ParametrizedComponentDef, ParamsFromDefs } from "./components/Component"
+import { CounterDef } from "./components/Counter"
+import { Decoder16SegDef } from "./components/Decoder16Seg"
+import { Decoder7SegDef } from "./components/Decoder7Seg"
+import { DecoderBCD4Def } from "./components/DecoderBCD4"
+import { DemuxDef } from "./components/Demux"
+import { FlipflopDDef } from "./components/FlipflopD"
+import { FlipflopJKDef } from "./components/FlipflopJK"
+import { FlipflopTDef } from "./components/FlipflopT"
+import { Gate1Def, GateNDef } from "./components/Gate"
+import { GateArrayDef } from "./components/GateArray"
+import { HalfAdderDef } from "./components/HalfAdder"
+import { InputDef } from "./components/Input"
+import { InputRandomDef } from "./components/InputRandom"
+import { LabelRectDef } from "./components/LabelRect"
+import { LabelStringDef } from "./components/LabelString"
+import { LatchSRDef } from "./components/LatchSR"
+import { MuxDef } from "./components/Mux"
+import { OutputDef } from "./components/Output"
+import { Output16SegDef } from "./components/Output16Seg"
+import { Output7SegDef } from "./components/Output7Seg"
+import { OutputAsciiDef } from "./components/OutputAscii"
+import { OutputBarDef } from "./components/OutputBar"
+import { OutputDisplayDef } from "./components/OutputDisplay"
+import { OutputShiftBufferDef } from "./components/OutputShiftBuffer"
+import { PassthroughDef } from "./components/Passthrough"
+import { RAMDef } from "./components/RAM"
+import { RegisterDef } from "./components/Register"
+import { ShiftRegisterDef } from "./components/ShiftRegister"
+import { SwitchedInverterDef } from "./components/SwitchedInverter"
+import { TriStateBufferDef } from "./components/TriStateBuffer"
+import { TriStateBufferArrayDef } from "./components/TriStateBufferArray"
+import { a, button, cls, div, emptyMod, raw, span, style, title, type } from "./htmlgen"
 import { ImageName, makeImage } from "./images"
 import { S, Strings } from "./strings"
-import { isDefined, isString, isUndefined } from "./utils"
+import { deepObjectEquals, isDefined, isString, isUndefined } from "./utils"
 
-type ComponentKey = Strings["ComponentBar"]["Components"]["type"]
+export type ComponentKey = Strings["ComponentBar"]["Components"]["type"]
 
-
-type ComponentItem = {
-    type: string // TODO better types for this
-    subtype: string | undefined // explicit undefined
-    strings: ComponentKey
-    img: ImageName
-    width: number
-    normallyHidden?: boolean
+export type DefAndParams<
+    TParamDefs extends Record<string, ParamDef<unknown>>,
+    TParams extends ParamsFromDefs<TParamDefs>
+> = {
+    def: ParametrizedComponentDef<any, any, any, any, any, any, any, any, TParams>,
+    params: TParams
 }
+
+export type LibraryItemVisibility = "always" | "withButton" | "ifShowOnly"
+const withButton = "withButton"
+const ifShowOnly = "ifShowOnly"
+
+export type LibraryItem = {
+    category: ComponentCategory
+    type?: string
+    params?: Branded<DefAndParams<any, any>, "params">
+    visual: ComponentKey & ImageName | [ComponentKey, ImageName]
+    compat?: string // for compatibility with old URL params
+    width: number
+    visible?: LibraryItemVisibility
+}
+
+export type LibraryButtonProps = { imgWidth: number }
+export type LibraryButtonOptions = { compat?: string, visible?: LibraryItemVisibility }
 
 type SectionNameKey = keyof Strings["ComponentBar"]["SectionNames"]
 
 type Section = {
     nameKey: SectionNameKey,
-    items: Array<ComponentItem>
+    items: Array<LibraryItem>
 }
 
-const componentsMenu: Array<Section> = [
-    {
-        nameKey: "InputOutput",
-        items: [
-            {
-                type: "in", subtype: undefined,
-                strings: "InputBit", img: "InputBit", width: 32,
-            },
-            {
-                type: "out", subtype: undefined,
-                strings: "OutputBit", img: "OutputBit", width: 32,
-            },
-            {
-                type: "out", subtype: "bar",
-                strings: "OutputBar", img: "OutputBar", width: 32,
-                normallyHidden: true,
-            },
-            {
-                type: "in", subtype: "clock",
-                strings: "Clock", img: "Clock", width: 50,
-            },
-            {
-                type: "in", subtype: "nibble",
-                strings: "InputNibble", img: "InputNibble", width: 32,
-            },
-            {
-                type: "out", subtype: "nibble",
-                strings: "OutputNibble", img: "OutputNibble", width: 32,
-            },
-            {
-                type: "out", subtype: "nibble-display",
-                strings: "OutputNibbleDisplay", img: "OutputNibbleDisplay", width: 32,
-            },
-            {
-                type: "in", subtype: "byte",
-                strings: "InputByte", img: "InputByte", width: 32,
-                normallyHidden: true,
-            },
-            {
-                type: "out", subtype: "byte",
-                strings: "OutputByte", img: "OutputByte", width: 32,
-                normallyHidden: true,
-            },
-            {
-                type: "out", subtype: "byte-display",
-                strings: "OutputByteDisplay", img: "OutputByteDisplay", width: 32,
-                normallyHidden: true,
-            },
-            {
-                type: "out", subtype: "7seg",
-                strings: "Output7Seg", img: "Output7Seg", width: 32,
-                normallyHidden: true,
-            },
-            {
-                type: "out", subtype: "16seg",
-                strings: "Output16Seg", img: "Output16Seg", width: 32,
-                normallyHidden: true,
-            },
-            {
-                type: "out", subtype: "ascii",
-                strings: "OutputAscii", img: "OutputAscii", width: 32,
-                normallyHidden: true,
-            },
-            {
-                type: "in", subtype: "random",
-                strings: "InputRandom", img: "InputRandom", width: 32,
-                normallyHidden: true,
-            },
-            {
-                type: "out", subtype: "shiftbuffer",
-                strings: "OutputShiftBuffer", img: "OutputShiftBuffer", width: 50,
-                normallyHidden: true,
-            },
-        ],
-    },
+const componentsMenu: Array<Section> = [{
+    nameKey: "InputOutput",
+    items: [
+        InputDef.button({ bits: 1 }, "Input1"),
+        OutputDef.button({ bits: 1 }, "Output1"),
+        OutputBarDef.button("OutputBar", { visible: withButton }),
+        ClockDef.button("Clock"),
 
-    {
-        nameKey: "Gates",
-        items: [
-            {
-                type: "gate", subtype: "NOT",
-                strings: "NOT", img: "NOT", width: 50,
-            },
-            {
-                type: "gate", subtype: "BUF",
-                strings: "BUF", img: "BUF", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "TRI",
-                strings: "TRI", img: "TRI", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "AND",
-                strings: "AND", img: "AND", width: 50,
-            },
-            {
-                type: "gate", subtype: "OR",
-                strings: "OR", img: "OR", width: 50,
-            },
-            {
-                type: "gate", subtype: "XOR",
-                strings: "XOR", img: "XOR", width: 50,
-            },
-            {
-                type: "gate", subtype: "NAND",
-                strings: "NAND", img: "NAND", width: 50,
-            },
-            {
-                type: "gate", subtype: "NOR",
-                strings: "NOR", img: "NOR", width: 50,
-            },
+        InputDef.button({ bits: 4 }, ["InputN", "Input4"], { compat: "in.nibble" }),
+        OutputDef.button({ bits: 4 }, ["OutputN", "Output4"], { compat: "out.nibble" }),
+        OutputDisplayDef.button({ bits: 4 }, ["OutputDisplayN", "OutputDisplay4"], { compat: "out.nibble-display" }),
 
-            {
-                type: "gate", subtype: "XNOR",
-                strings: "XNOR", img: "XNOR", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "IMPLY",
-                strings: "IMPLY", img: "IMPLY", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "NIMPLY",
-                strings: "NIMPLY", img: "NIMPLY", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "TXA",
-                strings: "TRANSFER", img: "TXA", width: 50,
-                normallyHidden: true,
-            },
+        InputDef.button({ bits: 8 }, "Input8", { compat: "in.byte", visible: ifShowOnly }),
+        OutputDef.button({ bits: 8 }, "Output8", { compat: "out.byte", visible: ifShowOnly }),
+        OutputDisplayDef.button({ bits: 8 }, "OutputDisplay8", { compat: "out.byte-display", visible: ifShowOnly }),
 
-            {
-                type: "gate", subtype: "AND3",
-                strings: "AND3", img: "AND3", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "OR3",
-                strings: "OR3", img: "OR3", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "XOR3",
-                strings: "XOR3", img: "XOR3", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "NAND3",
-                strings: "NAND3", img: "NAND3", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "NOR3",
-                strings: "NOR3", img: "NOR3", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "XNOR3",
-                strings: "XNOR3", img: "XNOR3", width: 50,
-                normallyHidden: true,
-            },
+        Output7SegDef.button("Output7Seg", { visible: withButton }),
+        Output16SegDef.button("Output16Seg", { visible: withButton }),
+        OutputAsciiDef.button("OutputAscii", { visible: withButton }),
 
-            {
-                type: "gate", subtype: "AND4",
-                strings: "AND4", img: "AND4", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "OR4",
-                strings: "OR4", img: "OR4", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "XOR4",
-                strings: "XOR4", img: "XOR4", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "NAND4",
-                strings: "NAND4", img: "NAND4", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "NOR4",
-                strings: "NOR4", img: "NOR4", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "gate", subtype: "XNOR4",
-                strings: "XNOR4", img: "XNOR4", width: 50,
-                normallyHidden: true,
-            },
+        InputRandomDef.button({ bits: 1 }, "InputRandom", { visible: withButton }),
+        OutputShiftBufferDef.button("OutputShiftBuffer", { visible: withButton }),
+    ],
+}, {
+    nameKey: "Gates",
+    items: [
+        Gate1Def.button({ type: "NOT" }, "NOT"),
+        Gate1Def.button({ type: "BUF" }, "BUF", { visible: withButton }),
+        TriStateBufferDef.button("TRI", { visible: withButton }),
 
+        GateNDef.button({ type: "AND", bits: 2 }, "AND"),
+        GateNDef.button({ type: "OR", bits: 2 }, "OR"),
+        GateNDef.button({ type: "XOR", bits: 2 }, "XOR"),
+        GateNDef.button({ type: "NAND", bits: 2 }, "NAND"),
+        GateNDef.button({ type: "NOR", bits: 2 }, "NOR"),
 
-            {
-                type: "component", subtype: "switched-inverter",
-                strings: "SwitchedInverter", img: "SwitchedInverter", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "quad-gate",
-                strings: "QuadGate", img: "QuadGate", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "quad-tristate",
-                strings: "QuadTriState", img: "QuadTriState", width: 50,
-                normallyHidden: true,
-            },
+        GateNDef.button({ type: "XNOR", bits: 2 }, "XNOR", { visible: withButton }),
+        GateNDef.button({ type: "IMPLY", bits: 2 }, "IMPLY", { visible: withButton }),
+        GateNDef.button({ type: "NIMPLY", bits: 2 }, "NIMPLY", { visible: withButton }),
+        GateNDef.button({ type: "TXA", bits: 2 }, ["TRANSFER", "TXA"], { visible: withButton }),
 
+        GateNDef.button({ type: "AND", bits: 3 }, "AND3", { compat: "AND3", visible: ifShowOnly }),
+        GateNDef.button({ type: "OR", bits: 3 }, "OR3", { compat: "OR3", visible: ifShowOnly }),
+        GateNDef.button({ type: "XOR", bits: 3 }, "XOR3", { compat: "XOR3", visible: ifShowOnly }),
+        GateNDef.button({ type: "NAND", bits: 3 }, "NAND3", { compat: "NAND3", visible: ifShowOnly }),
+        GateNDef.button({ type: "NOR", bits: 3 }, "NOR3", { compat: "NOR3", visible: ifShowOnly }),
+        GateNDef.button({ type: "XNOR", bits: 3 }, "XNOR3", { compat: "XNOR3", visible: ifShowOnly }),
 
-        ],
-    },
+        GateNDef.button({ type: "AND", bits: 4 }, "AND4", { compat: "AND4", visible: ifShowOnly }),
+        GateNDef.button({ type: "OR", bits: 4 }, "OR4", { compat: "OR4", visible: ifShowOnly }),
+        GateNDef.button({ type: "XOR", bits: 4 }, "XOR4", { compat: "XOR4", visible: ifShowOnly }),
+        GateNDef.button({ type: "NAND", bits: 4 }, "NAND4", { compat: "NAND4", visible: ifShowOnly }),
+        GateNDef.button({ type: "NOR", bits: 4 }, "NOR4", { compat: "NOR4", visible: ifShowOnly }),
+        GateNDef.button({ type: "XNOR", bits: 4 }, "XNOR4", { compat: "XNOR4", visible: ifShowOnly }),
 
-    {
-        nameKey: "Layout",
-        items: [
-            {
-                type: "label", subtype: undefined,
-                strings: "LabelString", img: "LabelString", width: 32,
-            },
-            {
-                type: "label", subtype: "rect",
-                strings: "LabelRectangle", img: "LabelRectangle", width: 32,
-            },
-            {
-                type: "layout", subtype: "pass",
-                strings: "Passthrough1", img: "Passthrough1", width: 32,
-            },
-            {
-                type: "layout", subtype: "pass-4",
-                strings: "Passthrough4", img: "Passthrough4", width: 32,
-            },
-            {
-                type: "layout", subtype: "pass-8",
-                strings: "Passthrough8", img: "Passthrough8", width: 32,
-                normallyHidden: true,
-            },
-        ],
-    },
+        SwitchedInverterDef.button({ bits: 4 }, "SwitchedInverter", { visible: withButton }),
+        GateArrayDef.button({ bits: 4 }, "GateArray", { visible: withButton }),
+        TriStateBufferArrayDef.button({ bits: 4 }, "TriStateBufferArray", { visible: withButton }),
 
+    ],
+}, {
+    nameKey: "Layout",
+    items: [
+        LabelStringDef.button("LabelString"),
+        LabelRectDef.button("LabelRectangle"),
 
-    {
-        nameKey: "Components",
-        items: [
-            {
-                type: "component", subtype: "halfadder",
-                strings: "HalfAdder", img: "HalfAdder", width: 50,
-            },
-            {
-                type: "component", subtype: "adder",
-                strings: "Adder", img: "Adder", width: 50,
-            },
-            {
-                type: "component", subtype: "alu",
-                strings: "ALU", img: "ALU", width: 50,
-            },
+        PassthroughDef.button({ bits: 1 }, "Passthrough1"),
+        PassthroughDef.button({ bits: 4 }, "PassthroughN"),
+    ],
+}, {
+    nameKey: "Components",
+    items: [
+        HalfAdderDef.button("HalfAdder"),
+        AdderDef.button("Adder"),
+        ComparatorDef.button("Comparator", { visible: withButton }),
 
-            {
-                type: "component", subtype: "mux-2to1",
-                strings: "Mux2to1", img: "Mux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "mux-4to1",
-                strings: "Mux4to1", img: "Mux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "mux-8to1",
-                strings: "Mux8to1", img: "Mux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "mux-4to2",
-                strings: "Mux4to2", img: "Mux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "mux-8to2",
-                strings: "Mux8to2", img: "Mux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "mux-8to4",
-                strings: "Mux8to4", img: "Mux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "mux-16to8",
-                strings: "Mux16to8", img: "Mux", width: 50,
-                normallyHidden: true,
-            },
+        AdderArrayDef.button({ bits: 4 }, "AdderArray"),
+        ALUDef.button({ bits: 4 }, "ALU"),
 
-            {
-                type: "component", subtype: "demux-1to2",
-                strings: "Demux1to2", img: "Demux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "demux-1to4",
-                strings: "Demux1to4", img: "Demux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "demux-1to8",
-                strings: "Demux1to8", img: "Demux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "demux-2to4",
-                strings: "Demux2to4", img: "Demux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "demux-2to8",
-                strings: "Demux2to8", img: "Demux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "demux-4to8",
-                strings: "Demux4to8", img: "Demux", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "demux-8to16",
-                strings: "Demux8to16", img: "Demux", width: 50,
-                normallyHidden: true,
-            },
+        MuxDef.button({ from: 4, to: 2 }, "Mux"),
+        DemuxDef.button({ from: 2, to: 4 }, "Demux"),
 
-            {
-                type: "component", subtype: "latch-sr",
-                strings: "LatchSR", img: "LatchSR", width: 50,
-            },
-            {
-                type: "component", subtype: "flipflop-jk",
-                strings: "FlipflopJK", img: "FlipflopJK", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "flipflop-t",
-                strings: "FlipflopT", img: "FlipflopT", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "flipflop-d",
-                strings: "FlipflopD", img: "FlipflopD", width: 50,
-            },
-            {
-                type: "component", subtype: "register",
-                strings: "Register", img: "Register", width: 50,
-            },
-            {
-                type: "component", subtype: "ram-16x4",
-                strings: "RAM16x4", img: "RAM16x4", width: 50,
-            },
-            {
-                type: "component", subtype: "ram-16x8",
-                strings: "RAM16x8", img: "RAM16x8", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "ram-64x8",
-                strings: "RAM64x8", img: "RAM64x8", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "ram-32x12",
-                strings: "RAM32x12", img: "RAM32x12", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "counter",
-                strings: "Counter", img: "Counter", width: 50,
-            },
-            {
-                type: "component", subtype: "decoder-7seg",
-                strings: "Decoder7Seg", img: "Decoder7Seg", width: 50,
-            },
-            {
-                type: "component", subtype: "decoder-16seg",
-                strings: "Decoder16Seg", img: "Decoder16Seg", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "decoder-bcd4",
-                strings: "DecoderBCD4", img: "DecoderBCD4", width: 50,
-                normallyHidden: true,
-            },
-            {
-                type: "component", subtype: "comparator",
-                strings: "Comparator", img: "Comparator", width: 50,
-                normallyHidden: true,
-            },
+        LatchSRDef.button("LatchSR"),
+        FlipflopJKDef.button("FlipflopJK", { visible: withButton }),
+        FlipflopTDef.button("FlipflopT", { visible: withButton }),
+        FlipflopDDef.button("FlipflopD"),
 
-        ],
-    },
-]
+        RegisterDef.button({ bits: 4 }, "Register"),
+        ShiftRegisterDef.button({ bits: 4 }, "ShiftRegister"),
+        CounterDef.button({ bits: 4 }, "Counter"),
+
+        RAMDef.button({ lines: 16, bits: 4 }, "RAM"),
+
+        Decoder7SegDef.button("Decoder7Seg"),
+        Decoder16SegDef.button("Decoder16Seg", { visible: withButton }),
+        DecoderBCD4Def.button("DecoderBCD4", { visible: withButton }),
+
+    ],
+}]
 
 
 export function makeComponentMenuInto(target: HTMLElement, _showOnly: string[] | undefined) {
@@ -461,49 +212,58 @@ export function makeComponentMenuInto(target: HTMLElement, _showOnly: string[] |
 
         // section content
         let numAdded = 0
-        const normallyHiddenButtons: HTMLButtonElement[] = []
+        const showWithMoreButton: HTMLButtonElement[] = []
+        const showOnlyWithURLParam: HTMLButtonElement[] = []
         for (const item of section.items) {
-            const normallyHidden = item.normallyHidden ?? false
+            const normallyHidden = isDefined(item.visible) && item.visible !== "always"
             const hiddenNow = isDefined(showOnly) ? !shouldShow(item, showOnly) : normallyHidden
 
-            let buttonStyle = ""
-            if (hiddenNow) {
-                buttonStyle += "max-height: 0; transition: all 0.25s ease-out; overflow: hidden; padding: 0; border: 0; margin-bottom: 0;"
-            }
-            const dataTypeOpt = isUndefined(item.subtype) ? emptyMod : dataType(item.subtype)
-            const compStrings = S.ComponentBar.Components.propsOf(item.strings)
+            const buttonStyle = !hiddenNow ? "" : "max-height: 0; transition: all 0.25s ease-out; overflow: hidden; padding: 0; border: 0; margin-bottom: 0;"
+            const visual = item.visual
+            const [stringsKey, img] = isString(visual) ? [visual, visual] : visual
+            const compStrings = S.ComponentBar.Components.props[stringsKey]
             const [titleStr, captionStr] = isString(compStrings) ? [compStrings, undefined] : compStrings
             const caption = isUndefined(captionStr) ? emptyMod : span(cls("gate-label"), captionStr)
-            const classId = componentIdFor(item)
-            const buttonTitle = title(isUndefined(titleStr) ? "" : (titleStr + " \n") + `(“${classId}”)`)
+            const classIds = componentIdsFor(item)
+            const buttonTitle = title(isUndefined(titleStr) ? "" : (titleStr + " \n") + `(“${classIds[0]}”)`)
             const extraClasses = hiddenNow ? " sim-component-button-extra" : ""
+            const params = item.params?.params
             const compButton =
                 button(type("button"), style(buttonStyle), cls(`list-group-item list-group-item-action sim-component-button${extraClasses}`),
-                    dataComponent(item.type), dataTypeOpt,
-                    dataClassId(classId),
-                    makeImage(item.img, item.width),
+                    makeImage(img, item.width),
                     caption, buttonTitle
                 ).render()
 
+            const compDataset = compButton.dataset as ButtonDataset
+            compDataset.category = item.category
+            if (isDefined(item.type)) {
+                compDataset.type = item.type
+            }
+            compDataset.componentId = classIds[0]
+            if (isDefined(params)) {
+                compDataset.params = JSON.stringify(params)
+            }
+
             if (hiddenNow) {
-                normallyHiddenButtons.push(compButton)
+                const targetArray = item.visible === "withButton" ? showWithMoreButton : showOnlyWithURLParam
+                targetArray.push(compButton)
             }
 
             target.appendChild(compButton)
             numAdded++
         }
 
-        const numHidden = normallyHiddenButtons.length
-        const numVisible = numAdded - numHidden
+        const numShowWithMoreButton = showWithMoreButton.length
+        const numVisible = numAdded - numShowWithMoreButton - showOnlyWithURLParam.length
 
         // link to show more if needed
-        if (numHidden !== 0 && isUndefined(showOnly)) {
+        if (numShowWithMoreButton !== 0 && isUndefined(showOnly)) {
             let moreShown = false
             const names = [S.ComponentBar.Labels.More + " ↓", S.ComponentBar.Labels.Less + " ↑"]
             const linkShowMore = a(cls("leftToolbarMore"), names[0]).render()
             linkShowMore.addEventListener("click", () => {
                 moreShown = !moreShown
-                for (const button of normallyHiddenButtons) {
+                for (const button of showWithMoreButton) {
                     if (moreShown) {
                         button.style.removeProperty("padding")
                         button.style.removeProperty("border")
@@ -543,14 +303,17 @@ export function makeComponentMenuInto(target: HTMLElement, _showOnly: string[] |
     }
 }
 
-function shouldShow(item: ComponentItem, showOnly: string[]) {
-    const componentId = componentIdFor(item)
+function shouldShow(item: LibraryItem, showOnly: string[]) {
+    const componentIds = componentIdsFor(item)
 
     let visible = false
-    if (showOnly.includes(componentId)) {
-        visible = true
-        const ind = showOnly.indexOf(componentId)
-        showOnly.splice(ind, 1)
+    for (const componentId of componentIds) {
+        if (showOnly.includes(componentId)) {
+            visible = true
+            const ind = showOnly.indexOf(componentId)
+            showOnly.splice(ind, 1)
+            break
+        }
     }
 
     // console.log(`buttonId '${buttonId}' is visible: ${visible}`)
@@ -558,22 +321,39 @@ function shouldShow(item: ComponentItem, showOnly: string[]) {
     return visible
 }
 
-function componentIdFor(item: ComponentItem): string {
-    const compType = item.type
-    const compSubtype = item.subtype
-
-    let buttonId
-    if (isUndefined(compSubtype)) {
-        buttonId = compType
-    } else {
-        if (compType === "component" || compType === "gate") {
-            buttonId = compSubtype
-        } else if (compType === "in" && compSubtype === "clock") {
-            buttonId = "clock"
-        } else {
-            buttonId = `${compType}.${compSubtype}`
+function componentIdsFor(item: LibraryItem): string[] {
+    const defAndParams = item.params
+    if (isDefined(defAndParams)) {
+        const ids: string[] = []
+        const { def, params } = defAndParams
+        if (deepObjectEquals(params, def.defaultParams)) {
+            const genericId = def.type ?? def.category
+            ids.push(genericId)
+        }
+        const specificId = def.variantName(params)
+        ids.push(specificId)
+        if (isDefined(item.compat)) {
+            ids.push(item.compat.toLowerCase())
+        }
+        if (ids.length !== 0) {
+            return ids
         }
     }
-    return buttonId.toLowerCase()
+
+    const category = item.category
+    const type = item.type
+    let buttonId
+    if (isUndefined(type)) {
+        buttonId = category
+    } else {
+        if (category === "ic" || category === "gate") {
+            buttonId = type
+        } else if (category === "in" && type === "clock") {
+            buttonId = "clock"
+        } else {
+            buttonId = `${category}.${type}`
+        }
+    }
+    return [buttonId.toLowerCase()]
 }
 

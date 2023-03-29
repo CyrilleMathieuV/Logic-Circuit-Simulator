@@ -1,29 +1,6 @@
-import * as t from "io-ts"
-import { GateDef } from "./components/Gate"
-import { ICDef } from "./components/IC"
-import { InputDef } from "./components/Inputs"
-import { OutputDef } from "./components/Outputs"
-import { Wire } from "./components/Wire"
-import { EditorOptions } from "./LogicEditor"
-import { PartialWhereUndefinedRecursively } from "./utils"
-
-const Circuit = t.partial({
-    in: t.array(InputDef),
-    out: t.array(OutputDef),
-    gates: t.array(GateDef),
-    components: t.array(ICDef),
-    wires: t.array(Wire.Repr),
-})
-type Circuit = { v: 4, opts?: Partial<EditorOptions> } & PartialWhereUndefinedRecursively<t.TypeOf<typeof Circuit>>
-
-function assertCircuits<T extends Record<string, Circuit>>(v: T): T {
-    // remove prototype to have a nice, clean completion in the console
-    return Object.assign(Object.create(null), v)
-}
-
-export const gallery = assertCircuits({
+export const gallery = {
     CharacterComparator: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [50, 130], "id": 0, "val": 1 },
             { "pos": [50, 160], "id": 1, "val": 1 },
@@ -107,7 +84,7 @@ export const gallery = assertCircuits({
         ],
     },
     Counters: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "type": "clock", "pos": [70, 40], "id": 0, "name": "bit 0", "period": 2000, "phase": 1000, "showLabel": false },
             { "type": "clock", "pos": [70, 80], "id": 10, "name": "bit 1", "period": 4000, "phase": 2000, "showLabel": false },
@@ -122,7 +99,7 @@ export const gallery = assertCircuits({
             { "type": "clock", "pos": [430, 270], "id": 12, "period": 32000, "phase": 16000, "showLabel": false },
         ],
         "out": [
-            { "type": "nibble-display", "pos": [240, 90], "id": [1, 2, 3, 4] },
+            { "type": "display", "bits": 4, "pos": [240, 90], "id": [1, 2, 3, 4] },
             { "type": "ascii", "pos": [580, 150], "id": [13, 14, 15, 16, 17, 18, 19] },
         ],
         "wires": [
@@ -131,7 +108,7 @@ export const gallery = assertCircuits({
         ],
     },
     AllGates: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [40, 320], "id": 0, "val": 0 },
             { "pos": [40, 490], "id": 1, "val": 0 },
@@ -222,7 +199,7 @@ export const gallery = assertCircuits({
         ],
     },
     SevenSegmentDisplay: {
-        "v": 4,
+        "v": 5,
         "opts": {
             "propagationDelay": 20,
         },
@@ -233,7 +210,7 @@ export const gallery = assertCircuits({
             { type: "clock", "pos": [210, 60], "orient": "s", "id": 24, "period": 2000, "phase": 1000 },
         ],
         "out": [
-            { "type": "nibble-display", "pos": [1320, 140], "id": [132, 133, 134, 135], "radix": 16 },
+            { "type": "display", "bits": 4, "pos": [1320, 140], "id": [132, 133, 134, 135], "radix": 16 },
             { "type": "bar", "pos": [1330, 310], "id": 117, "display": "h" },
             { "type": "bar", "pos": [1270, 490], "id": 118, "display": "v" },
             { "type": "bar", "pos": [1390, 370], "id": 119, "display": "v" },
@@ -345,9 +322,9 @@ export const gallery = assertCircuits({
         ],
     },
     SevenSegmentBCDDisplay: {
-        "v": 4,
+        "v": 5,
         "in": [
-            { "type": "nibble", "pos": [50, 80], "id": [0, 1, 2, 3], "val": [0, 1, 0, 1] },
+            { "bits": 4, "pos": [50, 80], "id": [0, 1, 2, 3], "val": [0, 1, 0, 1] },
         ],
         "out": [
             { "type": "bar", "pos": [560, 100], "id": 4, "display": "h" },
@@ -359,9 +336,9 @@ export const gallery = assertCircuits({
             { "type": "bar", "pos": [620, 160], "id": 10, "display": "v" },
             { "type": "bar", "pos": [420, 160], "id": 50, "display": "v" },
             { "type": "bar", "pos": [420, 280], "id": 51, "display": "v" },
-            { "type": "nibble-display", "pos": [170, 250], "id": [11, 23, 24, 25] },
+            { "type": "display", "bits": 4, "pos": [170, 250], "id": [11, 23, 24, 25] },
         ],
-        "components": [
+        "ic": [
             { "type": "decoder-7seg", "pos": [280, 60], "in": [12, 13, 14, 15], "out": [16, 17, 18, 19, 20, 21, 22] },
             { "type": "decoder-bcd4", "pos": [180, 80], "in": [26, 27, 28, 29], "out": [30, 31, 32, 33, 34] },
         ],
@@ -372,10 +349,10 @@ export const gallery = assertCircuits({
         ],
     },
     SixteenVsSevenSegmentDisplays: {
-        "v": 4,
+        "v": 5,
         "in": [
-            { "type": "nibble", "pos": [50, 90], "id": [74, 75, 76, 77], "val": [1, 0, 0, 1] },
-            { "type": "nibble", "pos": [50, 170], "id": [78, 79, 80, 81], "val": [1, 1, 0, 0] },
+            { "bits": 4, "pos": [50, 90], "id": [74, 75, 76, 77], "val": [1, 0, 0, 1] },
+            { "bits": 4, "pos": [50, 170], "id": [78, 79, 80, 81], "val": [1, 1, 0, 0] },
         ],
         "out": [
             { "type": "16seg", "pos": [440, 170], "id": [57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73] },
@@ -383,7 +360,7 @@ export const gallery = assertCircuits({
             { "type": "7seg", "pos": [440, 330], "id": [93, 94, 95, 96, 97, 98, 99, 100] },
         ],
         "gates": [{ "type": "OR", "pos": [330, 250], "in": [90, 91], "out": 92 }],
-        "components": [
+        "ic": [
             { "type": "decoder-16seg", "pos": [230, 170], "in": [34, 35, 36, 37, 38, 39, 40], "out": [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 89] },
             { "type": "decoder-7seg", "pos": [230, 320], "in": [101, 102, 103, 104], "out": [105, 106, 107, 108, 109, 110, 111] },
         ],
@@ -397,7 +374,7 @@ export const gallery = assertCircuits({
         ],
     },
     NibbleAdder: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [100, 40], "orient": "s", "id": 3, "name": "A3", "val": 0 },
             { "pos": [200, 40], "orient": "s", "id": 0, "name": "A2", "val": 0 },
@@ -414,11 +391,11 @@ export const gallery = assertCircuits({
             { "pos": [220, 450], "orient": "s", "id": 38, "name": "S2" },
             { "pos": [320, 450], "orient": "s", "id": 39, "name": "S1" },
             { "pos": [420, 450], "orient": "s", "id": 40, "name": "S0" },
-            { "type": "nibble-display", "pos": [530, 100], "id": [4, 5, 6, 7] },
-            { "type": "nibble-display", "pos": [530, 240], "id": [8, 9, 10, 11] },
-            { "type": "nibble-display", "pos": [530, 390], "id": [41, 42, 43, 44] },
+            { "type": "display", "bits": 4, "pos": [530, 100], "id": [4, 5, 6, 7] },
+            { "type": "display", "bits": 4, "pos": [530, 240], "id": [8, 9, 10, 11] },
+            { "type": "display", "bits": 4, "pos": [530, 390], "id": [41, 42, 43, 44] },
         ],
-        "components": [
+        "ic": [
             { "type": "adder", "pos": [420, 320], "in": [16, 17, 18], "out": [19, 20] },
             { "type": "adder", "pos": [320, 320], "in": [21, 22, 23], "out": [24, 25] },
             { "type": "adder", "pos": [220, 320], "in": [26, 27, 28], "out": [29, 30] },
@@ -456,7 +433,7 @@ export const gallery = assertCircuits({
         ],
     },
     ALU: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [290, 60], "orient": "s", "id": 16, "name": "Op1", "val": 0 },
             { "pos": [330, 60], "orient": "s", "id": 17, "name": "Op0", "val": 0 },
@@ -472,14 +449,14 @@ export const gallery = assertCircuits({
         "out": [
             { "pos": [420, 320], "id": 38, "name": "Zero" },
             { "pos": [420, 350], "id": 39, "name": "oVerflow" },
-            { "type": "nibble-display", "pos": [110, 60], "orient": "n", "id": [22, 23, 24, 25], "name": "A (non signé)" },
-            { "type": "nibble-display", "pos": [110, 350], "orient": "s", "id": [30, 31, 32, 33], "name": "B (non signé)" },
-            { "type": "nibble-display", "pos": [420, 250], "id": [34, 35, 36, 37], "name": "Y (signé)", "radix": -10 },
-            { "type": "nibble-display", "pos": [420, 150], "id": [40, 41, 42, 43], "name": "Y (non signé)" },
-            { "type": "nibble-display", "pos": [210, 60], "orient": "n", "id": [44, 45, 46, 47], "name": "A (signé)", "radix": -10 },
-            { "type": "nibble-display", "pos": [210, 350], "orient": "s", "id": [48, 49, 50, 51], "name": "B (signé)", "radix": -10 },
+            { "type": "display", "bits": 4, "pos": [110, 60], "orient": "n", "id": [22, 23, 24, 25], "name": "A (non signé)" },
+            { "type": "display", "bits": 4, "pos": [110, 350], "orient": "s", "id": [30, 31, 32, 33], "name": "B (non signé)" },
+            { "type": "display", "bits": 4, "pos": [420, 250], "id": [34, 35, 36, 37], "name": "Y (signé)", "radix": -10 },
+            { "type": "display", "bits": 4, "pos": [420, 150], "id": [40, 41, 42, 43], "name": "Y (non signé)" },
+            { "type": "display", "bits": 4, "pos": [210, 60], "orient": "n", "id": [44, 45, 46, 47], "name": "A (signé)", "radix": -10 },
+            { "type": "display", "bits": 4, "pos": [210, 350], "orient": "s", "id": [48, 49, 50, 51], "name": "B (signé)", "radix": -10 },
         ],
-        "components": [
+        "ic": [
             { "type": "alu", "pos": [280, 220], "in": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "out": [10, 11, 12, 13, 14, 15] },
         ],
         "wires": [
@@ -523,7 +500,7 @@ export const gallery = assertCircuits({
     },
 
     MiniAlu: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [340, 40], "orient": "s", "id": 10, "val": 1 },
             { "pos": [470, 40], "orient": "s", "id": 11, "val": 1 },
@@ -537,9 +514,9 @@ export const gallery = assertCircuits({
         ],
         "out": [
             { "pos": [600, 690], "id": 49, "name": "V" },
-            { "type": "nibble-display", "pos": [600, 120], "id": [18, 19, 20, 21], "name": "A" },
-            { "type": "nibble-display", "pos": [600, 260], "id": [22, 23, 24, 25], "name": "B" },
-            { "type": "nibble-display", "pos": [600, 620], "id": [45, 46, 47, 48], "name": "S" },
+            { "type": "display", "bits": 4, "pos": [600, 120], "id": [18, 19, 20, 21], "name": "A" },
+            { "type": "display", "bits": 4, "pos": [600, 260], "id": [22, 23, 24, 25], "name": "B" },
+            { "type": "display", "bits": 4, "pos": [600, 620], "id": [45, 46, 47, 48], "name": "S" },
         ],
         "gates": [
             { "type": "XOR", "pos": [120, 450], "orient": "s", "in": [86, 87], "out": 88 },
@@ -547,7 +524,7 @@ export const gallery = assertCircuits({
             { "type": "XOR", "pos": [380, 450], "orient": "s", "in": [92, 93], "out": 94 },
             { "type": "XOR", "pos": [510, 450], "orient": "s", "in": [95, 96], "out": 97 },
         ],
-        "components": [
+        "ic": [
             { "type": "adder", "pos": [490, 530], "in": [0, 1, 2], "out": [3, 4] },
             { "type": "adder", "pos": [360, 530], "in": [5, 6, 7], "out": [8, 9] },
             { "type": "adder", "pos": [230, 530], "in": [35, 36, 37], "out": [38, 39] },
@@ -591,7 +568,7 @@ export const gallery = assertCircuits({
     },
 
     LatchedAdder: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [340, 570], "orient": "n", "id": 40, "name": "Reset", "val": 0, "isPushButton": true },
             { "pos": [40, 220], "id": 41, "val": 0 },
@@ -603,10 +580,10 @@ export const gallery = assertCircuits({
         ],
         "out": [
             { "pos": [550, 380], "id": 61, "name": "V" },
-            { "type": "nibble-display", "pos": [100, 390], "orient": "s", "id": [50, 51, 52, 53], "name": "B" },
-            { "type": "nibble-display", "pos": [550, 230], "id": [46, 47, 48, 49], "name": "Acc." },
+            { "type": "display", "bits": 4, "pos": [100, 390], "orient": "s", "id": [50, 51, 52, 53], "name": "B" },
+            { "type": "display", "bits": 4, "pos": [550, 230], "id": [46, 47, 48, 49], "name": "Acc." },
         ],
-        "components": [
+        "ic": [
             { "type": "alu", "pos": [180, 210], "in": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "out": [10, 11, 12, 13, 14, 15] },
             { "type": "flipflop-d", "pos": [390, 100], "in": [17, 18, 19, 16], "out": [20, 21], "state": 0 },
             { "type": "flipflop-d", "pos": [390, 200], "in": [23, 24, 25, 22], "out": [26, 27], "state": 0 },
@@ -652,8 +629,8 @@ export const gallery = assertCircuits({
     },
 
     LatchedCounter: {
-        "v": 4,
-        "components": [
+        "v": 5,
+        "ic": [
             { "type": "flipflop-d", "pos": [170, 160], "in": [7, 8, 9, 6], "out": [10, 11], "state": 0, "trigger": "falling", "showContent": true },
             { "type": "flipflop-d", "pos": [300, 160], "in": [15, 16, 17, 14], "out": [18, 19], "state": 0, "trigger": "falling", "showContent": true },
             { "type": "flipflop-d", "pos": [440, 160], "in": [21, 22, 23, 20], "out": [24, 25], "state": 0, "trigger": "falling", "showContent": true },
@@ -663,7 +640,7 @@ export const gallery = assertCircuits({
             { "pos": [100, 180], "id": 12, "name": "Horloge", "val": 0, "isPushButton": true },
             { "pos": [100, 240], "id": 41, "name": "Reset", "val": 0, "isPushButton": true },
         ],
-        "out": [{ "type": "nibble-display", "pos": [660, 60], "id": [26, 27, 28, 29] }],
+        "out": [{ "type": "display", "bits": 4, "pos": [660, 60], "id": [26, 27, 28, 29] }],
         "wires": [
             [12, 7],
             [10, 15],
@@ -685,7 +662,7 @@ export const gallery = assertCircuits({
     },
 
     Decoder2To4: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [60, 80], "id": 0, "name": "S0", "val": 0 },
             { "pos": [60, 220], "id": 1, "name": "S1", "val": 0 },
@@ -727,7 +704,7 @@ export const gallery = assertCircuits({
     },
 
     Decoder3To8: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [60, 130], "id": 26, "name": "S0", "val": 1 },
             { "pos": [60, 290], "id": 27, "name": "S1", "val": 1 },
@@ -737,14 +714,14 @@ export const gallery = assertCircuits({
             { "type": "NOT", "pos": [130, 90], "in": 30, "out": 31 },
             { "type": "NOT", "pos": [130, 250], "in": 32, "out": 33 },
             { "type": "NOT", "pos": [130, 420], "in": 34, "out": 35 },
-            { "type": "AND3", "pos": [340, 120], "in": [36, 37, 38], "out": 39 },
-            { "type": "AND3", "pos": [340, 190], "in": [40, 41, 42], "out": 43 },
-            { "type": "AND3", "pos": [340, 260], "in": [44, 45, 46], "out": 47 },
-            { "type": "AND3", "pos": [340, 330], "in": [48, 49, 50], "out": 51 },
-            { "type": "AND3", "pos": [340, 400], "in": [52, 53, 54], "out": 55 },
-            { "type": "AND3", "pos": [340, 470], "in": [56, 57, 58], "out": 59 },
-            { "type": "AND3", "pos": [340, 540], "in": [60, 61, 62], "out": 63 },
-            { "type": "AND3", "pos": [340, 50], "in": [64, 65, 66], "out": 67 },
+            { "type": "AND", "bits": 3, "pos": [340, 120], "in": [36, 37, 38], "out": 39 },
+            { "type": "AND", "bits": 3, "pos": [340, 190], "in": [40, 41, 42], "out": 43 },
+            { "type": "AND", "bits": 3, "pos": [340, 260], "in": [44, 45, 46], "out": 47 },
+            { "type": "AND", "bits": 3, "pos": [340, 330], "in": [48, 49, 50], "out": 51 },
+            { "type": "AND", "bits": 3, "pos": [340, 400], "in": [52, 53, 54], "out": 55 },
+            { "type": "AND", "bits": 3, "pos": [340, 470], "in": [56, 57, 58], "out": 59 },
+            { "type": "AND", "bits": 3, "pos": [340, 540], "in": [60, 61, 62], "out": 63 },
+            { "type": "AND", "bits": 3, "pos": [340, 50], "in": [64, 65, 66], "out": 67 },
             { "type": "BUF", "pos": [130, 170], "in": 76, "out": 77 },
             { "type": "BUF", "pos": [130, 330], "in": 78, "out": 79 },
             { "type": "BUF", "pos": [130, 500], "in": 80, "out": 81 },
@@ -802,7 +779,7 @@ export const gallery = assertCircuits({
     },
 
     ParityGenerator: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [70, 180], "id": 0, "name": "D1", "val": 0 },
             { "pos": [70, 300], "id": 1, "name": "D2", "val": 0 },
@@ -850,14 +827,14 @@ export const gallery = assertCircuits({
     },
 
     ShiftRegister: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [110, 130], "id": 0, "name": "D", "val": 1 },
             { "pos": [100, 210], "id": 1, "name": "Horloge", "val": 0, "isPushButton": true },
             { "pos": [100, 260], "id": 38, "name": "Reset", "val": 0, "isPushButton": true },
         ],
-        "out": [{ "type": "nibble-display", "pos": [650, 60], "id": [39, 40, 41, 42] }],
-        "components": [
+        "out": [{ "type": "display", "bits": 4, "pos": [650, 60], "id": [39, 40, 41, 42] }],
+        "ic": [
             { "type": "flipflop-d", "pos": [560, 150], "in": [21, 22, 23, 20], "out": [24, 25], "state": 1, "showContent": true },
             { "type": "flipflop-d", "pos": [450, 150], "in": [15, 16, 17, 14], "out": [18, 19], "state": 0, "showContent": true },
             { "type": "flipflop-d", "pos": [340, 150], "in": [9, 10, 11, 8], "out": [12, 13], "state": 1, "showContent": true },
@@ -884,34 +861,34 @@ export const gallery = assertCircuits({
     },
 
     Muxes: {
-        "v": 4,
+        "v": 5,
         "in": [
             { "pos": [160, 70], "orient": "s", "id": 59, "name": "S0", "val": 0 },
             { "pos": [160, 340], "orient": "s", "id": 64, "name": "S0", "val": 0 },
             { "pos": [450, 360], "orient": "s", "id": 69, "name": "S0", "val": 0 },
-            { "type": "nibble", "pos": [270, 60], "orient": "s", "id": [0, 1, 2, 3], "val": [1, 1, 0, 0] },
-            { "type": "nibble", "pos": [460, 70], "orient": "s", "id": [60, 61, 62, 63], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [270, 300], "orient": "s", "id": [65, 66, 67, 68], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [110, 180], "id": [86, 87, 88, 89], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [230, 180], "id": [90, 91, 92, 93], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [400, 170], "id": [94, 95, 96, 97], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [400, 250], "id": [98, 99, 100, 101], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [110, 420], "id": [102, 103, 104, 105], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [110, 520], "id": [106, 107, 108, 109], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [400, 540], "id": [110, 111, 112, 113], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [400, 440], "id": [114, 115, 116, 117], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [230, 400], "id": [118, 119, 120, 121], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [230, 460], "id": [122, 123, 124, 125], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [230, 520], "id": [126, 127, 128, 129], "val": [0, 0, 0, 0] },
-            { "type": "nibble", "pos": [230, 580], "id": [130, 131, 132, 133], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [270, 60], "orient": "s", "id": [0, 1, 2, 3], "val": [1, 1, 0, 0] },
+            { "bits": 4, "pos": [460, 70], "orient": "s", "id": [60, 61, 62, 63], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [270, 300], "orient": "s", "id": [65, 66, 67, 68], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [110, 180], "id": [86, 87, 88, 89], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [230, 180], "id": [90, 91, 92, 93], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [400, 170], "id": [94, 95, 96, 97], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [400, 250], "id": [98, 99, 100, 101], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [110, 420], "id": [102, 103, 104, 105], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [110, 520], "id": [106, 107, 108, 109], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [400, 540], "id": [110, 111, 112, 113], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [400, 440], "id": [114, 115, 116, 117], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [230, 400], "id": [118, 119, 120, 121], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [230, 460], "id": [122, 123, 124, 125], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [230, 520], "id": [126, 127, 128, 129], "val": [0, 0, 0, 0] },
+            { "bits": 4, "pos": [230, 580], "id": [130, 131, 132, 133], "val": [0, 0, 0, 0] },
         ],
-        "components": [
-            { "type": "mux-2to1", "pos": [160, 160], "in": [5, 6, 7], "out": 8 },
-            { "type": "mux-4to1", "pos": [290, 180], "in": [4, 9, 10, 11, 12, 13], "out": 14 },
-            { "type": "mux-8to1", "pos": [470, 210], "in": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25], "out": 26 },
-            { "type": "mux-4to2", "pos": [160, 470], "in": [27, 28, 29, 30, 31], "out": [32, 33] },
-            { "type": "mux-8to2", "pos": [290, 490], "in": [34, 35, 36, 37, 38, 39, 40, 41, 42, 43], "out": [44, 45] },
-            { "type": "mux-8to4", "pos": [450, 490], "in": [46, 47, 48, 49, 50, 51, 52, 53, 54], "out": [55, 56, 57, 58] },
+        "ic": [
+            { "type": "mux", "from": 2, "to": 1, "pos": [160, 160], "in": [5, 6, 7], "out": 8 },
+            { "type": "mux", "from": 4, "to": 1, "pos": [290, 180], "in": [4, 9, 10, 11, 12, 13], "out": 14 },
+            { "type": "mux", "from": 8, "to": 1, "pos": [470, 210], "in": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25], "out": 26 },
+            { "type": "mux", "from": 4, "to": 2, "pos": [160, 470], "in": [27, 28, 29, 30, 31], "out": [32, 33] },
+            { "type": "mux", "from": 8, "to": 2, "pos": [290, 490], "in": [34, 35, 36, 37, 38, 39, 40, 41, 42, 43], "out": [44, 45] },
+            { "type": "mux", "from": 8, "to": 4, "pos": [450, 490], "in": [46, 47, 48, 49, 50, 51, 52, 53, 54], "out": [55, 56, 57, 58] },
             { "type": "alu", "pos": [630, 450], "in": [70, 71, 72, 73, 74, 75, 76, 77, 78, 79], "out": [80, 81, 82, 83, 84, 85] },
         ],
         "wires": [
@@ -961,5 +938,4 @@ export const gallery = assertCircuits({
             [132, 41],
         ],
     },
-})
-
+}

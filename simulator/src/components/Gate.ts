@@ -1,319 +1,59 @@
 import * as t from "io-ts"
+import { circle, ColorString, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_DARK_RED, COLOR_GATE_NAMES, COLOR_MOUSE_OVER, COLOR_UNKNOWN, drawWireLineToComponent, GRID_STEP, PATTERN_STRIPED_GRAY } from "../drawutils"
+import { asValue, b, cls, div, emptyMod, Modifier, ModifierObject, mods, table, tbody, td, th, thead, tooltipContent, tr } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_DARK_RED, COLOR_GATE_NAMES, COLOR_MOUSE_OVER, COLOR_UNKNOWN, ColorString, GRID_STEP, PATTERN_STRIPED_GRAY, circle, drawWireLineToComponent } from "../drawutils"
-import { Modifier, ModifierObject, asValue, b, cls, div, emptyMod, mods, table, tbody, td, th, thead, tooltipContent, tr } from "../htmlgen"
 import { S } from "../strings"
-import { LogicValue, Mode, RichStringEnum, Unknown, isDefined, isHighImpedance, isString, isUndefined, isUnknown } from "../utils"
-import { ComponentBase, ComponentRepr, NodeVisuals, defineComponent } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
-import { TriStateBuffer, TriStateBufferDef } from "./TriStateBuffer"
+import { ArrayFillUsing, deepEquals, isDefined, isUndefined, isUnknown, LogicValue, Mode, typeOrUndefined, Unknown } from "../utils"
+import { defineParametrizedComponent, ExtractParamDefs, ExtractParams, groupVertical, InstantiatedComponentDef, NodesIn, NodesOut, param, ParametrizedComponentBase, Repr, ResolvedParams, SomeParamCompDef } from "./Component"
+import { ContextMenuData, ContextMenuItem, DrawContext, MenuItems } from "./Drawable"
+import { Gate1Type, Gate1TypeRepr, Gate1Types, Gate2OnlyTypes, Gate2toNTypes, GateNType, GateNTypeRepr, GateNTypes, GateTypes } from "./GateTypes"
 
-
-export type GateProps = {
-    includeInContextMenu: boolean
-    includeInPoseAs: boolean
-    fullShortDesc: () => [string, string | undefined, string]
-}
-
-
-// Gates with one input
-
-const Gate1Types_ = {
-    NOT: {
-        out: (in1: boolean) => !in1,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NOT,
-    },
-    BUF: {
-        out: (in1: boolean) => in1,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.BUF,
-    },
-} as const
-
-export const Gate1Types = RichStringEnum.withProps<GateProps & {
-    out: (in1: boolean) => boolean
-}>()(Gate1Types_)
-
-export type Gate1Type = typeof Gate1Types.type
-
-const Gate1MandatoryParams = t.type({
-    type: t.keyof(Gate1Types_),
-})
-type Gate1MandatoryParams = t.TypeOf<typeof Gate1MandatoryParams>
-
-
-// Gates with two inputs
-
-export const Gate2Types_ = {
-    // usual suspects
-    AND: {
-        out: (in1: boolean, in2: boolean) => in1 && in2,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.AND,
-    },
-    OR: {
-        out: (in1: boolean, in2: boolean) => in1 || in2,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.OR,
-    },
-    XOR: {
-        out: (in1: boolean, in2: boolean) => in1 !== in2,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.XOR,
-    },
-    NAND: {
-        out: (in1: boolean, in2: boolean) => !(in1 && in2),
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NAND,
-    },
-    NOR: {
-        out: (in1: boolean, in2: boolean) => !(in1 || in2),
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NOR,
-    },
-    XNOR: {
-        out: (in1: boolean, in2: boolean) => in1 === in2,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.XNOR,
-    },
-
-    // less common gates
-    IMPLY: {
-        out: (in1: boolean, in2: boolean) => !in1 || in2,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.IMPLY,
-    },
-    RIMPLY: {
-        out: (in1: boolean, in2: boolean) => in1 || !in2,
-        includeInContextMenu: false, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.RIMPLY,
-    },
-    NIMPLY: {
-        out: (in1: boolean, in2: boolean) => in1 && !in2,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NIMPLY,
-    },
-    RNIMPLY: {
-        out: (in1: boolean, in2: boolean) => !in1 && in2,
-        includeInContextMenu: false, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.RNIMPLY,
-    },
-
-    // observing only one input
-    TXA: {
-        out: (in1: boolean, __: boolean) => in1,
-        includeInContextMenu: true, includeInPoseAs: false,
-        fullShortDesc: () => S.Components.Gate.TXA,
-    },
-    TXB: {
-        out: (__: boolean, in2: boolean) => in2,
-        includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: () => S.Components.Gate.TXB,
-    },
-    TXNA: {
-        out: (in1: boolean, __: boolean) => !in1,
-        includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: () => S.Components.Gate.TXNA,
-    },
-    TXNB: {
-        out: (__: boolean, in2: boolean) => !in2,
-        includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: () => S.Components.Gate.TXNB,
-    },
-} as const
-
-export type Gate2Props = GateProps & {
-    out: (in1: boolean, in2: boolean) => boolean
-}
-
-export const Gate2Types = RichStringEnum.withProps<Gate2Props>()(Gate2Types_)
-
-export type Gate2Type = typeof Gate2Types.type
-
-const Gate2MandatoryParams = t.type({
-    type: t.keyof(Gate2Types_),
-})
-type Gate2MandatoryParams = t.TypeOf<typeof Gate2MandatoryParams>
-
-
-
-// Gates with three inputs
-
-const Gate3Types_ = {
-    AND3: {
-        out: (in1: boolean, in2: boolean, in3: boolean) => in1 && in2 && in3,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.AND3,
-    },
-    OR3: {
-        out: (in1: boolean, in2: boolean, in3: boolean) => in1 || in2 || in3,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.OR3,
-    },
-    XOR3: {
-        out: (in1: boolean, in2: boolean, in3: boolean) => (Number(in1) + Number(in2) + Number(in3)) % 2 === 1,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.XOR3,
-    },
-    NAND3: {
-        out: (in1: boolean, in2: boolean, in3: boolean) => !(in1 && in2 && in3),
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NAND3,
-    },
-    NOR3: {
-        out: (in1: boolean, in2: boolean, in3: boolean) => !(in1 || in2 || in3),
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NOR3,
-    },
-    XNOR3: {
-        out: (in1: boolean, in2: boolean, in3: boolean) => (Number(in1) + Number(in2) + Number(in3)) % 2 === 0,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.XNOR3,
-    },
-} as const
-
-export const Gate3Types = RichStringEnum.withProps<GateProps & {
-    out: (in1: boolean, in2: boolean, in3: boolean) => boolean
-}>()(Gate3Types_)
-
-export type Gate3Type = typeof Gate3Types.type
-
-const Gate3MandatoryParams = t.type({
-    type: t.keyof(Gate3Types_),
-})
-type Gate3MandatoryParams = t.TypeOf<typeof Gate3MandatoryParams>
-
-
-
-// Gates with four inputs
-
-const Gate4Types_ = {
-    AND4: {
-        out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => in1 && in2 && in3 && in4,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.AND4,
-    },
-    OR4: {
-        out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => in1 || in2 || in3 || in4,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.OR4,
-    },
-    XOR4: {
-        out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => (Number(in1) + Number(in2) + Number(in3) + Number(in4)) % 2 === 1,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.XOR4,
-    },
-    NAND4: {
-        out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => !(in1 && in2 && in3 && in4),
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NAND4,
-    },
-    NOR4: {
-        out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => !(in1 || in2 || in3 || in4),
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NOR4,
-    },
-    XNOR4: {
-        out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => (Number(in1) + Number(in2) + Number(in3) + Number(in4)) % 2 === 0,
-        includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.XNOR4,
-    },
-} as const
-
-export const Gate4Types = RichStringEnum.withProps<GateProps & {
-    out: (in1: boolean, in2: boolean, in3: boolean, in4: boolean) => boolean
-}>()(Gate4Types_)
-
-export type Gate4Type = typeof Gate4Types.type
-
-const Gate4MandatoryParams = t.type({
-    type: t.keyof(Gate4Types_),
-})
-type Gate4MandatoryParams = t.TypeOf<typeof Gate4MandatoryParams>
-
-
-// Putting all gates together
-
-export type GateType = Gate2Type | Gate1Type | Gate3Type | Gate4Type
-export const GateTypes = {
-    isValue: (str: string | null | undefined): str is GateType => {
-        return Gate2Types.isValue(str) || Gate1Types.isValue(str) || Gate3Types.isValue(str) || Gate4Types.isValue(str)
-    },
-}
-
-
-
-type GateMandatoryParams<G extends GateType> = { type: G }
-
-const Gate2Def = defineComponent(true, true, Gate2MandatoryParams)
-const Gate1Def = defineComponent(true, true, Gate1MandatoryParams)
-const Gate3Def = defineComponent(true, true, Gate3MandatoryParams)
-const Gate4Def = defineComponent(true, true, Gate4MandatoryParams)
-
-export const GateDef = t.union([
-    Gate2Def.repr,
-    Gate1Def.repr,
-    Gate3Def.repr,
-    Gate4Def.repr,
-    TriStateBufferDef.repr,
-], "Gate")
-
-
-type GateRepr<G extends GateType> = ComponentRepr<true, true> & GateMandatoryParams<G> & {
-    poseAs?: G | undefined
-    showAsUnknown: boolean | undefined
-}
-
-const GRID_WIDTH_1_2 = 7
-const GRID_HEIGHT_1_2 = 4
-
-const GRID_WIDTH_3 = 9
-const GRID_HEIGHT_3 = 6
-
-const GRID_WIDTH_4 = 11
-const GRID_HEIGHT_4 = 8
-
-export type Gate = GateBase<GateType, GateRepr<GateType>>
+type GateRepr = Gate1Repr | GateNRepr
 
 export abstract class GateBase<
-    G extends GateType,
-    Repr extends GateRepr<G>
-    > extends ComponentBase<Repr, LogicValue, true, true> {
+    TRepr extends GateRepr,
+    TGateType extends TRepr["type"] = TRepr["type"],
+    TParamDefs extends ExtractParamDefs<TRepr> = ExtractParamDefs<TRepr>
+> extends ParametrizedComponentBase<
+    TRepr,
+    LogicValue,
+    TParamDefs,
+    ExtractParams<TRepr>,
+    NodesIn<TRepr>,
+    NodesOut<TRepr>,
+    true, true
+> {
 
-    private _type: G
-    private _poseAs: G | undefined = undefined
-    private _showAsUnknown = false
+    public abstract get numBits(): number
+    private _type: TGateType
+    private _poseAs: TGateType | undefined
+    private _showAsUnknown: boolean
 
-    protected constructor(editor: LogicEditor, savedData: Repr | GateMandatoryParams<G>, nodeOffsets: NodeVisuals<true, true>) {
-        super(editor, false, "in" in savedData ? savedData : null, nodeOffsets)
-        this._type = savedData.type
-        if ("poseAs" in savedData) {
-            this._poseAs = savedData.poseAs
-        }
-        if ("showAsUnknown" in savedData) {
-            this._showAsUnknown = savedData.showAsUnknown ?? false
-        }
+    protected constructor(editor: LogicEditor, SubclassDef: [InstantiatedComponentDef<TRepr, LogicValue>, SomeParamCompDef<TParamDefs>], type: TGateType, saved?: TRepr) {
+        super(editor, SubclassDef, saved)
+
+        this._type = type
+        this._poseAs = saved?.poseAs as TGateType ?? undefined
+        this._showAsUnknown = saved?.showAsUnknown ?? false
     }
 
-    protected override toJSONBase() {
+    protected toGateJSON(numBits: number | undefined) {
         return {
             type: this._type,
+            bits: numBits,
             ...super.toJSONBase(),
             showAsUnknown: (this._showAsUnknown) ? true : undefined,
             poseAs: this._poseAs,
         }
     }
 
-    public get componentType() {
-        return "gate" as const
-    }
+    protected abstract gateTypes(numBits: number): GateTypes<TGateType>
 
     public get type() {
         return this._type
     }
 
-    protected doSetType(newType: G) {
+    protected doSetType(newType: TGateType) {
         this._type = newType
         this.setNeedsRecalc()
         this.setNeedsRedraw("gate type changed")
@@ -323,7 +63,7 @@ export abstract class GateBase<
         return this._poseAs
     }
 
-    public set poseAs(newPoseAs: G | undefined) {
+    public set poseAs(newPoseAs: TGateType | undefined) {
         if (newPoseAs !== this._poseAs) {
             this._poseAs = newPoseAs
             this.setNeedsRedraw("gate display changed")
@@ -343,41 +83,85 @@ export abstract class GateBase<
         return this.type
     }
 
-    public get unrotatedWidth() {
-        return GRID_WIDTH_1_2 * GRID_STEP
-    }
-
-    public get unrotatedHeight() {
-        return GRID_HEIGHT_1_2 * GRID_STEP
+    protected doRecalcValue(): LogicValue {
+        const inputs = this.inputValues(this.inputs.In)
+        const logicFunc = this.gateTypes(this.numBits).props[this.type].out
+        return logicFunc(inputs)
     }
 
     protected override propagateValue(newValue: LogicValue) {
-        this.outputs[0].value = newValue
+        this.outputs.Out.value = newValue
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    public override makeTooltip() {
+        const s = S.Components.Gate.tooltip
+        if (this.showAsUnknown) {
+            return div(s.UnknownGate)
+        }
+
+        const myIns = this.inputValues(this.inputs.In)
+        const myOut = this.value
+
+        const gateProps = this.gateTypes(this.numBits).props[this.type]
+
+        const genTruthTableData = () => {
+            const header =
+                this.numBits === 1 ? [s.Input] :
+                    ArrayFillUsing(i => s.Input + " " + (i + 1), this.numBits)
+            header.push(s.Output)
+            const rows: TruthTableRowData[] = []
+            for (const ins of valueCombinations(this.numBits)) {
+                const matchesCurrent = deepEquals(myIns, ins)
+                const out = gateProps.out(ins)
+                ins.push(out)
+                rows.push({ matchesCurrent, cells: ins })
+            }
+            return [header, rows] as const
+        }
+
+        const nodeOut = this.outputs.Out.value
+        const desc = nodeOut === myOut
+            ? s.CurrentlyDelivers
+            : s.ShouldCurrentlyDeliver
+
+        const gateIsUnspecified = myIns.includes(Unknown)
+        const explanation = gateIsUnspecified
+            ? mods(desc + " " + s.UndeterminedOutputBecauseInputUnknown)
+            : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.BecauseInputIs + " ", ...myIns.map(asValue), ", " + s.AccordingToTruthTable)
+
+        const fullShortDesc = gateProps.fullShortDesc()
+        const header = (() => {
+            switch (this.type) {
+                case "NOT": return mods(s.Inverter[0], b(S.Components.Gate.NOT[0]), s.Inverter[1])
+                case "BUF": return mods(s.Buffer[0], b(S.Components.Gate.BUF[0]), s.Buffer[1])
+                default: return s.GateTitle(b(fullShortDesc[0]))
+            }
+        })()
+
+        return makeGateTooltip(this.numBits,
+            header,
+            fullShortDesc[2],
+            explanation,
+            makeTruthTable(genTruthTableData())
+        )
+    }
+
+    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
         const gateType = this._showAsUnknown
             ? Unknown
             : this.poseAs ?? this.type
         this.drawGate(g, gateType, gateType !== this.type && !this._showAsUnknown, ctx)
     }
 
-    public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
-        if (this.editor.mode >= Mode.FULL && e.altKey) {
-            this.doSetShowAsUnknown(!this._showAsUnknown)
-            return true
-        }
-        return false
-    }
-
-    protected drawGate(g: CanvasRenderingContext2D, type: G | Unknown, isFake: boolean, ctx: DrawContext) {
-        const output = this.outputs[0]
+    private drawGate(g: CanvasRenderingContext2D, type: TGateType | Unknown, isFake: boolean, ctx: DrawContext) {
+        const numBits = this.numBits
+        const output = this.outputs.Out
 
         const width = this.unrotatedWidth
         const height = this.unrotatedHeight
-        const left = this.posX - width / 2
         const top = this.posY - height / 2
-        const bottom = this.posY + height / 2
+        const bottom = top + height
+        const left = this.posX - width / 2
         const pi2 = Math.PI / 2
 
         if (ctx.isMouseOver) {
@@ -395,7 +179,7 @@ export abstract class GateBase<
             g.stroke()
         }
 
-        const gateWidth = (2 * Math.max(2, this.inputs.length)) * GRID_STEP
+        const gateWidth = (2 * Math.max(2, this.numBits)) * GRID_STEP
         let gateLeft = this.posX - gateWidth / 2
         let gateRight = this.posX + gateWidth / 2
         let nameDeltaX = 0
@@ -417,21 +201,20 @@ export abstract class GateBase<
             g.stroke()
         }
         const drawWireEnds = (shortUp = false, shortDown = false, isORLike = false) => {
-            const numInputs = this.inputs.length
-            for (let i = 0; i < numInputs; i++) {
-                const input = this.inputs[i]
+            for (let i = 0; i < numBits; i++) {
+                const input = this.inputs.In[i]
                 const short = i === 0 ? shortUp : shortDown
                 let rightEnd = gateLeft - 1
                 if (short) {
                     rightEnd -= 9
                 }
                 if (isORLike) {
-                    if (numInputs === 3) {
+                    if (numBits === 3) {
                         rightEnd += 3
                         if (i === 1) {
                             rightEnd += 4
                         }
-                    } else if (numInputs === 4) {
+                    } else if (numBits === 4) {
                         rightEnd += 3
                         if (i === 1 || i === 2) {
                             rightEnd += 8
@@ -620,7 +403,7 @@ export abstract class GateBase<
         }
 
         if (this.editor.options.showGateTypes && !isUnknown(type)) {
-            const gateShortName = this.gateTypeEnum.propsOf(type).fullShortDesc()[1]
+            const gateShortName = this.gateTypes(this.numBits).props[type].fullShortDesc()[1]
             if (isDefined(gateShortName)) {
                 g.fillStyle = COLOR_GATE_NAMES
                 g.textAlign = "center"
@@ -634,33 +417,34 @@ export abstract class GateBase<
         }
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const items: [ContextMenuItemPlacement, ContextMenuItem][] = [
+    public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
+        if (this.editor.mode >= Mode.FULL && e.altKey) {
+            this.doSetShowAsUnknown(!this._showAsUnknown)
+            return true
+        }
+        return false
+    }
+
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        const items: MenuItems = [
             ["start", this.makeReplaceByMenuItem()],
         ]
         if (this.editor.mode >= Mode.FULL) {
             items.push(
                 ["mid", this.makePoseAsMenuItem()],
+                ...this.makeForceOutputsContextMenuItem()
             )
-            const forceOutputItem = this.makeForceOutputsContextMenuItem()
-            if (isDefined(forceOutputItem)) {
-                items.push(
-                    ["mid", forceOutputItem]
-                )
-            }
         }
         return items
     }
 
-    protected abstract get gateTypeEnum(): RichStringEnum<G, GateProps>
-
     private makeReplaceByMenuItem(): ContextMenuItem {
-        const enumDef = this.gateTypeEnum
+        const gateTypes = this.gateTypes(this.numBits)
         const s = S.Components.Gate.contextMenu
-        const otherTypes = enumDef.values.filter(t => t !== this._type && enumDef.propsOf(t).includeInContextMenu)
+        const otherTypes = gateTypes.values.filter(t => t !== this._type && gateTypes.props[t].includeInContextMenu)
         return ContextMenuData.submenu("replace", s.ReplaceBy, [
             ...otherTypes.map(newType => {
-                const gateProps = enumDef.propsOf(newType)
+                const gateProps = gateTypes.props[newType]
                 return ContextMenuData.item(undefined, s.GateTempl.expand({ type: gateProps.fullShortDesc()[0] }), () => {
                     this.doSetType(newType)
                 })
@@ -671,14 +455,14 @@ export abstract class GateBase<
     }
 
     private makePoseAsMenuItem(): ContextMenuItem {
-        const enumDef = this.gateTypeEnum
+        const gateTypes = this.gateTypes(this.numBits)
         const s = S.Components.Gate.contextMenu
-        const otherTypes = enumDef.values.filter(t => t !== this._type && enumDef.propsOf(t).includeInPoseAs)
+        const otherTypes = gateTypes.values.filter(t => t !== this._type && gateTypes.props[t].includeInPoseAs)
         const currentShowAsUnknown = this._showAsUnknown
         const currentPoseAs = this.poseAs
         return ContextMenuData.submenu("questioncircled", s.ShowAs, [
             ContextMenuData.item(!currentShowAsUnknown && isUndefined(currentPoseAs) ? "check" : "none",
-                s.NormalGateTempl.expand({ type: enumDef.propsOf(this._type).fullShortDesc()[0] }), () => {
+                s.NormalGateTempl.expand({ type: gateTypes.props[this._type].fullShortDesc()[0] }), () => {
                     this.poseAs = undefined
                     this.doSetShowAsUnknown(false)
                 }),
@@ -689,7 +473,7 @@ export abstract class GateBase<
                 }),
             ContextMenuData.sep(),
             ...otherTypes.map(newType => {
-                const gateProps = enumDef.propsOf(newType)
+                const gateProps = gateTypes.props[newType]
                 return ContextMenuData.item(!currentShowAsUnknown && newType === currentPoseAs ? "check" : "none",
                     s.GateTempl.expand({ type: gateProps.fullShortDesc()[0] }), () => {
                         this.doSetShowAsUnknown(false)
@@ -703,77 +487,45 @@ export abstract class GateBase<
 
 
 
-type Gate1Repr = GateRepr<Gate1Type>
-export class Gate1 extends GateBase<Gate1Type, Gate1Repr> {
+export const Gate1Def =
+    defineParametrizedComponent("gate", undefined, true, true, {
+        variantName: ({ type }) => `${type}`,
+        button: { imgWidth: 50 },
+        repr: {
+            type: Gate1TypeRepr,
+            poseAs: typeOrUndefined(Gate1TypeRepr),
+            showAsUnknown: typeOrUndefined(t.boolean),
+        },
+        valueDefaults: {},
+        params: {
+            type: param("NOT" as Gate1Type),
+        },
+        size: () => ({
+            gridWidth: 7, gridHeight: 4,
+        }),
+        makeNodes: () => ({
+            ins: { In: [[-4, 0, "w"]] },
+            outs: { Out: [+4, 0, "e"] },
+        }),
+        initialValue: () => false as LogicValue,
+    })
 
-    public constructor(editor: LogicEditor, savedData: Gate1Repr | Gate1MandatoryParams) {
-        super(editor, savedData, {
-            ins: [[undefined, -4, 0, "w"]],
-            outs: [[undefined, +4, 0, "e"]],
-        })
+export type Gate1Repr = Repr<typeof Gate1Def>
+export type Gate1Params = ResolvedParams<typeof Gate1Def>
+
+
+export class Gate1 extends GateBase<Gate1Repr> {
+
+    public get numBits() { return 1 }
+
+    public constructor(editor: LogicEditor, params: Gate1Params, saved?: Gate1Repr) {
+        super(editor, Gate1Def.with(params), params.type, saved)
     }
+
+    protected gateTypes() { return Gate1Types }
 
     public toJSON() {
-        return super.toJSONBase()
-    }
-
-    protected get gateTypeEnum() {
-        return Gate1Types
-    }
-
-    protected doRecalcValue(): LogicValue {
-        const in0 = this.inputs[0].value
-        if (isUnknown(in0) || isHighImpedance(in0)) {
-            return Unknown
-        }
-        const gateProps = Gate1Types.propsOf(this.type)
-        return gateProps.out(in0)
-    }
-
-    public override makeTooltip() {
-        const s = S.Components.Gate.tooltip
-        if (this.showAsUnknown) {
-            return div(s.UnknownGate)
-        }
-
-        const myIn = this.inputs[0].value
-        const myOut = this.value
-
-        const gateProps = Gate1Types.propsOf(this.type)
-
-        const genTruthTableData = () => {
-            const header = [s.Input, s.Output]
-            const rows: TruthTableRowData[] = []
-            for (const in0 of [false, true]) {
-                const matchesCurrent = myIn === in0
-                const out = gateProps.out(in0)
-                rows.push({ matchesCurrent, cells: [in0, out] })
-            }
-            return [header, rows] as const
-        }
-
-        const nodeOut = this.outputs[0].value
-        const desc = nodeOut === myOut
-            ? s.CurrentlyDelivers
-            : s.ShouldCurrentlyDeliver
-
-        const explanation = isUnknown(myIn)
-            ? mods(desc + " " + s.UndeterminedOutputBecauseInputUnknown)
-            : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.BecauseInputIs + " ", asValue(myIn), ", " + s.AccordingToTruthTable)
-
-        const header = (() => {
-            switch (this.type) {
-                case "NOT": return mods(s.Inverter[0], b(S.Components.Gate.NOT[0]), s.Inverter[1])
-                case "BUF": return mods(s.Buffer[0], b(S.Components.Gate.BUF[0]), s.Buffer[1])
-            }
-        })()
-
-        return makeGateTooltip(1,
-            header,
-            Gate1Types.propsOf(this.type).fullShortDesc()[2],
-            explanation,
-            makeTruthTable(genTruthTableData())
-        )
+        return this.toGateJSON(undefined)
     }
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
@@ -788,80 +540,68 @@ export class Gate1 extends GateBase<Gate1Type, Gate1Repr> {
     }
 
 }
+Gate1Def.impl = Gate1
 
-type Gate2Repr = GateRepr<Gate2Type>
-export class Gate2 extends GateBase<Gate2Type, Gate2Repr> {
 
-    public constructor(editor: LogicEditor, savedData: Gate2Repr | Gate2MandatoryParams) {
-        super(editor, savedData, {
-            ins: [
-                [undefined, -4, -1, "w", "In"],
-                [undefined, -4, +1, "w", "In"],
-            ],
-            outs: [[undefined, +4, 0, "e"]],
-        })
+
+export const GateNDef =
+    defineParametrizedComponent("gate", undefined, true, true, {
+        variantName: ({ type }) => `${type}`,
+        button: { imgWidth: 50 },
+        repr: {
+            type: GateNTypeRepr,
+            poseAs: typeOrUndefined(GateNTypeRepr),
+            showAsUnknown: typeOrUndefined(t.boolean),
+        },
+        valueDefaults: {},
+        params: {
+            type: param("NAND" as GateNType),
+            bits: param(2, [2, 3, 4, 7, 8, 16]),
+        },
+        validateParams: ({ type: type_, bits }, defs) => {
+            const type = (bits > 2 && !Gate2toNTypes.includes(type_)) ? defs.type.defaultValue : type_
+            return { type, numBits: bits }
+        },
+        size: ({ numBits }) => ({
+            gridWidth: 7 + Math.max(0, numBits - 2) * 2,
+            gridHeight: 4 + Math.max(0, numBits - 2) * 2,
+        }),
+        makeNodes: ({ numBits }) => {
+            const outX = 4 + (numBits - 2)
+            const inX = -outX
+            return {
+                ins: {
+                    In: groupVertical("w", inX, 0, numBits),
+                },
+                outs: {
+                    Out: [outX, 0, "e"],
+                },
+            }
+        },
+        initialValue: () => false as LogicValue,
+    })
+
+export type GateNRepr = Repr<typeof GateNDef>
+export type GateNParams = ResolvedParams<typeof GateNDef>
+
+
+export class GateN extends GateBase<GateNRepr> {
+
+    public readonly numBits: number
+
+    public constructor(editor: LogicEditor, params: GateNParams, saved?: GateNRepr) {
+        super(editor, GateNDef.with(params), params.type, saved)
+        this.numBits = params.numBits
+    }
+
+    protected gateTypes(numBits: number) {
+        return (numBits > 2 ? Gate2toNTypes : GateNTypes) as any
     }
 
     public toJSON() {
-        return super.toJSONBase()
-    }
-
-    protected get gateTypeEnum() {
-        return Gate2Types
-    }
-
-    public override makeTooltip() {
-        const s = S.Components.Gate.tooltip
-        if (this.showAsUnknown) {
-            return div(s.UnknownGate)
-        }
-
-        const gateProps = Gate2Types.propsOf(this.type)
-        const myIn0 = this.inputs[0].value
-        const myIn1 = this.inputs[1].value
-        const myOut = this.value
-
-        const genTruthTableData = () => {
-            const header = [s.Input + " 1", s.Input + " 2", s.Output]
-            const rows: TruthTableRowData[] = []
-            for (const in0 of [false, true]) {
-                for (const in1 of [false, true]) {
-                    const matchesCurrent = myIn0 === in0 && myIn1 === in1
-                    const out = gateProps.out(in0, in1)
-                    rows.push({ matchesCurrent, cells: [in0, in1, out] })
-                }
-            }
-            return [header, rows] as const
-        }
-
-        const nodeOut = this.outputs[0].value
-        const desc = nodeOut === myOut
-            ? s.CurrentlyDelivers
-            : s.ShouldCurrentlyDeliver
-
-        const gateIsUnspecified = isUnknown(myIn0) || isUnknown(myIn1)
-        const explanation = gateIsUnspecified
-            ? mods(desc + " " + s.UndeterminedOutputBecauseInputsUnknown)
-            : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.AccordingToTruthTable)
-
-        const fullShortDesc = gateProps.fullShortDesc()
-        return makeGateTooltip(2,
-            s.GateTitle(b(fullShortDesc[0])),
-            fullShortDesc[2],
-            explanation,
-            makeTruthTable(genTruthTableData())
+        return this.toGateJSON(
+            this.numBits !== GateNDef.aults.bits ? this.numBits : undefined
         )
-
-    }
-
-    protected doRecalcValue(): LogicValue {
-        const in1 = this.inputs[0].value
-        const in2 = this.inputs[1].value
-        if (isUnknown(in1) || isUnknown(in2) || isHighImpedance(in1) || isHighImpedance(in2)) {
-            return Unknown
-        }
-        const gateProps = Gate2Types.propsOf(this.type)
-        return gateProps.out(in1, in2)
     }
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
@@ -894,202 +634,40 @@ export class Gate2 extends GateBase<Gate2Type, Gate2Repr> {
         return false
     }
 
-}
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        const s = S.Components.Generic.contextMenu
 
+        const changeBitsItems: MenuItems = Gate2OnlyTypes.includes(this.type) ? [] : [
+            this.makeChangeParamsContextMenuItem("inputs", s.ParamNumInputs, this.numBits, "bits"),
+            ["mid", ContextMenuData.sep()],
+        ]
 
-
-type Gate3Repr = GateRepr<Gate3Type>
-export class Gate3 extends GateBase<Gate3Type, Gate3Repr> {
-
-    public constructor(editor: LogicEditor, savedData: Gate3Repr | Gate3MandatoryParams) {
-        super(editor, savedData, {
-            ins: [
-                [undefined, -5, -2, "w", "In"],
-                [undefined, -5, 0, "w", "In"],
-                [undefined, -5, +2, "w", "In"],
-            ],
-            outs: [[undefined, +5, 0, "e"]],
-        })
-    }
-
-    public toJSON() {
-        return super.toJSONBase()
-    }
-
-    protected get gateTypeEnum() {
-        return Gate3Types
-    }
-
-    public override get unrotatedWidth() {
-        return GRID_WIDTH_3 * GRID_STEP
-    }
-
-    public override get unrotatedHeight() {
-        return GRID_HEIGHT_3 * GRID_STEP
-    }
-
-    public override makeTooltip() {
-        const s = S.Components.Gate.tooltip
-        if (this.showAsUnknown) {
-            return div(s.UnknownGate)
-        }
-
-        const gateProps = Gate3Types.propsOf(this.type)
-        const myIn0 = this.inputs[0].value
-        const myIn1 = this.inputs[1].value
-        const myIn2 = this.inputs[2].value
-        const myOut = this.value
-
-        const genTruthTableData = () => {
-            const header = [s.Input + " 1", s.Input + " 2", s.Input + " 3", s.Output]
-
-            const rows: TruthTableRowData[] = []
-            for (const in0 of [false, true]) {
-                for (const in1 of [false, true]) {
-                    for (const in2 of [false, true]) {
-                        const matchesCurrent = myIn0 === in0 && myIn1 === in1 && myIn2 === in2
-                        const out = gateProps.out(in0, in1, in2)
-                        rows.push({ matchesCurrent, cells: [in0, in1, in2, out] })
-                    }
-                }
-            }
-            return [header, rows] as const
-        }
-
-        const nodeOut = this.outputs[0].value
-        const desc = nodeOut === myOut
-            ? s.CurrentlyDelivers
-            : s.ShouldCurrentlyDeliver
-
-        const gateIsUnspecified = isUnknown(myIn0) || isUnknown(myIn1)
-        const explanation = gateIsUnspecified
-            ? mods(desc + " " + s.UndeterminedOutputBecauseInputsUnknown)
-            : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.AccordingToTruthTable)
-
-        const fullShortDesc = gateProps.fullShortDesc()
-        return makeGateTooltip(3,
-            s.GateTitle(b(fullShortDesc[0])),
-            fullShortDesc[2],
-            explanation,
-            makeTruthTable(genTruthTableData())
-        )
-
-    }
-
-    protected doRecalcValue(): LogicValue {
-        const in0 = this.inputs[0].value
-        const in1 = this.inputs[1].value
-        const in2 = this.inputs[2].value
-        if (isUnknown(in0) || isUnknown(in1) || isUnknown(in2) || isHighImpedance(in0) || isHighImpedance(in1) || isHighImpedance(in2)) {
-            return Unknown
-        }
-        const gateProps = Gate3Types.propsOf(this.type)
-        return gateProps.out(in0, in1, in2)
+        return [
+            ...changeBitsItems,
+            ...super.makeComponentSpecificContextMenuItems(),
+        ]
     }
 
 }
+GateNDef.impl = GateN
 
-
-
-type Gate4Repr = GateRepr<Gate4Type>
-export class Gate4 extends GateBase<Gate4Type, Gate4Repr> {
-
-    public constructor(editor: LogicEditor, savedData: Gate4Repr | Gate4MandatoryParams) {
-        super(editor, savedData, {
-            ins: [
-                [undefined, -6, -3, "w", "In"],
-                [undefined, -6, -1, "w", "In"],
-                [undefined, -6, +1, "w", "In"],
-                [undefined, -6, +3, "w", "In"],
-            ],
-            outs: [[undefined, +6, 0, "e"]],
-        })
-    }
-
-    public toJSON() {
-        return super.toJSONBase()
-    }
-
-    protected get gateTypeEnum() {
-        return Gate4Types
-    }
-
-    public override get unrotatedWidth() {
-        return GRID_WIDTH_4 * GRID_STEP
-    }
-
-    public override get unrotatedHeight() {
-        return GRID_HEIGHT_4 * GRID_STEP
-    }
-
-    public override makeTooltip() {
-        const s = S.Components.Gate.tooltip
-        if (this.showAsUnknown) {
-            return div(s.UnknownGate)
-        }
-
-        const gateProps = Gate4Types.propsOf(this.type)
-        const myIn0 = this.inputs[0].value
-        const myIn1 = this.inputs[1].value
-        const myIn2 = this.inputs[2].value
-        const myIn3 = this.inputs[3].value
-        const myOut = this.value
-
-        const genTruthTableData = () => {
-            const header = [s.Input + " 1", s.Input + " 2", s.Input + " 3", s.Input + " 4", s.Output]
-            const rows: TruthTableRowData[] = []
-            for (const in0 of [false, true]) {
-                for (const in1 of [false, true]) {
-                    for (const in2 of [false, true]) {
-                        for (const in3 of [false, true]) {
-                            const matchesCurrent = myIn0 === in0 && myIn1 === in1 && myIn2 === in2 && myIn3 === in3
-                            const out = gateProps.out(in0, in1, in2, in3)
-                            rows.push({ matchesCurrent, cells: [in0, in1, in2, in3, out] })
-                        }
-                    }
-                }
-            }
-            return [header, rows] as const
-        }
-
-        const nodeOut = this.outputs[0].value
-        const desc = nodeOut === myOut
-            ? s.CurrentlyDelivers
-            : s.ShouldCurrentlyDeliver
-
-        const gateIsUnspecified = isUnknown(myIn0) || isUnknown(myIn1)
-        const explanation = gateIsUnspecified
-            ? mods(desc + " " + s.UndeterminedOutputBecauseInputsUnknown)
-            : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.AccordingToTruthTable)
-
-        const fullShortDesc = gateProps.fullShortDesc()
-        return makeGateTooltip(4,
-            s.GateTitle(b(fullShortDesc[0])),
-            fullShortDesc[2],
-            explanation,
-            makeTruthTable(genTruthTableData())
-        )
-    }
-
-    protected doRecalcValue(): LogicValue {
-        const in0 = this.inputs[0].value
-        const in1 = this.inputs[1].value
-        const in2 = this.inputs[2].value
-        const in3 = this.inputs[3].value
-        if (isUnknown(in0) || isUnknown(in1) || isUnknown(in2) || isUnknown(in3) || isHighImpedance(in0) || isHighImpedance(in1) || isHighImpedance(in2) || isHighImpedance(in3)) {
-            return Unknown
-        }
-        const gateProps = Gate4Types.propsOf(this.type)
-        return gateProps.out(in0, in1, in2, in3)
-    }
-
-}
 
 
 // Truth table generation helpers
 
-type TruthTableRowData = { matchesCurrent: boolean, cells: boolean[] }
-const makeTruthTable = ([header, rows]: readonly [string[], TruthTableRowData[]]) => {
+function* valueCombinations(n: number) {
+    let curr = 0
+    const max = 1 << n
+    while (curr < max) {
+        const binString = curr.toString(2).padStart(n, "0")
+        const valueArray = binString.split("").reverse().map(v => (v === "1") as LogicValue)
+        yield valueArray
+        curr++
+    }
+}
+
+type TruthTableRowData = { matchesCurrent: boolean, cells: LogicValue[] }
+function makeTruthTable([header, rows]: readonly [string[], TruthTableRowData[]]) {
     const htmlRows = rows.map(({ matchesCurrent, cells }) =>
         tr(matchesCurrent ? cls("current") : emptyMod, ...cells.map(v => td(asValue(v))))
     )
@@ -1100,40 +678,7 @@ const makeTruthTable = ([header, rows]: readonly [string[], TruthTableRowData[]]
         tbody(...htmlRows)
     )
 }
-const makeGateTooltip = (nInput: number, title: Modifier, description: Modifier, explanation: Modifier, truthTable: Modifier): ModifierObject => {
+function makeGateTooltip(nInput: number, title: Modifier, description: Modifier, explanation: Modifier, truthTable: Modifier): ModifierObject {
     const maxWidth = 200 + (Math.max(0, nInput - 2)) * 50
     return tooltipContent(title, mods(div(description), div(explanation), div(truthTable)), maxWidth)
-}
-
-export const GateFactory = {
-
-    make: (editor: LogicEditor, savedDataOrType: GateRepr<GateType> | string | undefined) => {
-        let gateParams
-        let blank = true
-        if (isUndefined(savedDataOrType)) {
-            gateParams = { type: "NAND" }
-        } else if (isString(savedDataOrType)) {
-            gateParams = { type: savedDataOrType }
-        } else {
-            gateParams = savedDataOrType
-            blank = false
-        }
-        if (Gate1Types.isValue(gateParams.type)) {
-            const sameSavedDataWithBetterTyping = { ...gateParams, type: gateParams.type }
-            return new Gate1(editor, sameSavedDataWithBetterTyping)
-        } else if (Gate2Types.isValue(gateParams.type)) {
-            const sameSavedDataWithBetterTyping = { ...gateParams, type: gateParams.type }
-            return new Gate2(editor, sameSavedDataWithBetterTyping)
-        } else if (Gate3Types.isValue(gateParams.type)) {
-            const sameSavedDataWithBetterTyping = { ...gateParams, type: gateParams.type }
-            return new Gate3(editor, sameSavedDataWithBetterTyping)
-        } else if (Gate4Types.isValue(gateParams.type)) {
-            const sameSavedDataWithBetterTyping = { ...gateParams, type: gateParams.type }
-            return new Gate4(editor, sameSavedDataWithBetterTyping)
-        } else if (gateParams.type === "TRI") {
-            return new TriStateBuffer(editor, blank ? null : savedDataOrType as any)
-        }
-        return undefined
-    },
-
 }

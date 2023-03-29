@@ -1,63 +1,60 @@
-import * as t from "io-ts"
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_MOUSE_OVER, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP } from "../drawutils"
+import { COLOR_COMPONENT_INNER_LABELS, displayValuesFromArray, drawLabel } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { ArrayFillWith, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent, Repr } from "./Component"
-import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { FixedArray, FixedArrayFillWith, isUnknown, LogicValue, Unknown } from "../utils"
+import { ComponentBase, defineComponent, group, Repr } from "./Component"
+import { DrawContext, MenuItems } from "./Drawable"
 
 export const Decoder16SegDef =
-    defineComponent(true, true, t.type({
-        type: t.literal("decoder-16seg"),
-    }, "Decoder16Seg"))
+    defineComponent("ic", "decoder-16seg", {
+        button: { imgWidth: 50 },
+        valueDefaults: {},
+        size: { gridWidth: 4, gridHeight: 10 },
+        makeNodes: () => ({
+            ins: {
+                I: group("w", [
+                    [-3, -3],
+                    [-3, -2],
+                    [-3, -1],
+                    [-3, 0],
+                    [-3, +1],
+                    [-3, +2],
+                    [-3, +3],
+                ]),
+            },
+            outs: {
+                Out: group("e", [
+                    [+4, -4, "a1"],
+                    [+3, -3.5, "a2"],
+                    [+4, -3, "b"],
+                    [+3, -2.5, "c"],
+                    [+4, -2, "d2"],
+                    [+3, -1.5, "d1"],
+                    [+4, -1, "e"],
+                    [+3, -0.5, "f"],
+                    [+4, 0, "g1"],
+                    [+3, 0.5, "g2"],
+                    [+4, +1, "h"],
+                    [+3, +1.5, "i"],
+                    [+4, +2, "j"],
+                    [+3, +2.5, "k"],
+                    [+4, +3, "l"],
+                    [+3, +3.5, "m"],
+                    [+4, +4, "p"],
+                ]),
+            },
+        }),
+        initialValue: () => FixedArrayFillWith(false as LogicValue, 17),
+    })
 
-const INPUT = {
-    I: [0, 1, 2, 3, 4, 5, 6] as const,
-}
-
-// const enum OUTPUT {
-//     a1, a2, b, c, d2, d1, e, f, g1, g2, h, i, j, k, l, m, p
-// }
-
-const GRID_WIDTH = 4
-const GRID_HEIGHT = 10
 
 type Decoder16SegRepr = Repr<typeof Decoder16SegDef>
 
-export class Decoder16Seg extends ComponentBase<Decoder16SegRepr, LogicValue[]> {
+export class Decoder16Seg extends ComponentBase<Decoder16SegRepr> {
 
-    public constructor(editor: LogicEditor, savedData: Decoder16SegRepr | null) {
-        super(editor, ArrayFillWith(false, 17), savedData, {
-            ins: [
-                ["I0", -3, -3, "w", "In"],
-                ["I1", -3, -2, "w", "In"],
-                ["I2", -3, -1, "w", "In"],
-                ["I3", -3, 0, "w", "In"],
-                ["I4", -3, +1, "w", "In"],
-                ["I5", -3, +2, "w", "In"],
-                ["I6", -3, +3, "w", "In"],
-            ],
-            outs: [
-                ["a1", +4, -4, "e", "Out"],
-                ["a2", +3, -3.5, "e", "Out"],
-                ["b", +4, -3, "e", "Out"],
-                ["c", +3, -2.5, "e", "Out"],
-                ["d2", +4, -2, "e", "Out"],
-                ["d1", +3, -1.5, "e", "Out"],
-                ["e", +4, -1, "e", "Out"],
-                ["f", +3, -0.5, "e", "Out"],
-                ["g1", +4, 0, "e", "Out"],
-                ["g2", +3, 0.5, "e", "Out"],
-                ["h", +4, +1, "e", "Out"],
-                ["i", +3, +1.5, "e", "Out"],
-                ["j", +4, +2, "e", "Out"],
-                ["k", +3, +2.5, "e", "Out"],
-                ["l", +4, +3, "e", "Out"],
-                ["m", +3, +3.5, "e", "Out"],
-                ["p", +4, +4, "e", "Out"],
-            ],
-        })
+    public constructor(editor: LogicEditor, saved?: Decoder16SegRepr) {
+        super(editor, Decoder16SegDef, saved)
     }
 
     public toJSON() {
@@ -67,37 +64,25 @@ export class Decoder16Seg extends ComponentBase<Decoder16SegRepr, LogicValue[]> 
         }
     }
 
-    public get componentType() {
-        return "ic" as const
-    }
-
-    public get unrotatedWidth() {
-        return GRID_WIDTH * GRID_STEP
-    }
-
-    public get unrotatedHeight() {
-        return GRID_HEIGHT * GRID_STEP
-    }
-
     public override makeTooltip() {
         return tooltipContent(undefined, mods(
             div(S.Components.Decoder16Seg.tooltip) // TODO better tooltip
         ))
     }
 
-    protected doRecalcValue(): LogicValue[] {
-        const input = this.inputValues(INPUT.I)
+    protected doRecalcValue(): FixedArray<LogicValue, 17> {
+        const input = this.inputValues(this.inputs.I)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output
         if (isUnknown(value)) {
-            output = ArrayFillWith(Unknown, 17)
+            output = FixedArrayFillWith(Unknown, 17)
         } else if (value < 32) {
             // control chars
-            output = ArrayFillWith(false, 17)
+            output = FixedArrayFillWith(false, 17)
         } else {
             const line = DECODER_MAPPING[value - 32]
-            output = ArrayFillWith(false, 17)
+            output = FixedArrayFillWith(false, 17)
             for (let i = 0; i < line.length; i++) {
                 output[i] = line.charAt(i) === "1"
             }
@@ -107,61 +92,36 @@ export class Decoder16Seg extends ComponentBase<Decoder16SegRepr, LogicValue[]> 
     }
 
     protected override propagateValue(newValue: LogicValue[]) {
-        for (let i = 0; i < 17; i++) {
-            this.outputs[i].value = newValue[i]
-        }
+        this.outputValues(this.outputs.Out, newValue)
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+        this.doDrawDefault(g, ctx, {
+            skipLabels: true,
+            drawInside: bounds => {
+                this.drawGroupBox(g, this.inputs.I.group, bounds)
+            },
+            drawLabels: (ctx, { left, right }) => {
+                g.fillStyle = COLOR_COMPONENT_INNER_LABELS
+                g.font = "bold 11px sans-serif"
 
-        g.fillStyle = COLOR_BACKGROUND
-        g.strokeStyle = ctx.isMouseOver ? COLOR_MOUSE_OVER : COLOR_COMPONENT_BORDER
-        g.lineWidth = 4
+                drawLabel(ctx, this.orient, "C", "w", left, this.inputs.I)
 
-        const width = GRID_WIDTH * GRID_STEP
-        const height = GRID_HEIGHT * GRID_STEP
-        const left = this.posX - width / 2
-        const right = left + width
-
-        g.beginPath()
-        g.rect(this.posX - width / 2, this.posY - height / 2, width, height)
-        g.fill()
-        g.stroke()
-
-        for (const input of this.inputs) {
-            drawWireLineToComponent(g, input, left - 2, input.posYInParentTransform)
-        }
-
-        for (const output of this.outputs) {
-            drawWireLineToComponent(g, output, right + 2, output.posYInParentTransform)
-        }
-
-        ctx.inNonTransformedFrame(ctx => {
-            g.fillStyle = COLOR_COMPONENT_INNER_LABELS
-            g.font = "bold 12px sans-serif"
-
-            drawLabel(ctx, this.orient, "C", "w", left, this.posY, this.inputs[0])
-
-            g.font = "7px sans-serif"
-            this.outputs.forEach(output => {
-                drawLabel(ctx, this.orient, output.name, "e", right, output)
-            })
-
+                g.font = "7px sans-serif"
+                this.outputs._all.forEach(output => {
+                    drawLabel(ctx, this.orient, output.shortName, "e", right, output)
+                })
+            },
         })
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const forceOutputItem = this.makeForceOutputsContextMenuItem()
-        if (isUndefined(forceOutputItem)) {
-            return []
-        }
-        return [
-            ["mid", forceOutputItem],
-        ]
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        return this.makeForceOutputsContextMenuItem()
     }
 
-
 }
+Decoder16SegDef.impl = Decoder16Seg
+
 
 // Taken and modified from https://github.com/dmadison/LED-Segment-ASCII
 const DECODER_MAPPING = [
