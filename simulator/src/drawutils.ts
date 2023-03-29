@@ -318,7 +318,7 @@ export const FONT_LABEL_DEFAULT = "18px sans-serif"
 
 
 export function useCompact(numNodes: number) {
-    return numNodes >= 5
+    return numNodes >= 6
 }
 
 
@@ -714,25 +714,23 @@ export function displayValuesFromArray(values: readonly LogicValue[], mostSignif
     return [binaryStringRep, value]
 }
 
-export function formatWithRadix(value: number | Unknown, radix: number, numBits: number, withPrefix = true): string {
+export function formatWithRadix(value: number | Unknown, radix: number, width: number, withPrefix = true): string {
     if (isUnknown(value)) {
         return Unknown
     }
-
     if (radix === -10) {
         // signed int
-        const asBinStr = (value >>> 0).toString(2).padStart(numBits, '0')
+        const asBinStr = (value >>> 0).toString(2).padStart(width, '0')
         if (asBinStr[0] === '1') {
             // negative
             const rest = parseInt(asBinStr.substring(1), 2)
             // swap hyphen for minus sign as en-dash
-            return '–' + String(-(-Math.pow(2, numBits - 1) + rest))
+            return '–' + String(-(-Math.pow(2, width - 1) + rest))
         } else {
             return String(value)
         }
     } else {
-        const padWidth = radix === 10 ? 1 : Math.ceil(Math.log(Math.pow(2, numBits)) / Math.log(radix))
-        const caption = value.toString(radix).toUpperCase().padStart(padWidth, '0')
+        const caption = value.toString(radix).toUpperCase()
         const prefix = !withPrefix ? "" : (() => {
             switch (radix) {
                 case 16: return "0x"

@@ -2,9 +2,9 @@ import { COLOR_COMPONENT_BORDER } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isHighImpedance, isUnknown, LogicValue, Unknown } from "../utils"
+import { isHighImpedance, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
 import { ComponentBase, defineComponent, Repr } from "./Component"
-import { DrawContext, MenuItems } from "./Drawable"
+import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 export const ComparatorDef =
     defineComponent("ic", "comparator", {
@@ -84,9 +84,14 @@ export class Comparator extends ComponentBase<ComparatorRepr> {
         })
     }
 
-    protected override makeComponentSpecificContextMenuItems(): MenuItems {
-        return this.makeForceOutputsContextMenuItem()
+    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
+        const forceOutputItem = this.makeForceOutputsContextMenuItem()
+        if (isUndefined(forceOutputItem)) {
+            return []
+        }
+        return [
+            ["mid", forceOutputItem],
+        ]
     }
-
 }
 ComparatorDef.impl = Comparator

@@ -18,13 +18,10 @@ import edit from '../img/icons/edit.icon.svg'; // @ts-ignore
 import eye from '../img/icons/eye.icon.svg'; // @ts-ignore
 import font from '../img/icons/font.icon.svg'; // @ts-ignore
 import force from '../img/icons/force.icon.svg'; // @ts-ignore
-import inputs from '../img/icons/inputs.icon.svg'; // @ts-ignore
 import link from '../img/icons/link.icon.svg'; // @ts-ignore
-import memlines from '../img/icons/memlines.icon.svg'; // @ts-ignore
 import move from '../img/icons/move.icon.svg'; // @ts-ignore
 import none from '../img/icons/none.icon.svg'; // @ts-ignore
 import open from '../img/icons/open.icon.svg'; // @ts-ignore
-import outputs from '../img/icons/outputs.icon.svg'; // @ts-ignore
 import palette from '../img/icons/palette.icon.svg'; // @ts-ignore
 import pause from '../img/icons/pause.icon.svg'; // @ts-ignore
 import pen from '../img/icons/pen.icon.svg'; // @ts-ignore
@@ -47,8 +44,9 @@ import wirestyle from '../img/icons/wirestyle.icon.svg'; // @ts-ignore
 
 // images
 import Adder from '../img/Adder.svg'; // @ts-ignore
-import AdderArray from '../img/AdderArray.svg'; // @ts-ignore
-import ALU from '../img/ALU.svg'; // @ts-ignore
+import AdderArray4 from '../img/AdderArray4.svg'; // @ts-ignore
+import ALU4 from '../img/ALU4.svg'; // @ts-ignore
+import ALU8 from '../img/ALU8.svg'; // @ts-ignore
 import AND from '../img/AND.svg'; // @ts-ignore
 import AND3 from '../img/AND3.svg'; // @ts-ignore
 import AND4 from '../img/AND4.svg'; // @ts-ignore
@@ -96,10 +94,15 @@ import OutputDisplay4 from '../img/OutputDisplay4.svg'; // @ts-ignore
 import OutputDisplay8 from '../img/OutputDisplay8.svg'; // @ts-ignore
 import OutputShiftBuffer from '../img/OutputShiftBuffer.svg'; // @ts-ignore
 import Passthrough1 from '../img/Passthrough1.svg'; // @ts-ignore
-import PassthroughN from '../img/PassthroughN.svg'; // @ts-ignore
-import RAM from '../img/RAM.svg'; // @ts-ignore
-import Register from '../img/Register.svg'; // @ts-ignore
-import ShiftRegister from '../img/ShiftRegister.svg'; // @ts-ignore
+import Passthrough4 from '../img/Passthrough4.svg'; // @ts-ignore
+import Passthrough8 from '../img/Passthrough8.svg'; // @ts-ignore
+import RAM16x4 from '../img/RAM16x4.svg'; // @ts-ignore
+import RAM16x8 from '../img/RAM16x8.svg'; // @ts-ignore
+import RAM64x8 from '../img/RAM64x8.svg'; // @ts-ignore
+import Register4 from '../img/Register4.svg'; // @ts-ignore
+import Register8 from '../img/Register8.svg'; // @ts-ignore
+import ShiftRegister4 from '../img/ShiftRegister4.svg'; // @ts-ignore
+import ShiftRegister8 from '../img/ShiftRegister8.svg'; // @ts-ignore
 import SwitchedInverter from '../img/SwitchedInverter.svg'; // @ts-ignore
 import TRI from '../img/TRI.svg'; // @ts-ignore
 import TriStateBufferArray from '../img/TriStateBufferArray.svg'; // @ts-ignore
@@ -128,13 +131,10 @@ const icons = {
     eye,
     font,
     force,
-    inputs,
     link,
-    memlines,
     move,
     none,
     open,
-    outputs,
     palette,
     pause,
     pen,
@@ -158,8 +158,9 @@ const icons = {
 
 const images = {
     Adder,
-    AdderArray,
-    ALU,
+    AdderArray4,
+    ALU4,
+    ALU8,
     AND,
     AND3,
     AND4,
@@ -207,10 +208,15 @@ const images = {
     OutputDisplay8,
     OutputShiftBuffer,
     Passthrough1,
-    PassthroughN,
-    RAM,
-    Register,
-    ShiftRegister,
+    Passthrough4,
+    Passthrough8,
+    RAM16x4,
+    RAM16x8,
+    RAM64x8,
+    Register4,
+    Register8,
+    ShiftRegister4,
+    ShiftRegister8,
     SwitchedInverter,
     TRI,
     TriStateBufferArray,

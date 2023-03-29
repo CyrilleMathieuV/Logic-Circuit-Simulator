@@ -27,7 +27,7 @@ export const DEFAULT_WIRE_COLOR = WireColor.black
 
 export type WireColor = keyof typeof WireColor
 
-export abstract class NodeBase<N extends Node> extends DrawableWithPosition {
+abstract class NodeBase<N extends Node> extends DrawableWithPosition {
 
     public readonly id: number
     private _isAlive = true
@@ -380,7 +380,7 @@ export class NodeOut extends NodeBase<NodeOut> {
 
     protected preDestroy() {
         // we need to make a copy of the array because the wires will remove themselves from the array
-        for (const wire of [...this._outgoingWires]) {
+        for (const wire of [... this._outgoingWires]) {
             this.editor.wireMgr.deleteWire(wire)
         }
     }

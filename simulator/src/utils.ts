@@ -9,6 +9,7 @@ export type TimeoutHandle = NodeJS.Timeout
 
 // Better types for an Object.keys() replacement
 export function keysOf<K extends keyof any>(d: Record<K, any>): K[]
+// eslint-disable-next-line @typescript-eslint/ban-types
 export function keysOf<K extends {}>(o: K): (keyof K)[]
 export function keysOf(o: any) {
     return Object.keys(o)

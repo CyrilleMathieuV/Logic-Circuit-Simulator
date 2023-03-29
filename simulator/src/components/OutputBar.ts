@@ -5,7 +5,7 @@ import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { HighImpedance, isDefined, isHighImpedance, isUnknown, LogicValue, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
 import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, Repr } from "./Component"
-import { ContextMenuData, DrawContext, MenuItems } from "./Drawable"
+import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 
 export const OutputBarTypes = {
@@ -61,18 +61,21 @@ type OutputBarRepr = Repr<typeof OutputBarDef>
 
 export class OutputBar extends ComponentBase<OutputBarRepr> {
 
-    private _display: OutputBarType
-    private _color: LedColor
-    private _transparent: boolean
-    private _name: ComponentName
+    private _display = OutputBarDef.aults.display
+    private _color = OutputBarDef.aults.color
+    private _transparent = OutputBarDef.aults.transparent
+    private _name: ComponentName = undefined
 
     public constructor(editor: LogicEditor, saved?: OutputBarRepr) {
         super(editor, OutputBarDef, saved)
-
-        this._color = saved?.color ?? OutputBarDef.aults.color
-        this._transparent = saved?.transparent ?? OutputBarDef.aults.transparent
-        this._name = saved?.name ?? undefined
-        this._display = this.doSetDisplay(saved?.display ?? OutputBarDef.aults.display)
+        if (isDefined(saved)) {
+            this.doSetDisplay(saved.display)
+            this._color = saved.color ?? OutputBarDef.aults.color
+            this._transparent = saved.transparent ?? OutputBarDef.aults.transparent
+            this._name = saved.name
+        } else {
+            this.updateInputOffsetX()
+        }
     }
 
     public toJSON() {
@@ -186,7 +189,6 @@ export class OutputBar extends ComponentBase<OutputBarRepr> {
         this._display = newDisplay
         this.updateInputOffsetX()
         this.setNeedsRedraw("display mode changed")
-        return newDisplay // to make compiler happy for constructor
     }
 
     private doSetColor(color: LedColor) {
@@ -204,7 +206,7 @@ export class OutputBar extends ComponentBase<OutputBarRepr> {
         this.inputs.I.gridOffsetX = -pxToGrid(width / 2) - 2
     }
 
-    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
         const s = S.Components.OutputBar.contextMenu
 
         const makeItemShowAs = (desc: string, display: OutputBarType) => {
