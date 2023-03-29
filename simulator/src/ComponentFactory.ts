@@ -148,11 +148,11 @@ class _ComponentFactory {
         for (const maker of AllComponentDefs) {
             const key = isDefined(maker.type) ? `${maker.category}.${maker.type}` : maker.category
             if (!maker.isValid()) {
-                throw new Error(`Implementation missing for components of type '${key}'`)
+                throw new Error(`Implementation missing for ${key}`)
             }
             // console.log(`Registering component for '${key}'`)
             if (this.registry.has(key)) {
-                throw new Error(`Duplicate component for components of type '${key}'`)
+                throw new Error(`Duplicate component for '${key}'`)
             }
             this.registry.set(key, maker)
         }
@@ -175,7 +175,7 @@ class _ComponentFactory {
         // TODO further general component customisation based on editor options
         // const classId = compDataset.componentId
         // if (isUndefined(classId)) {
-        //     console.warn("No class ID linked to elem " + elem.outerHTML)
+        //     console.log("WARN No class ID linked to elem " + elem.outerHTML)
         // } else {
         //     const compConfig = editor.options.initParams?.[classId]
         //     if (isDefined(compConfig)) {
