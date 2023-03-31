@@ -1,6 +1,6 @@
 import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
-import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_RECTANGLE_BACKGROUND, COLOR_RECTANGLE_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
+import { COLOR_COMPONENT_BORDER, COLOR_RECTANGLE_BACKGROUND, COLOR_RECTANGLE_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { span, style, title } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
@@ -225,7 +225,7 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
 
         if (ctx.isMouseOver) {
             g.lineWidth = Math.max(3, this._strokeWidth)
-            g.strokeStyle = COLOR_MOUSE_OVER
+            g.strokeStyle = ctx.borderColor
             g.stroke()
         } else if (this._strokeWidth > 0) {
             g.lineWidth = this._strokeWidth

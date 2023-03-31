@@ -1,12 +1,12 @@
 import * as t from "io-ts"
-import { COLOR_LED_ON, COLOR_OFF_BACKGROUND } from "../drawutils"
-import { div, mods, span, style, title, tooltipContent } from "../htmlgen"
+import { COLOR_OFF_BACKGROUND } from "../drawutils"
+import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { ArrayFillWith, LogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, group, Repr } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
-import { LedColor, ledColorForLogicValue, LedColors } from "./OutputBar"
+import { ComponentNameRepr, defineComponent, group, Repr } from "./Component"
+import { DrawContext } from "./Drawable"
+import { ledColorForLogicValue, LedColors, OutputBarBase } from "./OutputBar"
 
 
 export const Output16SegDef =
@@ -17,10 +17,7 @@ export const Output16SegDef =
             transparent: typeOrUndefined(t.boolean),
             name: ComponentNameRepr,
         },
-        valueDefaults: {
-            color: "green" as LedColor,
-            transparent: true,
-        },
+        valueDefaults: {},
         size: { gridWidth: 8, gridHeight: 10 },
         makeNodes: () => ({
             ins: {
@@ -48,30 +45,18 @@ export const Output16SegDef =
         initialValue: () => ArrayFillWith<LogicValue>(false, 17),
     })
 
-type Output16SegRepr = Repr<typeof Output16SegDef>
+export type Output16SegRepr = Repr<typeof Output16SegDef>
 
-export class Output16Seg extends ComponentBase<Output16SegRepr> {
-
-    private _color: LedColor = Output16SegDef.aults.color
-    private _transparent = Output16SegDef.aults.transparent
-    private _name: ComponentName = undefined
+export class Output16Seg extends OutputBarBase<Output16SegRepr, LogicValue[]> {
 
     public constructor(editor: LogicEditor, saved?: Output16SegRepr) {
-        super(editor, Output16SegDef, saved)
-        if (isDefined(saved)) {
-            this._color = saved.color ?? Output16SegDef.aults.color
-            this._transparent = saved.transparent ?? Output16SegDef.aults.transparent
-            this._name = saved.name
-        }
+        super(editor, Output16SegDef, true, saved)
     }
 
     public toJSON() {
         return {
             type: "16seg" as const,
             ...this.toJSONBase(),
-            color: this._color === Output16SegDef.aults.color ? undefined : this._color,
-            transparent: this._transparent === Output16SegDef.aults.transparent ? undefined : this._transparent,
-            name: this._name,
         }
     }
 
@@ -88,7 +73,7 @@ export class Output16Seg extends ComponentBase<Output16SegRepr> {
     protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
         this.doDrawDefault(g, ctx, {
             labelSize: 7,
-            name: [this._name, this.value.map(toLogicValueRepr).join(""), true],
+            componentName: [this._name, true, () => this.value.map(toLogicValueRepr).reverse().join("")],
             drawInside: ({ left, right, top, bottom }) => {
                 const [a1, a2, b, c, d2, d1, e, f, g1, g2, h, i, j, k, l, m, p] = this.value
 
@@ -190,61 +175,6 @@ export class Output16Seg extends ComponentBase<Output16SegRepr> {
                 doFill(p)
             },
         })
-    }
-
-    private doSetName(name: ComponentName) {
-        this._name = name
-        this.setNeedsRedraw("name changed")
-    }
-
-    private doSetColor(color: LedColor) {
-        this._color = color
-        this.setNeedsRedraw("color changed")
-    }
-
-    private doSetTransparent(transparent: boolean) {
-        this._transparent = transparent
-        this.setNeedsRedraw("transparent changed")
-    }
-
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-
-        // TODO merge with OutputBar
-        const s = S.Components.OutputBar.contextMenu // same between 16 and 7 seg; merge?
-
-        const makeItemUseColor = (desc: string, color: LedColor) => {
-            const isCurrent = this._color === color
-            const icon = isCurrent ? "check" : "none"
-            const action = isCurrent ? () => undefined : () => this.doSetColor(color)
-            const cssColor = COLOR_LED_ON[color]
-            return ContextMenuData.item(icon, span(title(desc), style(`display: inline-block; width: 140px; height: 16px; background-color: ${cssColor}; margin-right: 8px`)), action)
-        }
-
-        const itemTransparent = ContextMenuData.item(
-            this._transparent ? "check" : "none",
-            s.TransparentWhenOff,
-            () => this.doSetTransparent(!this._transparent)
-        )
-
-        return [
-            ["mid", ContextMenuData.submenu("palette", s.Color, [
-                makeItemUseColor(s.ColorGreen, "green"),
-                makeItemUseColor(s.ColorRed, "red"),
-                makeItemUseColor(s.ColorYellow, "yellow"), ContextMenuData.sep(),
-                itemTransparent,
-
-            ])],
-            ["mid", this.makeSetNameContextMenuItem(this._name, this.doSetName.bind(this))],
-        ]
-    }
-
-
-    public override keyDown(e: KeyboardEvent): void {
-        if (e.key === "Enter") {
-            this.runSetNameDialog(this._name, this.doSetName.bind(this))
-        } else {
-            super.keyDown(e)
-        }
     }
 
 }

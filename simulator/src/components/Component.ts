@@ -1,5 +1,5 @@
 import * as t from "io-ts"
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_GROUP_SPAN, COLOR_MOUSE_OVER, drawClockInput, drawComponentName, DrawingRect, drawLabel, drawWireLineToComponent, GRID_STEP, shouldShowNode, useCompact } from "../drawutils"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_INNER_LABELS, COLOR_GROUP_SPAN, drawClockInput, drawComponentName, DrawingRect, drawLabel, drawWireLineToComponent, GRID_STEP, shouldShowNode, useCompact } from "../drawutils"
 import { IconName, ImageName } from "../images"
 import { LogicEditor } from "../LogicEditor"
 import type { ComponentKey, DefAndParams, LibraryButtonOptions, LibraryButtonProps, LibraryItem } from "../menuutils"
@@ -752,7 +752,7 @@ export abstract class ComponentBase<
             skipLabels?: boolean,
             labelSize?: number,
             background?: string,
-            name?: [name: ComponentName, value: string | number, onRight: boolean]
+            componentName?: [name: ComponentName, onRight: boolean, value: string | number | (() => string | number)]
         }
     ) {
         const bounds = this.bounds()
@@ -782,14 +782,15 @@ export abstract class ComponentBase<
 
         // outline
         g.lineWidth = 3
-        g.strokeStyle = ctx.isMouseOver ? COLOR_MOUSE_OVER : COLOR_COMPONENT_BORDER
+        g.strokeStyle = ctx.borderColor
         g.stroke(bounds.outline)
 
         // labels
         ctx.inNonTransformedFrame(ctx => {
-            if (isDefined(opts?.name?.[0])) {
-                const [name, value, onRight] = opts!.name!
-                drawComponentName(g, ctx, name, value, this, onRight)
+            if (isDefined(opts?.componentName?.[0])) {
+                const [name, onRight, value] = opts!.componentName!
+                const val = isNumber(value) || isString(value) ? value : value()
+                drawComponentName(g, ctx, name, val, this, onRight)
             }
 
             if (drawLabels) {
@@ -1040,7 +1041,7 @@ export abstract class ComponentBase<
     }
 
     public override get cursorWhenMouseover(): string | undefined {
-        return "grab"
+        return this.lockPos ? undefined : "grab"
     }
 
     public override makeContextMenu(): ContextMenuData {
@@ -1082,13 +1083,8 @@ export abstract class ComponentBase<
                 ["end", ContextMenuData.sep()],
             ]
 
-        const rotateItems: MenuItems =
-            !this.canRotate() ? [] : [
-                ["start", this.makeChangeOrientationContextMenuItem()],
-            ]
-
         return [
-            ...rotateItems,
+            ...this.makeOrientationAndPosMenuItems(),
             ...setRefItems,
             ["end", this.makeDeleteContextMenuItem()],
         ]
@@ -1333,7 +1329,7 @@ export abstract class ParametrizedComponentBase<
 // Node definition helpers
 //
 
-export function group<TDescArr extends readonly NodeDescInGroup[]>(orient: Orientation, nodes: TDescArr) {
+export function group<const TDescArr extends readonly NodeDescInGroup[]>(orient: Orientation, nodes: TDescArr) {
     return FixedArrayMap(nodes, ([x, y, name]) => [x, y, orient, name] as const)
 }
 
@@ -1347,7 +1343,7 @@ export function groupVertical(orient: "e" | "w", x: number, yCenter: number, num
 }
 
 export function groupVerticalMulti(orient: "e" | "w", x: number, yCenter: number, numOuter: number, numInner: number) {
-    const innerSpacing = useCompact(numInner) ? 1 : 2
+    const innerSpacing = useCompact(numInner === 1 ? numOuter : numInner) ? 1 : 2
     const groupSpacing = numInner === 1 ? innerSpacing : innerSpacing * 2
     const groupOffset = (numInner - 1) * innerSpacing + groupSpacing
     const span = numOuter * (numInner - 1) * innerSpacing + (numOuter - 1) * groupSpacing

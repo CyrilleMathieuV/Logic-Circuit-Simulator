@@ -1,6 +1,6 @@
 import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
-import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
+import { COLOR_COMPONENT_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { isDefined, isUndefined, typeOrUndefined } from "../utils"
@@ -86,7 +86,7 @@ export class LabelString extends ComponentBase<LabelStringRepr> {
             }
             const width = this.unrotatedWidth
             const height = this.unrotatedHeight
-            g.strokeStyle = COLOR_MOUSE_OVER
+            g.strokeStyle = ctx.borderColor
             g.beginPath()
             g.rect(this.posX - width / 2, this.posY - height / 2, width, height)
             g.stroke()

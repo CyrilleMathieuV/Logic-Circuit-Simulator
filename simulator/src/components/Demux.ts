@@ -1,5 +1,5 @@
 import * as t from "io-ts"
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, displayValuesFromArray, drawWireLineToComponent, strokeAsWireLine, useCompact } from "../drawutils"
+import { COLOR_BACKGROUND, displayValuesFromArray, drawWireLineToComponent, strokeAsWireLine, useCompact } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { IconName } from "../images"
 import { LogicEditor } from "../LogicEditor"
@@ -37,7 +37,7 @@ export const DemuxDef =
         },
         size: ({ numFrom, numTo, numGroups, numSel }) => {
             const gridWidth = 2 * numSel
-            const spacing = useCompact(numFrom) ? 1 : 2
+            const spacing = useCompact(numFrom === 1 ? numTo : numFrom) ? 1 : 2
             const addByGroupSep = numFrom > 1 ? 1 : 0
             const numLeftSlots = numTo + (numGroups - 1) * addByGroupSep
             const gridHeight = spacing * numLeftSlots
@@ -200,7 +200,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
 
         // outline
         g.lineWidth = 3
-        g.strokeStyle = ctx.isMouseOver ? COLOR_MOUSE_OVER : COLOR_COMPONENT_BORDER
+        g.strokeStyle = ctx.borderColor
         g.stroke(outline)
 
     }

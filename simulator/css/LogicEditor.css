@@ -4,7 +4,6 @@
 
 #logicEditorRoot {
   font-family: 'Roboto', sans-serif;
-  /* border: 3px solid red; */
 }
 
 /* TODO would that go in some global CSS?
@@ -54,18 +53,21 @@ logic-editor:not(:defined) {
   color: rgb(33, 33, 33);
 }
 
+.dark .leftToolbarHeader {
+  background-color: rgb(56, 56, 56);
+}
+
 .dark #leftToolbar {
   background-color: #5e5e5e;
-  color: black; /*rgb(181, 181, 181);*/
+  color: rgb(181, 181, 181);
 }
 
 .dark .leftToolbarMore {
-  color: black; /*rgb(181, 181, 181);*/
+  color: rgb(204, 204, 204);
 }
 
 .dark #leftToolbar .list-group-item {
   background-color: #5e5e5e;
-  color: black; /*rgb(181, 181, 181);*/
 }
 
 .sim-toolbar-right {
@@ -137,7 +139,8 @@ logic-editor:not(:defined) {
   color: rgb(255, 192, 8);
 }
 
-.truth-table th:last-child, .truth-table td:last-child {
+.truth-table th:last-child,
+.truth-table td:last-child {
   border-left: 1px solid grey;
 }
 
@@ -373,9 +376,9 @@ i.svgimg {
 }
 
 .dark i.svgimg {
-  color: rgb(230,230,230);
+  color: rgb(230, 230, 230);
 }
 
 .dark .gate-label {
-  color: rgb(200,200,200);
+  color: rgb(200, 200, 200);
 }

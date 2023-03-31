@@ -114,7 +114,7 @@ export class OutputDisplay extends ParametrizedComponentBase<OutputDisplayRepr> 
         this.doDrawDefault(g, ctx, {
             background,
             skipLabels: true,
-            name: [this._name, value, true],
+            componentName: [this._name, true, value],
             drawLabels: (ctx, { width, height }) => {
                 const isVertical = Orientation.isVertical(this.orient)
                 const backColorComps = colorComps(background)

@@ -322,11 +322,13 @@ function shouldShow(item: LibraryItem, showOnly: string[]) {
 }
 
 function componentIdsFor(item: LibraryItem): string[] {
+    const category = item.category
     const defAndParams = item.params
+
     if (isDefined(defAndParams)) {
         const ids: string[] = []
         const { def, params } = defAndParams
-        if (deepObjectEquals(params, def.defaultParams)) {
+        if (category !== "gate" && deepObjectEquals(params, def.defaultParams)) {
             const genericId = def.type ?? def.category
             ids.push(genericId)
         }
@@ -340,7 +342,6 @@ function componentIdsFor(item: LibraryItem): string[] {
         }
     }
 
-    const category = item.category
     const type = item.type
     let buttonId
     if (isUndefined(type)) {
@@ -354,6 +355,6 @@ function componentIdsFor(item: LibraryItem): string[] {
             buttonId = `${category}.${type}`
         }
     }
-    return [buttonId.toLowerCase()]
+    return [buttonId]
 }
 

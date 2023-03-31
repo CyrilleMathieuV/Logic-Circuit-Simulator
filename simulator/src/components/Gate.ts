@@ -1,10 +1,10 @@
 import * as t from "io-ts"
-import { circle, ColorString, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_DARK_RED, COLOR_GATE_NAMES, COLOR_MOUSE_OVER, COLOR_UNKNOWN, drawWireLineToComponent, GRID_STEP, PATTERN_STRIPED_GRAY } from "../drawutils"
-import { asValue, b, cls, div, emptyMod, Modifier, ModifierObject, mods, table, tbody, td, th, thead, tooltipContent, tr } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_DARK_RED, COLOR_GATE_NAMES, COLOR_UNKNOWN, ColorString, GRID_STEP, PATTERN_STRIPED_GRAY, circle, drawWireLineToComponent } from "../drawutils"
+import { Modifier, ModifierObject, asValue, b, cls, div, emptyMod, mods, table, tbody, td, th, thead, tooltipContent, tr } from "../htmlgen"
 import { S } from "../strings"
-import { ArrayFillUsing, deepEquals, isDefined, isUndefined, isUnknown, LogicValue, Mode, typeOrUndefined, Unknown } from "../utils"
-import { defineParametrizedComponent, ExtractParamDefs, ExtractParams, groupVertical, InstantiatedComponentDef, NodesIn, NodesOut, param, ParametrizedComponentBase, Repr, ResolvedParams, SomeParamCompDef } from "./Component"
+import { ArrayFillUsing, LogicValue, Mode, Unknown, deepEquals, isDefined, isUndefined, isUnknown, typeOrUndefined } from "../utils"
+import { ExtractParamDefs, ExtractParams, InstantiatedComponentDef, NodesIn, NodesOut, ParametrizedComponentBase, Repr, ResolvedParams, SomeParamCompDef, defineParametrizedComponent, groupVertical, param } from "./Component"
 import { ContextMenuData, ContextMenuItem, DrawContext, MenuItems } from "./Drawable"
 import { Gate1Type, Gate1TypeRepr, Gate1Types, Gate2OnlyTypes, Gate2toNTypes, GateNType, GateNTypeRepr, GateNTypes, GateTypes } from "./GateTypes"
 
@@ -168,7 +168,7 @@ export abstract class GateBase<
             const frameWidth = 2
             const frameMargin = 2
             g.lineWidth = frameWidth
-            g.strokeStyle = COLOR_MOUSE_OVER
+            g.strokeStyle = ctx.borderColor
             g.beginPath()
             g.rect(
                 left - frameWidth - frameMargin,
@@ -253,11 +253,7 @@ export abstract class GateBase<
 
 
             case "AND":
-            case "AND3":
-            case "AND4":
             case "NAND":
-            case "NAND3":
-            case "NAND4":
             case "NIMPLY":
             case "RNIMPLY": {
                 g.moveTo(this.posX, bottom)
@@ -292,17 +288,9 @@ export abstract class GateBase<
 
 
             case "OR":
-            case "OR3":
-            case "OR4":
             case "NOR":
-            case "NOR3":
-            case "NOR4":
             case "XOR":
-            case "XOR3":
-            case "XOR4":
             case "XNOR":
-            case "XNOR3":
-            case "XNOR4":
             case "IMPLY":
             case "RIMPLY": {
                 g.beginPath()

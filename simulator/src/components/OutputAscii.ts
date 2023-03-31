@@ -103,7 +103,7 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
 
         this.doDrawDefault(g, ctx, {
             skipLabels: true,
-            name: [this._name, mainText, true],
+            componentName: [this._name, true, mainText],
             drawLabels: (ctx, { width, height }) => {
                 const isVertical = Orientation.isVertical(this.orient)
                 const hasAdditionalRepresentation = isDefined(this._additionalReprRadix)
@@ -215,7 +215,6 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
                 makeItemShowRadix(16, s.DisplayHex),
                 ContextMenuData.sep(),
                 ContextMenuData.text(s.ChangeDisplayDesc),
-
             ])],
             ["mid", makeItemShowAs(S.Components.Generic.contextMenu.ShowAsUnknown, () => this.doSetShowAsUnknown(!this._showAsUnknown), this._showAsUnknown)],
             ["mid", ContextMenuData.sep()],

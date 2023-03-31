@@ -118,10 +118,9 @@ export class InputRandom extends ParametrizedComponentBase<InputRandomRepr> {
 
     protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
         const outputValues = this.value
-        const [__, value] = displayValuesFromArray(outputValues, false)
 
         this.doDrawDefault(g, ctx, {
-            name: [this._name, value, false],
+            componentName: [this._name, false, () => displayValuesFromArray(outputValues, false)[1]],
             skipLabels: true,
             drawLabels: (ctx, { top }) => {
                 if (this.numBits === 1) {

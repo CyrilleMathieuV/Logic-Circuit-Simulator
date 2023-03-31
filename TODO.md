@@ -3,19 +3,21 @@
 
 ## High priority
 
+ * Incrementable register
  * Get key events also when multiple editors are on the same page
  * Copy-paste
  * Hide mouseover when mouse leaves web component boundaries
- * High-Z bus logic
  * Adder orientation
- * Lock position
  * Prevent click event if right-click and when dragging
  * More consistently set things dirty
 
 
 ## Medium priority
 
+ * Load/save RAM/ROM contents via file and editor
+ * High-Z bus logic
  * ROM
+ * Mnemonic in context menu
  * Undo/redo as buttons
  * Custom component creation
  * (Address) decoder: 2, 3, 4 bit versions
@@ -33,6 +35,7 @@
 
 ## Low priority
 
+ * Alternative representation for push or toggle buttons
  * Allow repeating deletions with Cmd+Y
  * Edge detector?
  * Highlight only nodes when dragging
@@ -46,6 +49,10 @@
 
 ### DONE
 
+ * Lock position
+ * Show selected RAM contents
+ * Draw n-x-1 mux/demux compactly
+ * Remove stale tooltips when deleting components
  * Replace input with clock and conversely
  * Make left buttons honor dark mode
  * Generic shared drawing code

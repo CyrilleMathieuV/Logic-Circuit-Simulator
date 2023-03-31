@@ -26,7 +26,7 @@
     "ts-arithmetic": "^0.1.1",
     "ts-loader": "^8.0.18",
     "type-coverage": "^2.17.2",
-    "typescript": "^4.9.5",
+    "typescript": "^5.0.3",
     "typescript-coverage-report": "^0.5.1"
   },
   "scripts": {
@@ -34,7 +34,7 @@
     "compile-watch": "tsc -p tsconfig.json --watch",
     "lint": "eslint . --ext .ts",
     "lint-watch": "npm-watch lint",
-    "bundle": "esbuild --minify --bundle --sourcemap --loader:.html=text  --loader:.css=text --loader:.icon.svg=text --loader:.svg=text simulator/src/LogicEditor.ts --outfile=simulator/lib/bundle.js && tools/insert_md5_into_index.sh",
+    "bundle": "./tools/bundle.js --dev --dist",
     "bundle-watch": "npm-watch bundle",
     "server": "./tools/local_server.py 8088",
     "deploy-all": "./deploy-jpp.sh && ./deploy-modulo.sh && ./deploy-modulo-dev.sh",

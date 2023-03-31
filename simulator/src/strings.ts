@@ -190,6 +190,7 @@ const Strings_fr = {
 
                 Orientation: "Orientation",
                 ChangeOrientationDesc: "Changez l’orientation avec Commande + double-clic sur le composant",
+                LockPosition: "Verrouiller la position",
                 ShowAsUnknown: "Afficher comme inconnu",
 
                 ForceOutputSingle: "Forcer la sortie",
@@ -529,6 +530,8 @@ const Strings_fr = {
             },
             contextMenu: {
                 DisplayAs: "Afficher",
+                DisplayNone: "Aucun",
+                DisplayAsBinary: "en binaire (base 2)",
                 DisplayAsDecimal: "en décimal (base 10)",
                 DisplayAsSignedDecimal: "en décimal signé",
                 DisplayAsOctal: "en octal (base 8)",
@@ -588,6 +591,9 @@ const Strings_fr = {
             tooltip: {
                 title: "RAM (mémoire vive)",
                 desc: template("Stocke ${numWords} lignes de ${numDataBits} bits."),
+            },
+            contextMenu: {
+                SelectedDataDisplay: "Affichage des données addressées",
             },
         },
         Register: {
@@ -672,12 +678,12 @@ const Strings_en: Strings = {
         },
         Components: RichStringEnum.withProps<ComponentStrings>()({
             Input1: ["Input", "IN"],
-            InputN: ["Multiple Inputs", "IN (Mult.)"],
+            InputN: ["Multiple Inputs", "IN Mult."],
             Input8: ["Byte (8-Bit) Input", "IN (8-Bit)"],
             Clock: ["Clock Generator", "Clock"],
             InputRandom: ["Random Input", "Random"],
             Output1: ["Output", "OUT"],
-            OutputN: ["Multiple Outputs", "OUT (Mult.)"],
+            OutputN: ["Multiple Outputs", "OUT Mult."],
             Output8: ["Byte (8-Bit) Output", "OUT (8-Bit)"],
             OutputDisplayN: ["Value Display", "Display"],
             OutputDisplay8: ["Byte (8-Bit) Display", "8-Bit Displ."],
@@ -819,6 +825,7 @@ const Strings_en: Strings = {
 
                 Orientation: "Orientation",
                 ChangeOrientationDesc: "Change the orientation with Command + double click on the component",
+                LockPosition: "Lock Position",
                 ShowAsUnknown: "Show As Unknown",
 
                 ForceOutputSingle: "Force Output",
@@ -1158,6 +1165,8 @@ const Strings_en: Strings = {
             },
             contextMenu: {
                 DisplayAs: "Display as",
+                DisplayNone: "None",
+                DisplayAsBinary: "Binary (Base 2)",
                 DisplayAsDecimal: "Decimal (Base 10)",
                 DisplayAsSignedDecimal: "Signed Decimal",
                 DisplayAsOctal: "Octal (Base 8)",
@@ -1217,6 +1226,9 @@ const Strings_en: Strings = {
             tooltip: {
                 title: "RAM",
                 desc: template("Stores ${numWords} rows of ${numDataBits} bits."),
+            },
+            contextMenu: {
+                SelectedDataDisplay: "Addressed Data Display",
             },
         },
         Register: {

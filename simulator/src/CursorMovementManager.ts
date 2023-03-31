@@ -165,6 +165,10 @@ export class CursorMovementManager {
         }
     }
 
+    public currentSelectionEmpty() {
+        return this.currentSelection === undefined || this.currentSelection.previouslySelectedElements.size === 0
+    }
+
     public updateMouseOver([x, y]: [number, number]) {
         const findMouseOver: () => Drawable | null = () => {
             // easy optimization: maybe we're still over the

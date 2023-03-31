@@ -130,6 +130,8 @@ export const GateNTypeRepr = t.union([
     Gate2OnlyTypeRepr,
 ])
 
+export type GateType = Gate1Type | GateNType
+
 
 // Logic functions
 

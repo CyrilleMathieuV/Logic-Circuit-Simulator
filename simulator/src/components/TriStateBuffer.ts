@@ -1,4 +1,4 @@
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, drawWireLineToComponent, GRID_STEP } from "../drawutils"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
@@ -22,8 +22,6 @@ export const TriStateBufferDef =
         }),
         initialValue: () => HighImpedance as LogicValue,
     })
-
-
 
 type TriStateBufferRepr = Repr<typeof TriStateBufferDef>
 
@@ -78,7 +76,7 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr> {
             const frameWidth = 2
             const frameMargin = 2
             g.lineWidth = frameWidth
-            g.strokeStyle = COLOR_MOUSE_OVER
+            g.strokeStyle = ctx.borderColor
             g.beginPath()
             g.rect(
                 left - frameWidth - frameMargin,

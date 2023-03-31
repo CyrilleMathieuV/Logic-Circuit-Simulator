@@ -81,6 +81,7 @@ export type ColorComponentsRGB = [number, number, number]
 export type ColorComponentsRGBA = [number, number, number, number]
 export type ColorString = string
 
+export const COLOR_TRANSPARENT: ColorString = "rgba(0,0,0,0)"
 export let COLOR_BACKGROUND: ColorString
 export let COLOR_OFF_BACKGROUND: ColorString
 export let COLOR_BACKGROUND_UNUSED_REGION: ColorString
@@ -126,6 +127,10 @@ export function setColors(darkMode: boolean) {
             })()
         }
     }
+}
+
+export function isDarkMode() {
+    return _currentModeIsDark
 }
 
 function doSetColors(darkMode: boolean) {
@@ -666,9 +671,9 @@ export function drawComponentName(g: CanvasRenderingContext2D, ctx: DrawContextE
     } else {
         // dynamic name
         if (value in name) {
-            displayName = `${value}: ${name[value]}`
+            displayName = `${name[value]}`
         } else if ("default" in name) {
-            displayName = `${value}: ${name.default}`
+            displayName = `${name.default}`
         } else if (isUnknown(value)) {
             displayName = Unknown
         } else {

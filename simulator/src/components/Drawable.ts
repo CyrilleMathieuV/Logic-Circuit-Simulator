@@ -1,6 +1,6 @@
 import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
-import { GRID_STEP, inRect } from "../drawutils"
+import { ColorString, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_MOUSE_OVER_DANGER, GRID_STEP, inRect } from "../drawutils"
 import { Modifier, ModifierObject, span, style } from "../htmlgen"
 import { IconName } from "../images"
 import { DrawParams, LogicEditor } from "../LogicEditor"
@@ -11,6 +11,7 @@ export interface DrawContext {
     g: CanvasRenderingContext2D
     drawParams: DrawParams
     isMouseOver: boolean
+    borderColor: ColorString
     inNonTransformedFrame(f: (ctx: DrawContextExt) => unknown): void
 }
 
@@ -53,6 +54,7 @@ class _DrawContextImpl implements DrawContext, DrawContextExt {
         public readonly g: CanvasRenderingContext2D,
         public readonly drawParams: DrawParams,
         public readonly isMouseOver: boolean,
+        public readonly borderColor: ColorString,
     ) {
         this.entranceTransform = g.getTransform()
         this.entranceTransformInv = this.entranceTransform.inverse()
@@ -103,7 +105,14 @@ export abstract class Drawable {
 
     public draw(g: CanvasRenderingContext2D, drawParams: DrawParams): void {
         const inSelectionRect = drawParams.currentSelection?.isSelected(this) ?? false
-        const ctx = new _DrawContextImpl(this, g, drawParams, this === drawParams.currentMouseOverComp || inSelectionRect)
+        const isMouseOver = this === drawParams.currentMouseOverComp || inSelectionRect
+        const borderColor = !isMouseOver
+            ? COLOR_COMPONENT_BORDER
+            : drawParams.anythingMoving && this.lockPos
+                ? COLOR_MOUSE_OVER_DANGER
+                : COLOR_MOUSE_OVER
+
+        const ctx = new _DrawContextImpl(this, g, drawParams, isMouseOver, borderColor)
         this.doDraw(g, ctx)
         ctx.exit()
     }
@@ -117,6 +126,10 @@ export abstract class Drawable {
     public abstract isOver(x: number, y: number): boolean
 
     public abstract isInRect(rect: DOMRect): boolean
+
+    public get lockPos(): boolean {
+        return false
+    }
 
     public get cursorWhenMouseover(): string | undefined {
         return undefined
@@ -257,6 +270,7 @@ export const Orientation = {
 // for compact JSON repr, pos is an array
 export const PositionSupportRepr = t.type({
     pos: t.readonly(t.tuple([t.number, t.number])),
+    lockPos: typeOrUndefined(t.boolean),
     orient: typeOrUndefined(t.keyof(Orientations_)),
     ref: typeOrUndefined(t.string),
 })
@@ -268,6 +282,7 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
 
     private _posX: number
     private _posY: number
+    private _lockPos: boolean
     private _orient: Orientation
 
     protected constructor(editor: LogicEditor, saved?: PositionSupportRepr) {
@@ -281,11 +296,13 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
             this.ref = saved.ref
             this._posX = saved.pos[0]
             this._posY = saved.pos[1]
+            this._lockPos = saved.lockPos ?? false
             this._orient = saved.orient ?? Orientation.default
         } else {
             // creating new object
             this._posX = Math.max(0, this.editor.mouseX)
             this._posY = this.editor.mouseY
+            this._lockPos = false
             this._orient = Orientation.default
         }
     }
@@ -293,6 +310,7 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
     protected toJSONBase(): PositionSupportRepr {
         return {
             pos: [this.posX, this.posY] as const,
+            lockPos: !this._lockPos ? undefined : true,
             orient: this.orient === Orientation.default ? undefined : this.orient,
             ref: this.ref,
         }
@@ -306,6 +324,10 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
         return this._posY
     }
 
+    public override get lockPos() {
+        return this._lockPos
+    }
+
     public isInRect(rect: DOMRect) {
         return this._posX >= rect.left && this._posX <= rect.right && this._posY >= rect.top && this._posY <= rect.bottom
     }
@@ -316,6 +338,15 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
 
     public canRotate() {
         return true
+    }
+
+    public canLockPos() {
+        return true
+    }
+
+    public doSetLockPos(lockPos: boolean) {
+        this._lockPos = lockPos
+        // no need to redraw
     }
 
     public doSetOrient(newOrient: Orientation) {
@@ -369,21 +400,33 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
         return undefined
     }
 
-    protected makeChangeOrientationContextMenuItem(): ContextMenuItem {
+    protected makeOrientationAndPosMenuItems(): MenuItems {
         const s = S.Components.Generic.contextMenu
-        return ContextMenuData.submenu("direction", s.Orientation, [
-            ...Orientations.values.map(orient => {
-                const isCurrent = this._orient === orient
-                const icon = isCurrent ? "check" : "none"
-                const caption = S.Orientations[orient]
-                const action = isCurrent ? () => undefined : () => {
-                    this.doSetOrient(orient)
-                }
-                return ContextMenuData.item(icon, caption, action)
-            }),
-            ContextMenuData.sep(),
-            ContextMenuData.text(s.ChangeOrientationDesc),
-        ])
+
+        const rotateItem: MenuItems = !this.canRotate() ? [] : [
+            ["start", ContextMenuData.submenu("direction", s.Orientation, [
+                ...Orientations.values.map(orient => {
+                    const isCurrent = this._orient === orient
+                    const icon = isCurrent ? "check" : "none"
+                    const caption = S.Orientations[orient]
+                    const action = isCurrent ? () => undefined : () => {
+                        this.doSetOrient(orient)
+                    }
+                    return ContextMenuData.item(icon, caption, action)
+                }),
+                ContextMenuData.sep(),
+                ContextMenuData.text(s.ChangeOrientationDesc),
+            ])],
+        ]
+
+        const lockPosItem: MenuItems = !this.canLockPos() ? [] : [
+            ["start", ContextMenuData.item(this.lockPos ? "check" : "none", s.LockPosition, () => {
+                this.doSetLockPos(!this.lockPos)
+            })],
+        ]
+
+        return [...rotateItem, ...lockPosItem]
+
     }
 
 }
@@ -410,6 +453,9 @@ export abstract class DrawableWithDraggablePosition extends DrawableWithPosition
     }
 
     protected tryStartMoving(e: MouseEvent | TouchEvent) {
+        if (this.lockPos) {
+            return
+        }
         if (isUndefined(this._isMovingWithContext)) {
             const [offsetX, offsetY] = this.editor.offsetXY(e)
             this._isMovingWithContext = {
@@ -422,6 +468,9 @@ export abstract class DrawableWithDraggablePosition extends DrawableWithPosition
     }
 
     protected updateWhileMoving(e: MouseEvent | TouchEvent) {
+        if (this.lockPos) {
+            return
+        }
         this.updatePositionIfNeeded(e)
         this.editor.moveMgr.setDrawableMoving(this)
     }

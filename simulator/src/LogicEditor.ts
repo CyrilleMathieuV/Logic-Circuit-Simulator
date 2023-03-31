@@ -7,7 +7,7 @@ import { Drawable, DrawableWithPosition, Orientation } from "./components/Drawab
 import { LabelRect, LabelRectDef } from "./components/LabelRect"
 import { Waypoint, Wire, WireManager, WireStyle, WireStyles } from "./components/Wire"
 import { CursorMovementManager, EditorSelection } from "./CursorMovementManager"
-import { clampZoom, COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, setColors, strokeSingleLine } from "./drawutils"
+import { clampZoom, COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, isDarkMode, setColors, strokeSingleLine } from "./drawutils"
 import { a, applyModifierTo, attr, attrBuilder, button, cls, div, emptyMod, href, input, label, mods, option, raw, select, span, style, target, title, type } from "./htmlgen"
 import { IconName, inlineIconSvgFor, isIconName, makeIcon } from "./images"
 import { makeComponentMenuInto } from "./menuutils"
@@ -107,6 +107,7 @@ export type DrawParams = {
     currentSelection: EditorSelection | undefined,
     highlightedItems: HighlightedItems | undefined,
     highlightColor: string | undefined,
+    anythingMoving: boolean,
 }
 export class LogicEditor extends HTMLElement {
 
@@ -1370,6 +1371,7 @@ export class LogicEditor extends HTMLElement {
     public tryDeleteComponentsWhere(cond: (e: Component) => boolean, onlyOne: boolean) {
         const numDeleted = this.components.tryDeleteWhere(cond, onlyOne)
         if (numDeleted > 0) {
+            this.cursorMovementMgr.clearPopperIfNecessary()
             this.redrawMgr.addReason("component(s) deleted", null)
         }
         return numDeleted
@@ -1639,7 +1641,14 @@ export class LogicEditor extends HTMLElement {
             tmpCanvas.height = height
 
             const g = tmpCanvas.getContext('2d')!
+            const wasDark = isDarkMode()
+            if (wasDark) {
+                setColors(false)
+            }
             this.doDrawWithContext(g, width, height, transform, transform, true, true)
+            if (wasDark) {
+                setColors(true)
+            }
             tmpCanvas.toBlob(resolve, 'image/png')
             tmpCanvas.remove()
 
@@ -1900,6 +1909,7 @@ export class LogicEditor extends HTMLElement {
             highlightedItems,
             highlightColor,
             currentSelection: undefined,
+            anythingMoving: this.moveMgr.areDrawablesMoving(),
         }
         const currentSelection = this.cursorMovementMgr.currentSelection
         drawParams.currentSelection = currentSelection
