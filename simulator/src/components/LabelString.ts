@@ -1,43 +1,48 @@
 import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
+import { COLOR_COMPONENT_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { LogicEditor } from "../LogicEditor"
-import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { S } from "../strings"
-import { isNotNull, isUndefined, typeOrUndefined } from "../utils"
-import { ComponentBase, Repr, defineComponent } from "./Component"
+import { isDefined, isUndefined, typeOrUndefined } from "../utils"
+import { ComponentBase, defineComponent, Repr } from "./Component"
 import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
 
 export const LabelStringDef =
-    defineComponent(false, false, t.type({
-        text: t.string,
-        // align: typeOrUndefined(t.string), 
-        font: typeOrUndefined(t.string),
-    }, "Label"))
+    defineComponent("label", undefined, {
+        button: { imgWidth: 32 },
+        repr: {
+            text: t.string,
+            // align: typeOrUndefined(t.string), 
+            font: typeOrUndefined(t.string),
+        },
+        valueDefaults: {
+            text: "Label",
+            // align: "center" as const,
+            font: FONT_LABEL_DEFAULT,
+        },
+        size: { gridWidth: 4, gridHeight: 2 }, // overridden
+        makeNodes: () => ({}),
+    })
 
-type LabelStringRepr = Repr<typeof LabelStringDef>
+export type LabelStringRepr = Repr<typeof LabelStringDef>
 
-const LabelStringDefaults = {
-    text: "Label",
-    // align: "center" as const,
-    font: FONT_LABEL_DEFAULT,
-}
-export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
+export class LabelString extends ComponentBase<LabelStringRepr> {
 
     private _text: string
     // private _align: CanvasTextAlign // causes issues with mouseovers and stuff
     private _font: string
     private _cachedTextMetrics: TextMetrics | undefined = undefined
 
-    public constructor(editor: LogicEditor, savedData: LabelStringRepr | null) {
-        super(editor, undefined, savedData, {})
-        if (isNotNull(savedData)) {
-            this._text = savedData.text
-            // this._align = (savedData.align as CanvasTextAlign) ?? LabelStringDefaults.align
-            this._font = savedData.font ?? LabelStringDefaults.font
+    public constructor(editor: LogicEditor, saved?: LabelStringRepr) {
+        super(editor, LabelStringDef, saved)
+        if (isDefined(saved)) {
+            this._text = saved.text
+            // this._align = (saved.align as CanvasTextAlign) ?? LabelStringDefaults.align
+            this._font = saved.font ?? LabelStringDef.aults.font
         } else {
-            this._text = LabelStringDefaults.text
+            this._text = LabelStringDef.aults.text
             // this._align = LabelStringDefaults.align
-            this._font = LabelStringDefaults.font
+            this._font = LabelStringDef.aults.font
         }
     }
 
@@ -46,19 +51,15 @@ export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
             ...this.toJSONBase(),
             text: this._text,
             // align: this._align === LabelStringDefaults.align ? undefined : this._align,
-            font: this._font === LabelStringDefaults.font ? undefined : this._font,
+            font: this._font === LabelStringDef.aults.font ? undefined : this._font,
         }
     }
 
-    public get componentType() {
-        return "label" as const
-    }
-
-    public get unrotatedWidth() {
+    public override get unrotatedWidth() {
         return this._cachedTextMetrics?.width ?? GRID_STEP * this._text.length
     }
 
-    public get unrotatedHeight() {
+    public override get unrotatedHeight() {
         const metrics = this._cachedTextMetrics
         if (isUndefined(metrics)) {
             return 2 * GRID_STEP
@@ -74,7 +75,7 @@ export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
         return 2
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
 
         g.font = this._font
         g.lineWidth = 3
@@ -85,7 +86,7 @@ export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
             }
             const width = this.unrotatedWidth
             const height = this.unrotatedHeight
-            g.strokeStyle = COLOR_MOUSE_OVER
+            g.strokeStyle = ctx.borderColor
             g.beginPath()
             g.rect(this.posX - width / 2, this.posY - height / 2, width, height)
             g.stroke()
@@ -114,7 +115,7 @@ export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
         const setTextItem = ContextMenuData.item("pen", s.ChangeText, this.runSetTextDialog.bind(this))
 
         const setFontItem = ContextMenuData.item("font", s.Font, () => {
-            this.runSetFontDialog(this._font, LabelStringDefaults.font, this.doSetFont.bind(this))
+            this.runSetFontDialog(this._font, LabelStringDef.aults.font, this.doSetFont.bind(this))
         })
 
         return [
@@ -127,7 +128,7 @@ export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
         const promptReturnValue = window.prompt(S.Components.LabelString.contextMenu.ChangeTextPrompt, this._text)
         if (promptReturnValue !== null) {
             // OK button pressed
-            const newText = promptReturnValue.length === 0 ? LabelStringDefaults.text : promptReturnValue
+            const newText = promptReturnValue.length === 0 ? LabelStringDef.aults.text : promptReturnValue
             this.doSetText(newText)
         }
     }
@@ -135,6 +136,8 @@ export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
     public override keyDown(e: KeyboardEvent): void {
         if (e.key === "Enter") {
             this.runSetTextDialog()
+        } else {
+            super.keyDown(e)
         }
     }
 
@@ -146,5 +149,5 @@ export class LabelString extends ComponentBase<LabelStringRepr, undefined> {
         return true
     }
 
-
 }
+LabelStringDef.impl = LabelString

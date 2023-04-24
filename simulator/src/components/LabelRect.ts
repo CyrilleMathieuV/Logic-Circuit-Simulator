@@ -1,12 +1,12 @@
 import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
-import { LogicEditor } from "../LogicEditor"
-import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_RECTANGLE_BACKGROUND, COLOR_RECTANGLE_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
+import { COLOR_COMPONENT_BORDER, COLOR_RECTANGLE_BACKGROUND, COLOR_RECTANGLE_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { span, style, title } from "../htmlgen"
+import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isDefined, isNotNull, isUndefined, typeOrUndefined } from "../utils"
-import { ComponentBase, Repr, defineComponent } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Drawable, DrawableWithPosition } from "./Drawable"
+import { isDefined, isUndefined, typeOrUndefined } from "../utils"
+import { ComponentBase, defineComponent, Repr } from "./Component"
+import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, Drawable, DrawableWithPosition, DrawContext } from "./Drawable"
 
 export const RectangleColor = {
     grey: "grey",
@@ -33,38 +33,40 @@ export const CaptionPosition = {
 
 export type CaptionPosition = keyof typeof CaptionPosition
 
-
 export const LabelRectDef =
-    defineComponent(false, false, t.type({
-        type: t.literal("rect"),
-        w: t.number,
-        h: t.number,
-        color: typeOrUndefined(t.keyof(RectangleColor)),
-        strokeWidth: typeOrUndefined(t.number),
-        noFill: typeOrUndefined(t.boolean),
-        rounded: typeOrUndefined(t.boolean),
-        caption: typeOrUndefined(t.string),
-        captionPos: typeOrUndefined(t.keyof(CaptionPosition)),
-        captionInside: typeOrUndefined(t.boolean),
-        font: typeOrUndefined(t.string),
-    }, "Rectangle"))
+    defineComponent("label", "rect", {
+        button: { imgWidth: 32 },
+        repr: {
+            w: t.number,
+            h: t.number,
+            color: typeOrUndefined(t.keyof(RectangleColor)),
+            strokeWidth: typeOrUndefined(t.number),
+            noFill: typeOrUndefined(t.boolean),
+            rounded: typeOrUndefined(t.boolean),
+            caption: typeOrUndefined(t.string),
+            captionPos: typeOrUndefined(t.keyof(CaptionPosition)),
+            captionInside: typeOrUndefined(t.boolean),
+            font: typeOrUndefined(t.string),
+        },
+        valueDefaults: {
+            width: 10 * GRID_STEP,
+            height: 10 * GRID_STEP,
+            color: RectangleColor.yellow,
+            strokeWidth: 2,
+            noFill: false,
+            rounded: false,
+            caption: undefined as string | undefined,
+            captionPos: CaptionPosition.n,
+            captionInside: false,
+            font: FONT_LABEL_DEFAULT,
+        },
+        size: { gridWidth: 10, gridHeight: 10 },
+        makeNodes: () => ({}),
+    })
 
-type LabelRectRepr = Repr<typeof LabelRectDef>
+export type LabelRectRepr = Repr<typeof LabelRectDef>
 
-const LabelRectDefaults = {
-    width: 10 * GRID_STEP,
-    height: 10 * GRID_STEP,
-    color: RectangleColor.yellow,
-    strokeWidth: 2,
-    noFill: false,
-    rounded: false,
-    caption: undefined as string | undefined,
-    captionPos: CaptionPosition.n,
-    captionInside: false,
-    font: FONT_LABEL_DEFAULT,
-}
-
-export class LabelRect extends ComponentBase<LabelRectRepr, undefined> {
+export class LabelRect extends ComponentBase<LabelRectRepr> {
 
     private _w: number
     private _h: number
@@ -77,30 +79,30 @@ export class LabelRect extends ComponentBase<LabelRectRepr, undefined> {
     private _captionInside: boolean
     private _font: string
 
-    public constructor(editor: LogicEditor, savedData: LabelRectRepr | null) {
-        super(editor, undefined, savedData, {})
-        if (isNotNull(savedData)) {
-            this._w = savedData.w
-            this._h = savedData.h
-            this._color = savedData.color ?? LabelRectDefaults.color
-            this._strokeWidth = savedData.strokeWidth ?? LabelRectDefaults.strokeWidth
-            this._noFill = savedData.noFill ?? LabelRectDefaults.noFill
-            this._rounded = savedData.rounded ?? LabelRectDefaults.rounded
-            this._caption = savedData.caption ?? LabelRectDefaults.caption
-            this._captionPos = savedData.captionPos ?? LabelRectDefaults.captionPos
-            this._captionInside = savedData.captionInside ?? LabelRectDefaults.captionInside
-            this._font = savedData.font ?? LabelRectDefaults.font
+    public constructor(editor: LogicEditor, saved?: LabelRectRepr) {
+        super(editor, LabelRectDef, saved)
+        if (isDefined(saved)) {
+            this._w = saved.w
+            this._h = saved.h
+            this._color = saved.color ?? LabelRectDef.aults.color
+            this._strokeWidth = saved.strokeWidth ?? LabelRectDef.aults.strokeWidth
+            this._noFill = saved.noFill ?? LabelRectDef.aults.noFill
+            this._rounded = saved.rounded ?? LabelRectDef.aults.rounded
+            this._caption = saved.caption ?? LabelRectDef.aults.caption
+            this._captionPos = saved.captionPos ?? LabelRectDef.aults.captionPos
+            this._captionInside = saved.captionInside ?? LabelRectDef.aults.captionInside
+            this._font = saved.font ?? LabelRectDef.aults.font
         } else {
-            this._w = LabelRectDefaults.width
-            this._h = LabelRectDefaults.height
-            this._color = LabelRectDefaults.color
-            this._strokeWidth = LabelRectDefaults.strokeWidth
-            this._noFill = LabelRectDefaults.noFill
-            this._rounded = LabelRectDefaults.rounded
-            this._caption = LabelRectDefaults.caption
-            this._captionPos = LabelRectDefaults.captionPos
-            this._captionInside = LabelRectDefaults.captionInside
-            this._font = LabelRectDefaults.font
+            this._w = LabelRectDef.aults.width
+            this._h = LabelRectDef.aults.height
+            this._color = LabelRectDef.aults.color
+            this._strokeWidth = LabelRectDef.aults.strokeWidth
+            this._noFill = LabelRectDef.aults.noFill
+            this._rounded = LabelRectDef.aults.rounded
+            this._caption = LabelRectDef.aults.caption
+            this._captionPos = LabelRectDef.aults.captionPos
+            this._captionInside = LabelRectDef.aults.captionInside
+            this._font = LabelRectDef.aults.font
         }
     }
 
@@ -112,28 +114,24 @@ export class LabelRect extends ComponentBase<LabelRectRepr, undefined> {
             h: this._h,
             color: this._color,
             strokeWidth: this._strokeWidth,
-            noFill: this._noFill === LabelRectDefaults.noFill ? undefined : this._noFill,
-            rounded: this._rounded === LabelRectDefaults.rounded ? undefined : this._rounded,
-            caption: this._caption === LabelRectDefaults.caption ? undefined : this._caption,
-            captionPos: this._captionPos === LabelRectDefaults.captionPos ? undefined : this._captionPos,
-            captionInside: this._captionInside === LabelRectDefaults.captionInside ? undefined : this._captionInside,
-            font: this._font === LabelRectDefaults.font ? undefined : this._font,
+            noFill: this._noFill === LabelRectDef.aults.noFill ? undefined : this._noFill,
+            rounded: this._rounded === LabelRectDef.aults.rounded ? undefined : this._rounded,
+            caption: this._caption === LabelRectDef.aults.caption ? undefined : this._caption,
+            captionPos: this._captionPos === LabelRectDef.aults.captionPos ? undefined : this._captionPos,
+            captionInside: this._captionInside === LabelRectDef.aults.captionInside ? undefined : this._captionInside,
+            font: this._font === LabelRectDef.aults.font ? undefined : this._font,
         }
-    }
-
-    public get componentType() {
-        return "label" as const
     }
 
     public override canRotate() {
         return false
     }
 
-    public get unrotatedWidth() {
+    public override get unrotatedWidth() {
         return this._w
     }
 
-    public get unrotatedHeight() {
+    public override get unrotatedHeight() {
         return this._h
     }
 
@@ -145,7 +143,7 @@ export class LabelRect extends ComponentBase<LabelRectRepr, undefined> {
         return 0
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
         const width = this._w
         const height = this._h
         const left = this.posX - width / 2
@@ -227,7 +225,7 @@ export class LabelRect extends ComponentBase<LabelRectRepr, undefined> {
 
         if (ctx.isMouseOver) {
             g.lineWidth = Math.max(3, this._strokeWidth)
-            g.strokeStyle = COLOR_MOUSE_OVER
+            g.strokeStyle = ctx.borderColor
             g.stroke()
         } else if (this._strokeWidth > 0) {
             g.lineWidth = this._strokeWidth
@@ -319,7 +317,7 @@ export class LabelRect extends ComponentBase<LabelRectRepr, undefined> {
         ]
 
         const setFontItem = ContextMenuData.item("font", s.Font, () => {
-            this.runSetFontDialog(this._font, LabelRectDefaults.font, this.doSetFont.bind(this))
+            this.runSetFontDialog(this._font, LabelRectDef.aults.font, this.doSetFont.bind(this))
         })
 
 
@@ -442,7 +440,10 @@ export class LabelRect extends ComponentBase<LabelRectRepr, undefined> {
     public override keyDown(e: KeyboardEvent): void {
         if (e.key === "Enter") {
             this.runSetCaptionDialog()
+        } else {
+            super.keyDown(e)
         }
     }
 
 }
+LabelRectDef.impl = LabelRect

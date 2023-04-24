@@ -149,11 +149,6 @@ export const src = attrBuilder("src")
 export const draggable = attrBuilder("draggable")("true")
 export const br = raw('<br>')
 
-export const dataComponent = attrBuilder("data-component")
-export const dataType = attrBuilder("data-type")
-export const dataClassId = attrBuilder("data-classid")
-
-
 
 // Common Modifier-generating helpers
 

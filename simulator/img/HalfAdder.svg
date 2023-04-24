@@ -1,1 +1,7 @@
-<svg version="1.1" id="Calque_1" xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100" style="enable-background:new 0 0 100 100" xml:space="preserve"><style>.st1,.st2{fill:none;stroke:#000;stroke-width:5}.st2{stroke-width:2}</style><path d="M71.2 18.2v67.7H26.6V18.2h44.6z" style="fill:none;stroke:#000;stroke-width:3;stroke-linecap:square"/><path class="st1" d="M48.5 38.2v27.7M34.9 51.8h27.3"/><path class="st2" d="M10.6 31.4h16M10.6 68.6h16M71.2 31.4h16M71.2 68.6h16"/></svg>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 26.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Calque_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 100 100" style="enable-background:new 0 0 100 100;" xml:space="preserve" fill="currentColor">
+    <polygon points="46,65.9 51,65.9 51,54.3 62.2,54.3 62.2,49.3 51,49.3 51,38.2 46,38.2 46,49.3 34.9,49.3 34.9,54.3 46,54.3 	" />
+    <path d="M87.2,32.4v-2H72.7V16.7H25.1v13.7H10.6v2h14.5v35.2H10.6v2h14.5v17.8h47.6V69.6h14.5v-2H72.7V32.4H87.2z M69.7,84.4H28.1
+		V19.7h41.6V84.4z" />
+</svg>

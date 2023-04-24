@@ -1,51 +1,60 @@
 import * as t from "io-ts"
-import { LogicEditor } from "../LogicEditor"
 import { COLOR_COMPONENT_BORDER } from "../drawutils"
 import { br, emptyMod, mods, tooltipContent } from "../htmlgen"
+import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { LogicValue, isDefined, isNotNull, typeOrUndefined } from "../utils"
-import { ComponentState, Repr, extendComponent } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
-import { InputBitBase, InputBitBaseDef } from "./InputBit"
-
+import { isDefined, LogicValue, typeOrUndefined } from "../utils"
+import { ComponentNameRepr, ComponentState, defineComponent, Repr } from "./Component"
+import { ContextMenuData, DrawContext, MenuItems } from "./Drawable"
+import { InputBase, InputDef } from "./Input"
 
 export const ClockDef =
-    extendComponent(InputBitBaseDef, t.type({
-        type: t.literal("clock"),
-        period: t.number,
-        dutycycle: typeOrUndefined(t.number),
-        phase: typeOrUndefined(t.number),
-        showLabel: typeOrUndefined(t.boolean),
-    }, "Clock"))
+    defineComponent("in", "clock", {
+        button: { imgWidth: 50 },
+        repr: {
+            name: ComponentNameRepr,
+            period: t.number,
+            dutycycle: typeOrUndefined(t.number),
+            phase: typeOrUndefined(t.number),
+            showLabel: typeOrUndefined(t.boolean),
+        },
+        valueDefaults: {
+            period: 2000,
+            dutycycle: 50,
+            phase: 0,
+            showLabel: true,
+        },
+        size: { gridWidth: 2, gridHeight: 2 }, // "overridden" by superclass
+        makeNodes: () => ({
+            outs: {
+                // we don't strictly need a group, but we use it
+                // for compatibility with InputBase
+                Out: [[3, 0, "e"]],
+            },
+        }),
+        initialValue: () => [false as LogicValue],
+    })
 
-type ClockRepr = Repr<typeof ClockDef>
+export type ClockRepr = Repr<typeof ClockDef>
 
-const ClockDefaults = {
-    period: 2000,
-    dutycycle: 50,
-    phase: 0,
-    showLabel: true,
-}
+export class Clock extends InputBase<ClockRepr> {
 
-export class Clock extends InputBitBase<ClockRepr> {
+    public get numBits() { return 1 }
+    private _period: number
+    private _dutycycle: number
+    private _phase: number
+    private _showLabel: boolean
 
-    private _period: number = ClockDefaults.period
-    private _dutycycle: number = ClockDefaults.dutycycle
-    private _phase: number = ClockDefaults.phase
-    private _showLabel: boolean = ClockDefaults.showLabel
+    public constructor(editor: LogicEditor, saved?: ClockRepr) {
+        // 'undefined as any' is a hack to get around the fact that InputBase is parametrized
+        // and Clock is not. As long as we don't try to change nonexitent params, it's fine.
+        super(editor, [ClockDef, undefined as any], saved)
 
-    public constructor(editor: LogicEditor, savedData: ClockRepr | null) {
-        super(editor, false, savedData)
-        if (isNotNull(savedData)) {
-            this._period = savedData.period
-            if (isDefined(savedData.dutycycle)) {
-                this._dutycycle = savedData.dutycycle % 100
-            }
-            if (isDefined(savedData.phase)) {
-                this._phase = savedData.phase % savedData.period
-            }
-            this._showLabel = savedData.showLabel ?? ClockDefaults.showLabel
-        }
+        this._period = saved?.period ?? ClockDef.aults.period
+        this._dutycycle = isDefined(saved?.dutycycle) ? saved!.dutycycle % 100 : ClockDef.aults.dutycycle
+        this._phase = isDefined(saved?.phase) ? saved!.phase % this._period : ClockDef.aults.phase
+        this._showLabel = saved?.showLabel ?? ClockDef.aults.showLabel
+
         // sets the value and schedules the next tick
         this.tickCallback(editor.timeline.adjustedTime())
     }
@@ -55,14 +64,10 @@ export class Clock extends InputBitBase<ClockRepr> {
             type: "clock" as const,
             ...this.toJSONBase(),
             period: this._period,
-            dutycycle: (this._dutycycle === ClockDefaults.dutycycle) ? undefined : this._dutycycle,
-            phase: (this._phase === ClockDefaults.phase) ? undefined : this._phase,
-            showLabel: (this._showLabel === ClockDefaults.showLabel) ? undefined : this._showLabel,
+            dutycycle: (this._dutycycle === ClockDef.aults.dutycycle) ? undefined : this._dutycycle,
+            phase: (this._phase === ClockDef.aults.phase) ? undefined : this._phase,
+            showLabel: (this._showLabel === ClockDef.aults.showLabel) ? undefined : this._showLabel,
         }
-    }
-
-    public get componentType() {
-        return "in" as const
     }
 
     public override makeTooltip() {
@@ -99,17 +104,13 @@ export class Clock extends InputBitBase<ClockRepr> {
         return [value, nextTick]
     }
 
-    protected doRecalcValue(): LogicValue {
-        // nothing special to recalc, will change automatically on next tick,
-        // so until further notice, we keep this same value
-        return this.value
-    }
-
     private tickCallback(theoreticalTime: number) {
         const [value, nextTick] = this.currentClockValue(theoreticalTime)
-        this.doSetValue(value)
+        this.doSetValue([value])
         if (this.state !== ComponentState.DEAD) {
-            this.editor.timeline.scheduleAt(nextTick, "next tick for clock value " + (!value), time => this.tickCallback(time))
+            this.editor.timeline.scheduleAt(nextTick, "next tick for clock value " + (!value),
+                time => this.tickCallback(time)
+            )
         }
     }
 
@@ -156,14 +157,8 @@ export class Clock extends InputBitBase<ClockRepr> {
         this.setNeedsRedraw("period changed")
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const newItems: [ContextMenuItemPlacement, ContextMenuItem][] = []
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
         const s = S.Components.Clock.contextMenu
-
-        const superItems = super.makeComponentSpecificContextMenuItems()
-        if (isDefined(superItems)) {
-            newItems.push(...superItems)
-        }
 
         const periodPresets: [number, string][] = [
             [100, "100 ms (10 Hz)"],
@@ -182,14 +177,19 @@ export class Clock extends InputBitBase<ClockRepr> {
             return ContextMenuData.item(icon, desc, () => this.doSetPeriod(period))
         }
 
-        const myItems: [ContextMenuItemPlacement, ContextMenuItem][] = [
+        const replaceWithInputItem =
+            ContextMenuData.item("replace", s.ReplaceWithInput, () => {
+                this.replaceWithComponent(InputDef.make(this.editor, { bits: 1 }))
+            })
+
+        return [
+            ...super.makeComponentSpecificContextMenuItems(),
             ["mid", ContextMenuData.sep()],
             ["mid", ContextMenuData.submenu("timer", s.Period, periodPresets.map(makeItemSetPeriod))],
+            ["mid", ContextMenuData.sep()],
+            ["mid", replaceWithInputItem],
         ]
-
-        newItems.push(...myItems)
-        return newItems
     }
 
-
 }
+ClockDef.impl = Clock

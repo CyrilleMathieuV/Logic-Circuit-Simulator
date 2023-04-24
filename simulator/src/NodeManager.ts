@@ -51,7 +51,7 @@ export class NodeManager {
     public tryConnectNodesOf(comp: Component) {
         const wireMgr = comp.editor.wireMgr
         const addedConnections: [Node, Component, Node][] = []
-        comp.forEachNode(node => {
+        for (const node of comp.allNodes()) {
             if (node.acceptsMoreConnections) {
                 const nodeX = node.posX
                 const nodeY = node.posY
@@ -70,11 +70,8 @@ export class NodeManager {
                     }
                 }
             }
-            return true
-        })
+        }
         return addedConnections
     }
 
 }
-
-

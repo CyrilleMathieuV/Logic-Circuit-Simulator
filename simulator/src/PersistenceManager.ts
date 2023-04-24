@@ -1,16 +1,9 @@
-import * as t from "io-ts"
-import { PathReporter } from 'io-ts/PathReporter'
-import { Component, ComponentTypes, JsonFieldComponent, JsonFieldsComponents, MainJsonFieldName } from "./components/Component"
-import { GateDef, GateFactory } from "./components/Gate"
-import { ICDef, ICFactory } from "./components/IC"
-import { InputDef, InputFactory } from "./components/Inputs"
-import { LabelDef, LabelFactory } from "./components/Labels"
-import { LayoutDef, LayoutFactory } from "./components/Layout"
-import { OutputDef, OutputFactory } from "./components/Outputs"
+import { ComponentFactory } from "./ComponentFactory"
+import { ComponentCategories, JsonFieldComponent, JsonFieldsComponents, MainJsonFieldName } from "./components/Component"
 import { Wire } from "./components/Wire"
 import { LogicEditor } from "./LogicEditor"
 import { stringifySmart } from "./stringifySmart"
-import { isArray, isDefined, isString, isUndefined, keysOf } from "./utils"
+import { binaryStringRepr, isAllZeros, isArray, isDefined, isString, isUndefined, keysOf, toLogicValue, validateJson } from "./utils"
 
 export type Workspace = Record<string, unknown>
 
@@ -50,6 +43,7 @@ class _PersistenceManager {
                 return "can't load this JSON - error " + err
             }
         }
+        // console.log("BEFORE:\n" + content)
 
         let jsonVersion = parsedContents["v"] ?? 0
         const savedVersion = jsonVersion
@@ -67,10 +61,15 @@ class _PersistenceManager {
         }
         if (jsonVersion === 3) {
             migrate3To4(parsedContents)
-            jsonVersion = 3
+            jsonVersion = 4
+        }
+        if (jsonVersion === 4) {
+            migrate4To5(parsedContents)
+            jsonVersion = 5
         }
         if (jsonVersion !== savedVersion) {
             console.log(`Migrated data format from v${savedVersion} to v${jsonVersion}, consider upgrading the source`)
+            // console.log("AFTER:\n" + this.stringifyWorkspace(parsedContents, false))
         }
         delete parsedContents["v"]
 
@@ -82,51 +81,27 @@ class _PersistenceManager {
         nodeMgr.clearAllLiveNodes()
         editor.timeline.reset()
 
-        function loadField<T>(fieldName: MainJsonFieldName | "wires", repr: t.Type<T, any> | { repr: t.Type<T, any> }, process: (params: T) => any) {
+        function loadField(fieldName: MainJsonFieldName | "wires", process: (obj: unknown) => any) {
             if (!(fieldName in parsedContents)) {
                 return
             }
-            const fieldValues = parsedContents[fieldName]
+            const objects = parsedContents[fieldName]
             delete parsedContents[fieldName]
 
-            if (!isArray(fieldValues)) {
+            if (!isArray(objects)) {
                 return
             }
-            if ("repr" in repr) {
-                repr = repr.repr
-            }
-            for (const someDefinition of fieldValues) {
-                const validated = repr.decode(someDefinition)
-                switch (validated._tag) {
-                    case "Left":
-                        console.log(`ERROR while parsing ${repr.name} from %o -> %s: `, someDefinition, PathReporter.report(validated).join("; "))
-                        break
-                    case "Right":
-                        process(validated.right)
-                        break
-                }
+            for (const obj of objects) {
+                process(obj)
             }
         }
 
-        type Factory<T> = {
-            make: (editor: LogicEditor, savedDataOrType: T) => Component | undefined
-        }
-
-        function loadComponentField<T>(fieldName: MainJsonFieldName, repr: t.Type<T, any> | { repr: t.Type<T, any> }, factory: Factory<T>) {
-            loadField(fieldName, repr, (d) => {
-                const comp = factory.make(editor, d)
-                if (isDefined(comp)) {
-                    components.add(comp)
-                }
+        for (const category of ComponentCategories) {
+            const fieldName = ComponentCategories.props[category].jsonFieldName
+            loadField(fieldName, obj => {
+                ComponentFactory.makeFromJSON(editor, category, obj)
             })
         }
-
-        loadComponentField("in", InputDef, InputFactory)
-        loadComponentField("out", OutputDef, OutputFactory)
-        loadComponentField("gates", GateDef, GateFactory as any)
-        loadComponentField("components", ICDef, ICFactory)
-        loadComponentField("labels", LabelDef, LabelFactory)
-        loadComponentField("layout", LayoutDef, LayoutFactory)
 
         // recalculating all the unconnected gates here allows
         // to avoid spurious circular dependency messages, as right
@@ -134,7 +109,13 @@ class _PersistenceManager {
         const recalcMgr = editor.recalcMgr
         recalcMgr.recalcAndPropagateIfNeeded()
 
-        loadField("wires", Wire.Repr, ([nodeID1, nodeID2, wireOptions]) => {
+        loadField("wires", obj => {
+            const wireData = validateJson(obj, Wire.Repr, "wire")
+            if (isUndefined(wireData)) {
+                return
+            }
+
+            const [nodeID1, nodeID2, wireOptions] = wireData
             const node1 = nodeMgr.findNode(nodeID1)
             const node2 = nodeMgr.findNode(nodeID2)
             if (!isUndefined(node1) && !isUndefined(node2)) {
@@ -189,7 +170,7 @@ class _PersistenceManager {
 
     public buildWorkspace(editor: LogicEditor): Workspace {
         const workspace: Workspace = {
-            "v": 4,
+            "v": 5,
             "opts": editor.nonDefaultOptions(),
         }
 
@@ -198,11 +179,11 @@ class _PersistenceManager {
         }
 
         for (const comp of editor.components.all()) {
-            const fieldName = ComponentTypes.propsOf(comp.componentType).jsonFieldName
+            const fieldName = ComponentCategories.props[comp.category].jsonFieldName
             let arr = workspace[fieldName]
             if (isUndefined(arr)) {
                 workspace[fieldName] = (arr = [comp])
-            } else if (Array.isArray(arr)) {
+            } else if (isArray(arr)) {
                 arr.push(comp)
             }
         }
@@ -248,7 +229,7 @@ class _PersistenceManager {
 
         const pushComponents = (jsonField: JsonFieldComponent) => {
             const arr = workspace[jsonField]
-            if (isDefined(arr) && Array.isArray(arr)) {
+            if (isDefined(arr) && isArray(arr)) {
                 const subparts: string[] = []
                 for (const comp of arr) {
                     subparts.push(stringifySmart(comp, { maxLength: Infinity }))
@@ -299,36 +280,36 @@ class _PersistenceManager {
 export const PersistenceManager = new _PersistenceManager()
 
 
-function findFirstFreeId(parsedContents: any): number {
+function findFirstFreeId(parsedContents: Record<string, unknown>): number {
     // this finds the maximum id of all components on raw (but parsed) JSON;
     // it is useful for migration code that needs to generate new ids
 
     let maxId = -1
 
-    function inspectComponentDef(compDef: any) {
+    function inspectComponentDef(compDef: Record<string, unknown>) {
         for (const fieldName of ["id", "in", "out"]) {
             inspectValue(compDef[fieldName])
         }
     }
 
-    function inspectValue(value: any) {
+    function inspectValue(value: unknown) {
         if (isUndefined(value)) {
             return
         }
         if (typeof value === "number") {
             maxId = Math.max(maxId, value)
-        } else if (Array.isArray(value)) {
+        } else if (isArray(value)) {
             for (const item of value) {
                 inspectValue(item)
             }
         } else if (typeof value === "object" && value !== null) {
-            inspectValue(value.id)
+            inspectValue((value as Record<string, unknown>).id)
         }
     }
 
     for (const jsonField of JsonFieldsComponents) {
         const arr = parsedContents[jsonField]
-        if (isDefined(arr) && Array.isArray(arr)) {
+        if (isDefined(arr) && isArray(arr)) {
             for (const comp of arr) {
                 inspectComponentDef(comp)
             }
@@ -338,7 +319,7 @@ function findFirstFreeId(parsedContents: any): number {
     return maxId + 1
 }
 
-function migrate0To1(workspace: any) {
+function migrate0To1(workspace: Record<string, unknown>) {
     // all displays are now out
     if ("displays" in workspace) {
         const displays = workspace.displays
@@ -346,8 +327,10 @@ function migrate0To1(workspace: any) {
         if (!("out" in workspace)) {
             workspace.out = []
         }
-        for (const display of displays) {
-            workspace.out.push(display)
+        if (isArray(displays) && isArray(workspace.out)) {
+            for (const display of displays) {
+                workspace.out.push(display)
+            }
         }
     }
 
@@ -358,18 +341,20 @@ function migrate0To1(workspace: any) {
         if (!("in" in workspace)) {
             workspace.in = []
         }
-        for (const clock of clocks) {
-            clock.type = "clock"
-            workspace.in.push(clock)
+        if (isArray(clocks) && isArray(workspace.in)) {
+            for (const clock of clocks) {
+                clock.type = "clock"
+                workspace.in.push(clock)
+            }
         }
     }
 
     // flipflops have a different input node order
-    if ("components" in workspace) {
-        const components = workspace.components
+    const components = workspace.components
+    if (isArray(components)) {
         for (const comp of components) {
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (comp.type.startsWith("flipflop")) {
+            let type
+            if (isString(type = comp.type) && type.startsWith("flipflop")) {
                 // extract last three inputs
                 const inputs: Array<number> = comp.in
                 const lastThree = inputs.splice(-3)
@@ -380,13 +365,13 @@ function migrate0To1(workspace: any) {
 }
 
 
-function migrate1To2(workspace: any) {
+function migrate1To2(workspace: Record<string, unknown>) {
     // waypoints -> via
     if ("wires" in workspace) {
         const wires = workspace.wires
-        if (Array.isArray(wires)) {
+        if (isArray(wires)) {
             for (const wire of wires) {
-                if (Array.isArray(wire) && wire.length === 3) {
+                if (isArray(wire) && wire.length === 3) {
                     const wireOptions = wire[2]
                     if ("waypoints" in wireOptions) {
                         wireOptions.via = wireOptions.waypoints
@@ -398,52 +383,176 @@ function migrate1To2(workspace: any) {
     }
 }
 
-function migrate2To3(parsedContents: any) {
+function migrate2To3(parsedContents: Record<string, unknown>) {
     let nextNewId = findFirstFreeId(parsedContents)
 
-    if ("components" in parsedContents) {
-        const components = parsedContents.components
-        if (Array.isArray(components)) {
-            for (const comp of components) {
-                if ("type" in comp && comp.type === "alu") {
-                    if (Array.isArray(comp.in)) {
-                        comp.in.push(nextNewId++)
-                    }
+    const components = parsedContents.components
+    if (isArray(components)) {
+        for (const comp of components) {
+            if (comp.type === "alu") {
+                if (isArray(comp.in)) {
+                    comp.in.push(nextNewId++)
                 }
             }
         }
     }
 }
 
-function migrate3To4(parsedContents: any) {
+function migrate3To4(parsedContents: Record<string, unknown>) {
     let nextNewId = findFirstFreeId(parsedContents)
 
-    if ("out" in parsedContents) {
-        const outs = parsedContents.out
-        if (Array.isArray(outs)) {
-            for (const out of outs) {
-                if ("type" in out && out.type === "nibble") {
-                    out.type = "nibble-display"
-                }
-            }
-        }
-    }
-    if ("components" in parsedContents) {
-        const components = parsedContents.components
-        if (Array.isArray(components)) {
-            for (const comp of components) {
-                if ("type" in comp && comp.type === "alu") {
-                    if (Array.isArray(comp.out)) {
-                        comp.out.push(nextNewId++) // add a new oVerflow output
-                        // replace carry output with overflow output as it was wrongly used before
-                        const t = comp.out[4]
-                        comp.out[4] = comp.out[6]
-                        comp.out[6] = t
-                    }
-                }
+    const outs = parsedContents.out
+    if (isArray(outs)) {
+        for (const out of outs) {
+            if (out.type === "nibble") {
+                out.type = "nibble-display"
             }
         }
     }
 
+    const components = parsedContents.components
+    if (isArray(components)) {
+        for (const comp of components) {
+            if (comp.type === "alu") {
+                if (isArray(comp.out)) {
+                    comp.out.push(nextNewId++) // add a new oVerflow output
+                    // replace carry output with overflow output as it was wrongly used before
+                    const t = comp.out[4]
+                    comp.out[4] = comp.out[6]
+                    comp.out[6] = t
+                }
+            }
+        }
+    }
 }
 
+function migrate4To5(parsedContents: Record<string, unknown>) {
+    let type
+    let match: RegExpExecArray | null
+
+    const ins = parsedContents.in
+    if (isArray(ins)) {
+        for (const in_ of ins) {
+            if (isString(type = in_.type)) {
+
+                if (type === "nibble") {
+                    delete in_.type
+                    in_.bits = 4
+
+                } else if (type === "byte") {
+                    delete in_.type
+                    in_.bits = 8
+                }
+            }
+        }
+    }
+
+    const outs = parsedContents.out
+    if (isArray(outs)) {
+        for (const out of outs) {
+            if (isString(type = out.type)) {
+
+                if (type === "nibble") {
+                    delete out.type
+                    out.bits = 4
+
+                } else if (type === "byte") {
+                    delete out.type
+                    out.bits = 8
+
+                } else if (type === "nibble-display") {
+                    out.type = "display"
+                    out.bits = 4
+
+                } else if (type === "byte-display") {
+                    out.type = "display"
+                    out.bits = 8
+
+                } else if (type === "shiftbuffer") {
+                    out.type = "shift-buffer"
+                }
+            }
+        }
+    }
+
+    const gates = parsedContents.gates
+    if (isArray(gates)) {
+        for (const gate of gates) {
+            if (isString(type = gate.type)) {
+
+                const lastChar = type[type.length - 1]
+                const maybeBit = parseInt(lastChar)
+                if (!isNaN(maybeBit)) {
+                    gate.bits = maybeBit
+                    gate.type = type.slice(0, -1)
+                }
+            }
+        }
+    }
+
+    const components = parsedContents.components
+    if (isArray(components)) {
+
+        const ramRegex = /^ram-(?<lines>\d+)x(?<bits>\d+)$/
+        const muxRegex = /^mux-(?<from>\d+)to(?<to>\d+)$/
+        const demuxRegex = /^demux-(?<from>\d+)to(?<to>\d+)$/
+
+        for (const comp of components) {
+            if (isString(type = comp.type)) {
+
+                if (type === "register") {
+                    // register.state -> register.content
+                    let state
+                    if (isArray(state = comp.state)) {
+                        const binStr = binaryStringRepr(state.map(toLogicValue) as any)
+                        if (!isAllZeros(binStr)) {
+                            comp.content = binStr
+                        }
+                        delete comp.state
+                    }
+
+                } else if (type === "quad-gate") {
+                    comp.type = "gate-array"
+
+                } else if (type === "quad-tristate") {
+                    comp.type = "tristate-array"
+
+                } else if ((match = ramRegex.exec(type)) !== null) {
+                    comp.type = "ram"
+                    comp.bits = parseInt(match.groups?.bits ?? "4")
+                    comp.lines = parseInt(match.groups?.lines ?? "16")
+
+                } else if ((match = muxRegex.exec(type)) !== null) {
+                    comp.type = "mux"
+                    comp.from = parseInt(match.groups?.from ?? "8")
+                    comp.to = parseInt(match.groups?.to ?? "4")
+
+                } else if ((match = demuxRegex.exec(type)) !== null) {
+                    comp.type = "demux"
+                    comp.from = parseInt(match.groups?.from ?? "4")
+                    comp.to = parseInt(match.groups?.to ?? "8")
+
+                }
+            }
+        }
+
+        parsedContents.ic = components
+        delete parsedContents.components
+    }
+
+    const layouts = parsedContents.layout
+    if (isArray(layouts)) {
+
+        const passthroughRegex = /^pass-(?<bits>\d+)$/
+
+        for (const layout of layouts) {
+            if (isString(type = layout.type)) {
+
+                if ((match = passthroughRegex.exec(type)) !== null) {
+                    layout.type = "pass"
+                    layout.bits = parseInt(match.groups?.bits ?? "1")
+                }
+            }
+        }
+    }
+}

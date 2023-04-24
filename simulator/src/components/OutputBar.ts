@@ -1,12 +1,23 @@
 import * as t from "io-ts"
-import { COLOR_COMPONENT_BORDER, COLOR_HIGH_IMPEDANCE, COLOR_LED_ON, COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE_BORDER, drawComponentName, drawWireLineToComponent, GRID_STEP, pxToGrid } from "../drawutils"
+import { COLOR_HIGH_IMPEDANCE, COLOR_LED_ON, COLOR_TRANSPARENT, COLOR_UNKNOWN, COLOR_WIRE_BORDER, GRID_STEP, pxToGrid } from "../drawutils"
 import { asValue, Modifier, mods, span, style, title, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { HighImpedance, isDefined, isHighImpedance, isNotNull, isUnknown, LogicValue, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, Repr } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { HighImpedance, isHighImpedance, isUnknown, LogicValue, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, InstantiatedComponentDef, NodesIn, NodesOut, Repr } from "./Component"
+import { ContextMenuData, DrawContext, MenuItems } from "./Drawable"
+import { Output16SegRepr } from "./Output16Seg"
+import { Output7SegRepr } from "./Output7Seg"
 
+
+
+export const LedColors = {
+    green: null,
+    red: null,
+    yellow: null,
+} as const
+
+export type LedColor = keyof typeof LedColors
 
 export const OutputBarTypes = {
     v: null,
@@ -18,57 +29,135 @@ export const OutputBarTypes = {
 type OutputBarType = keyof typeof OutputBarTypes
 
 
-export const LedColors = {
-    green: null,
-    red: null,
-    yellow: null,
-} as const
-
-export type LedColor = keyof typeof LedColors
-
 export function ledColorForLogicValue(v: LogicValue, onColor: LedColor) {
     return isUnknown(v) ? COLOR_UNKNOWN :
         isHighImpedance(v) ? COLOR_HIGH_IMPEDANCE :
             v ? COLOR_LED_ON[onColor] : COLOR_WIRE_BORDER
 }
 
+type OutputBarBaseRepr = OutputBarRepr | Output7SegRepr | Output16SegRepr
+
+export abstract class OutputBarBase<TRepr extends OutputBarBaseRepr, TValue> extends ComponentBase<
+    TRepr,
+    TValue,
+    NodesIn<TRepr>,
+    NodesOut<TRepr>,
+    true, false
+> {
+
+    private readonly transparentDefault: boolean
+    protected _color: LedColor
+    protected _transparent: boolean
+    protected _name: ComponentName
+
+    protected constructor(editor: LogicEditor, SubclassDef: InstantiatedComponentDef<TRepr, TValue>, transparentDefault: boolean, saved?: TRepr) {
+        super(editor, SubclassDef, saved)
+        this.transparentDefault = transparentDefault
+
+        this._color = saved?.color ?? OutputBarDef.aults.color
+        this._transparent = saved?.transparent ?? transparentDefault
+        this._name = saved?.name ?? undefined
+    }
+
+    public override toJSONBase() {
+        return {
+            ...super.toJSONBase(),
+            color: this._color === OutputBarDef.aults.color ? undefined : this._color,
+            transparent: this._transparent === this.transparentDefault ? undefined : this._transparent,
+            name: this._name,
+        }
+    }
+
+    private doSetName(name: ComponentName) {
+        this._name = name
+        this.setNeedsRedraw("name changed")
+    }
+
+    private doSetColor(color: LedColor) {
+        this._color = color
+        this.setNeedsRedraw("color changed")
+    }
+
+    private doSetTransparent(transparent: boolean) {
+        this._transparent = transparent
+        this.setNeedsRedraw("transparent changed")
+    }
+
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        const s = S.Components.OutputBar.contextMenu
+
+        const makeItemUseColor = (desc: string, color: LedColor) => {
+            const isCurrent = this._color === color
+            const icon = isCurrent ? "check" : "none"
+            const action = isCurrent ? () => undefined : () => this.doSetColor(color)
+            const cssColor = COLOR_LED_ON[color]
+            return ContextMenuData.item(icon, span(title(desc), style(`display: inline-block; width: 140px; height: 16px; background-color: ${cssColor}; margin-right: 8px`)), action)
+        }
+
+        const itemTransparent = ContextMenuData.item(
+            this._transparent ? "check" : "none",
+            s.TransparentWhenOff,
+            () => this.doSetTransparent(!this._transparent)
+        )
+
+        return [
+            ["mid", ContextMenuData.submenu("palette", s.Color, [
+                makeItemUseColor(s.ColorGreen, "green"),
+                makeItemUseColor(s.ColorRed, "red"),
+                makeItemUseColor(s.ColorYellow, "yellow"),
+                ContextMenuData.sep(),
+                itemTransparent,
+            ])],
+            ["mid", this.makeSetNameContextMenuItem(this._name, this.doSetName.bind(this))],
+        ]
+    }
+
+    public override keyDown(e: KeyboardEvent): void {
+        if (e.key === "Enter") {
+            this.runSetNameDialog(this._name, this.doSetName.bind(this))
+        } else {
+            super.keyDown(e)
+        }
+    }
+
+}
+
+
+
 export const OutputBarDef =
-    defineComponent(true, false, t.type({
-        type: t.literal("bar"),
-        display: t.keyof(OutputBarTypes, "OutputBarType"),
-        color: typeOrUndefined(t.keyof(LedColors, "LedColor")),
-        transparent: typeOrUndefined(t.boolean),
-        name: ComponentNameRepr,
-    }, "OutputBar"))
+    defineComponent("out", "bar", {
+        button: { imgWidth: 32 },
+        repr: {
+            display: t.keyof(OutputBarTypes, "OutputBarType"),
+            color: typeOrUndefined(t.keyof(LedColors, "LedColor")),
+            transparent: typeOrUndefined(t.boolean),
+            name: ComponentNameRepr,
+        },
+        valueDefaults: {
+            display: "h" as OutputBarType,
+            color: "green" as LedColor,
+            transparent: true,
+        },
+        size: { gridWidth: 1, gridHeight: 1 }, // overridden
+        makeNodes: () => ({
+            ins: {
+                I: [0, 0, "w"],
+            },
+        }),
+        initialValue: () => false as LogicValue,
+    })
 
 type OutputBarRepr = Repr<typeof OutputBarDef>
 
-const OutputBarDefaults = {
-    display: "h" as OutputBarType,
-    color: "green" as LedColor,
-    transparent: false,
-}
-const GRID_WIDTH = 10
-const GRID_HEIGHT = 2
 
+export class OutputBar extends OutputBarBase<OutputBarRepr, LogicValue> {
 
-export class OutputBar extends ComponentBase<OutputBarRepr, LogicValue> {
+    private _display: OutputBarType
 
-    private _display = OutputBarDefaults.display
-    private _color = OutputBarDefaults.color
-    private _transparent = OutputBarDefaults.transparent
-    private _name: ComponentName = undefined
+    public constructor(editor: LogicEditor, saved?: OutputBarRepr) {
+        super(editor, OutputBarDef, false, saved)
 
-    public constructor(editor: LogicEditor, savedData: OutputBarRepr | null) {
-        super(editor, false, savedData, { ins: [[undefined, 0, 0, "w"]] })
-        if (isNotNull(savedData)) {
-            this.doSetDisplay(savedData.display)
-            this._color = savedData.color ?? OutputBarDefaults.color
-            this._transparent = savedData.transparent ?? OutputBarDefaults.transparent
-            this._name = savedData.name
-        } else {
-            this.updateInputOffsetX()
-        }
+        this._display = this.doSetDisplay(saved?.display ?? OutputBarDef.aults.display)
     }
 
     public toJSON() {
@@ -76,21 +165,14 @@ export class OutputBar extends ComponentBase<OutputBarRepr, LogicValue> {
             type: "bar" as const,
             ...super.toJSONBase(),
             display: this._display,
-            color: this._color === OutputBarDefaults.color ? undefined : this._color,
-            transparent: this._transparent === OutputBarDefaults.transparent ? undefined : this._transparent,
-            name: this._name,
         }
     }
 
-    public get componentType() {
-        return "out" as const
-    }
-
-    public get unrotatedWidth() {
+    public override get unrotatedWidth() {
         return this.getWidthAndHeight()[0]
     }
 
-    public get unrotatedHeight() {
+    public override get unrotatedHeight() {
         return this.getWidthAndHeight()[1]
     }
 
@@ -112,52 +194,34 @@ export class OutputBar extends ComponentBase<OutputBarRepr, LogicValue> {
     }
 
     protected doRecalcValue(): LogicValue {
-        return this.inputs[0].value
+        return this.inputs.I.value
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
-        const input = this.inputs[0]
+    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
         const valueToShow = this.editor.options.hideOutputColors ? Unknown : this.value
+        const background = this._transparent && valueToShow === false
+            ? COLOR_TRANSPARENT
+            : ledColorForLogicValue(valueToShow, this._color)
 
-        g.strokeStyle = ctx.isMouseOver ? COLOR_MOUSE_OVER : COLOR_COMPONENT_BORDER
-        g.lineWidth = 4
-
-        const backColor = ledColorForLogicValue(valueToShow, this._color)
-
-        g.fillStyle = backColor
-        const [w, h] = this.getWidthAndHeight()
-        g.beginPath()
-        g.rect(this.posX - w / 2, this.posY - h / 2, w, h)
-        g.closePath()
-        if (!this._transparent || valueToShow !== false) {
-            g.fill()
-        }
-        g.stroke()
-
-        drawWireLineToComponent(g, input, this.posX - w / 2 - 2, this.posY)
-
-        ctx.inNonTransformedFrame(ctx => {
-            if (isDefined(this._name)) {
-                drawComponentName(g, ctx, this._name, toLogicValueRepr(valueToShow), this, true)
-            }
+        this.doDrawDefault(g, ctx, {
+            background,
+            skipLabels: true,
+            componentName: [this._name, true, toLogicValueRepr(valueToShow)],
         })
     }
 
-    private doSetName(name: ComponentName) {
-        this._name = name
-        this.setNeedsRedraw("name changed")
-    }
-
     public getWidthAndHeight() {
+        const w = 10
+        const h = 2
         switch (this._display) {
             case "h":
-                return [GRID_WIDTH * GRID_STEP, GRID_HEIGHT * GRID_STEP] as const
+                return [w * GRID_STEP, h * GRID_STEP] as const
             case "v":
-                return [GRID_HEIGHT * GRID_STEP, GRID_WIDTH * GRID_STEP] as const
+                return [h * GRID_STEP, w * GRID_STEP] as const
             case "px":
-                return [GRID_HEIGHT * GRID_STEP, GRID_HEIGHT * GRID_STEP] as const
+                return [h * GRID_STEP, h * GRID_STEP] as const
             case "PX":
-                return [GRID_WIDTH * GRID_STEP, GRID_WIDTH * GRID_STEP] as const
+                return [w * GRID_STEP, w * GRID_STEP] as const
         }
     }
 
@@ -184,24 +248,15 @@ export class OutputBar extends ComponentBase<OutputBarRepr, LogicValue> {
         this._display = newDisplay
         this.updateInputOffsetX()
         this.setNeedsRedraw("display mode changed")
-    }
-
-    private doSetColor(color: LedColor) {
-        this._color = color
-        this.setNeedsRedraw("color changed")
-    }
-
-    private doSetTransparent(transparent: boolean) {
-        this._transparent = transparent
-        this.setNeedsRedraw("transparent changed")
+        return newDisplay // to make compiler happy for constructor
     }
 
     private updateInputOffsetX() {
         const width = this.getWidthAndHeight()[0]
-        this.inputs[0].gridOffsetX = -pxToGrid(width / 2) - 2
+        this.inputs.I.gridOffsetX = -pxToGrid(width / 2) - 2
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
         const s = S.Components.OutputBar.contextMenu
 
         const makeItemShowAs = (desc: string, display: OutputBarType) => {
@@ -210,20 +265,6 @@ export class OutputBar extends ComponentBase<OutputBarRepr, LogicValue> {
             const action = isCurrent ? () => undefined : () => this.doSetDisplay(display)
             return ContextMenuData.item(icon, desc, action)
         }
-
-        const makeItemUseColor = (desc: string, color: LedColor) => {
-            const isCurrent = this._color === color
-            const icon = isCurrent ? "check" : "none"
-            const action = isCurrent ? () => undefined : () => this.doSetColor(color)
-            const cssColor = COLOR_LED_ON[color]
-            return ContextMenuData.item(icon, span(title(desc), style(`display: inline-block; width: 140px; height: 16px; background-color: ${cssColor}; margin-right: 8px`)), action)
-        }
-
-        const itemTransparent = ContextMenuData.item(
-            this._transparent ? "check" : "none",
-            s.TransparentWhenOff,
-            () => this.doSetTransparent(!this._transparent)
-        )
 
         return [
             ["mid", ContextMenuData.submenu("eye", s.Display, [
@@ -234,22 +275,10 @@ export class OutputBar extends ComponentBase<OutputBarRepr, LogicValue> {
                 ContextMenuData.sep(),
                 ContextMenuData.text(s.DisplayChangeDesc),
             ])],
-            ["mid", ContextMenuData.submenu("palette", s.Color, [
-                makeItemUseColor(s.ColorGreen, "green"),
-                makeItemUseColor(s.ColorRed, "red"),
-                makeItemUseColor(s.ColorYellow, "yellow"),
-                ContextMenuData.sep(),
-                itemTransparent,
-            ])],
-            ["mid", this.makeSetNameContextMenuItem(this._name, this.doSetName.bind(this))],
+            ...super.makeComponentSpecificContextMenuItems(),
         ]
     }
 
 
-    public override keyDown(e: KeyboardEvent): void {
-        if (e.key === "Enter") {
-            this.runSetNameDialog(this._name, this.doSetName.bind(this))
-        }
-    }
-
 }
+OutputBarDef.impl = OutputBar

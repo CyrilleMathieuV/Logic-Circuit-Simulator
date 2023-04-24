@@ -1,48 +1,39 @@
-import * as t from "io-ts"
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_MOUSE_OVER, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP } from "../drawutils"
+import { displayValuesFromArray } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { ArrayFillWith, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent, Repr } from "./Component"
-import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { FixedArray, FixedArrayFillWith, isUnknown, LogicValue, Unknown } from "../utils"
+import { ComponentBase, defineComponent, group, groupVertical, Repr } from "./Component"
+import { MenuItems } from "./Drawable"
+
 
 export const DecoderBCD4Def =
-    defineComponent(true, true, t.type({
-        type: t.literal("decoder-bcd4"),
-    }, "DecoderBCD4"))
-
-const INPUT = {
-    I: [0, 1, 2, 3] as const,
-}
-
-// const OUTPUT = {
-//     B: [0, 1, 2, 3, 5] as const,
-// }
-
-const GRID_WIDTH = 5
-const GRID_HEIGHT = 12
+    defineComponent("ic", "decoder-bcd4", {
+        button: { imgWidth: 50 },
+        valueDefaults: {},
+        size: { gridWidth: 5, gridHeight: 10 },
+        makeNodes: () => ({
+            ins: {
+                I: group("w", [
+                    [-4, -3, "A"],
+                    [-4, -1, "B"],
+                    [-4, +1, "C"],
+                    [-4, +3, "D"],
+                ]),
+            },
+            outs: {
+                Z: groupVertical("e", 4, 0, 5, 2),
+            },
+        }),
+        initialValue: () => FixedArrayFillWith(false as LogicValue, 5),
+    })
 
 type DecoderBCD4Repr = Repr<typeof DecoderBCD4Def>
 
-export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr, LogicValue[]> {
+export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr> {
 
-    public constructor(editor: LogicEditor, savedData: DecoderBCD4Repr | null) {
-        super(editor, ArrayFillWith(false, 5), savedData, {
-            ins: [
-                ["D", -4, -3, "w", "In"],
-                ["C", -4, -1, "w", "In"],
-                ["B", -4, +1, "w", "In"],
-                ["A", -4, +3, "w", "In"],
-            ],
-            outs: [
-                ["Z0", +4, -5, "e", "Z"],
-                ["Z1", +4, -3, "e", "Z"],
-                ["Z2", +4, -1, "e", "Z"],
-                ["Z3", +4, +1, "e", "Z"],
-                ["Z4", +4, +5, "e", "Z"],
-            ],
-        })
+    public constructor(editor: LogicEditor, saved?: DecoderBCD4Repr) {
+        super(editor, DecoderBCD4Def, saved)
     }
 
     public toJSON() {
@@ -52,33 +43,21 @@ export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr, LogicValue[]> {
         }
     }
 
-    public get componentType() {
-        return "ic" as const
-    }
-
-    public get unrotatedWidth() {
-        return GRID_WIDTH * GRID_STEP
-    }
-
-    public get unrotatedHeight() {
-        return GRID_HEIGHT * GRID_STEP
-    }
-
     public override makeTooltip() {
         return tooltipContent(undefined, mods(
             div(S.Components.DecoderBCD4.tooltip)
         ))
     }
 
-    protected doRecalcValue(): LogicValue[] {
-        const input = this.inputValues(INPUT.I)
+    protected doRecalcValue(): FixedArray<LogicValue, 5> {
+        const input = this.inputValues(this.inputs.I)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output
         if (isUnknown(value)) {
-            output = ArrayFillWith(Unknown, 5)
+            output = FixedArrayFillWith(Unknown, 5)
         } else {
-            output = (() => {
+            output = ((): FixedArray<LogicValue, 5> => {
                 switch (value) {
                     case 0: return [false, false, false, false, false]
                     case 1: return [false, false, false, false, true]
@@ -96,7 +75,7 @@ export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr, LogicValue[]> {
                     case 13: return [true, false, false, true, true]
                     case 14: return [true, false, true, false, false]
                     case 15: return [true, false, true, false, true]
-                    default: return ArrayFillWith(Unknown, 5)
+                    default: return FixedArrayFillWith(Unknown, 5)
                 }
             })()
         }
@@ -105,58 +84,12 @@ export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr, LogicValue[]> {
     }
 
     protected override propagateValue(newValue: LogicValue[]) {
-        this.outputs.forEach((output, i) => {
-            output.value = newValue[5 - i - 1]
-        })
+        this.outputValues(this.outputs.Z, newValue, true)
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
-
-        g.fillStyle = COLOR_BACKGROUND
-        g.strokeStyle = ctx.isMouseOver ? COLOR_MOUSE_OVER : COLOR_COMPONENT_BORDER
-        g.lineWidth = 4
-
-        const width = GRID_WIDTH * GRID_STEP
-        const height = GRID_HEIGHT * GRID_STEP
-        const left = this.posX - width / 2
-        const right = left + width
-
-        g.beginPath()
-        g.rect(this.posX - width / 2, this.posY - height / 2, width, height)
-        g.fill()
-        g.stroke()
-
-        for (const input of this.inputs) {
-            drawWireLineToComponent(g, input, left - 2, input.posYInParentTransform)
-        }
-
-        for (const output of this.outputs) {
-            drawWireLineToComponent(g, output, right + 2, output.posYInParentTransform)
-        }
-
-        ctx.inNonTransformedFrame(ctx => {
-            g.fillStyle = COLOR_COMPONENT_INNER_LABELS
-            g.font = "12px sans-serif"
-
-            this.inputs.forEach(input => {
-                drawLabel(ctx, this.orient, input.name, "w", left, input)
-            })
-            this.outputs.forEach(output => {
-                drawLabel(ctx, this.orient, output.name, "e", right, output)
-            })
-
-        })
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        return this.makeForceOutputsContextMenuItem()
     }
-
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const forceOutputItem = this.makeForceOutputsContextMenuItem()
-        if (isUndefined(forceOutputItem)) {
-            return []
-        }
-        return [
-            ["mid", forceOutputItem],
-        ]
-    }
-
 
 }
+DecoderBCD4Def.impl = DecoderBCD4

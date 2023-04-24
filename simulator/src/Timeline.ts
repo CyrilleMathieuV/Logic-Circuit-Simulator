@@ -23,7 +23,7 @@ export class Timeline {
     // per callback time, a list of callbacks
     private _schedule!: ScheduledCallbacks
     // allows canceling the next tick if (a) we pause, (b) we enqueue something before
-    private _nextTimeoutHandle: TimeoutHandle | undefined
+    private _nextTimeout: { handle: TimeoutHandle, tickTime: number } | undefined
     // when we are paused: the (absolute) start time of the pause
     private _pausedSince: Timestamp | undefined
     // remember last sent state to avoid fake events
@@ -41,9 +41,9 @@ export class Timeline {
         this._epochStart = this.unadjustedTime()
         this._sortedNextCallbackTimes = []
         this._schedule = {}
-        if (isDefined(this._nextTimeoutHandle)) {
-            clearTimeout(this._nextTimeoutHandle)
-            this._nextTimeoutHandle = undefined
+        if (isDefined(this._nextTimeout)) {
+            clearTimeout(this._nextTimeout.handle)
+            this._nextTimeout = undefined
         }
         this._pausedSince = undefined
     }
@@ -71,7 +71,7 @@ export class Timeline {
 
     public scheduleAt(time: Timestamp, desc: string, callback: Callback) {
         if (time < this.adjustedTime()) {
-            console.log(`WARNING Scheduling this (${this.adjustedTime() - time} ms), may behave strangely: ` + desc)
+            console.log(`WARNING Scheduling this in the past (${time - this.adjustedTime()} ms), may behave strangely: ` + desc)
         }
         // console.log(`Scheduling '${desc}' at ${time}`)
         if (time in this._schedule) {
@@ -109,21 +109,31 @@ export class Timeline {
 
     private rescheduleNextIfNeeded() {
         // schedules a timeout for the next wanted tick time
-        if (isDefined(this._nextTimeoutHandle)) {
-            clearTimeout(this._nextTimeoutHandle)
-        }
 
-        if (nonEmpty(this._sortedNextCallbackTimes)) {
+        if (this._sortedNextCallbackTimes.length === 0) {
+            // make sure nothing is scheduled
+            if (isDefined(this._nextTimeout)) {
+                clearTimeout(this._nextTimeout.handle)
+                this._nextTimeout = undefined
+            }
+
+        } else {
+            // check if we need to reschedule
             const tickTime = this._sortedNextCallbackTimes[0]
-            const waitDuration = tickTime - this.adjustedTime()
-            this._nextTimeoutHandle = setTimeout(
-                () => this.nextTickCallback(), waitDuration
-            )
+            if (isDefined(this._nextTimeout) && this._nextTimeout.tickTime <= tickTime) {
+                // already scheduled, or scheduled before
+                return
+            }
+            const now = this.adjustedTime()
+            const waitDuration = tickTime - now
+            // console.log(`Now is ${now}; scheduling next timeline event for ${tickTime} in ${waitDuration} ms`, this._sortedNextCallbackTimes)
+            const handle = setTimeout(() => this.nextTickCallback(), waitDuration)
+            this._nextTimeout = { handle, tickTime }
         }
     }
 
     private nextTickCallback() {
-        this._nextTimeoutHandle = undefined
+        this._nextTimeout = undefined
         // don't do anything if this was called while we are paused
         if (isDefined(this._pausedSince)) {
             return
@@ -133,15 +143,23 @@ export class Timeline {
 
     private handleNextTick() {
         // run all the handlers from the next tick
-        const wantedTime = this._sortedNextCallbackTimes.shift() ?? -1
-        if (wantedTime === -1) {
+        const wantedTime = this._sortedNextCallbackTimes.shift()
+        if (isUndefined(wantedTime)) {
             return
         }
+        const now = this.adjustedTime()
+        // console.log(`Running callbacks for ${wantedTime} (now is ${now})`)
         const callbacks = this._schedule[wantedTime]
         delete this._schedule[wantedTime]
+        const late = now - wantedTime
+        if (late > 100) {
+            // adjust time; probably, the page was hidden and then shown again or callbacks are running slowly
+            this._epochStart += late
+            // console.log(`Adjusted time by ${late} ms`)
+        }
+        // console.log(`Running ${callbacks.length} callbacks at logical time ${now} (wanted for ${wantedTime}, late by ${late} ms)`)
 
         const runCallback = () => {
-            // console.log(`Running ${callbacks.length} callbacks at real time ${this.adjustedTime()} (wanted for ${wantedTime})`)
             for (const [callback, desc] of callbacks) {
                 // console.log(`  -> Running '${desc}'`)
                 try {
@@ -165,9 +183,11 @@ export class Timeline {
         if (isDefined(this._pausedSince)) {
             return
         }
-        if (isDefined(this._nextTimeoutHandle)) {
-            clearTimeout(this._nextTimeoutHandle)
+        if (isDefined(this._nextTimeout)) {
+            clearTimeout(this._nextTimeout.handle)
+            this._nextTimeout = undefined
         }
+        // console.log(`Pausing timeline at ${this.adjustedTime()} ms`)
         this._pausedSince = this.unadjustedTime()
         this.fireStateChangedIfNeeded()
     }
@@ -178,6 +198,7 @@ export class Timeline {
         }
         this._epochStart += (this.unadjustedTime() - this._pausedSince)
         this._pausedSince = undefined
+        // console.log(`Resuming timeline at ${this.adjustedTime()} ms`)
         this.rescheduleNextIfNeeded()
         this.fireStateChangedIfNeeded()
     }

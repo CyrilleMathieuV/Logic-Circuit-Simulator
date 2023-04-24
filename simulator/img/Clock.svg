@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generator: Adobe Illustrator 26.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 100 50" style="enable-background:new 0 0 100 50;" xml:space="preserve">
-<style type="text/css">
-	.st0{fill:none;}
-	.st1{font-family:'Helvetica-Bold';}
-	.st2{font-size:24px;}
-	.st3{fill:none;stroke:#000000;stroke-width:4;stroke-miterlimit:10;}
-</style>
-<path class="st0" d="M-1-1h102v52H-1V-1z"/>
-<text transform="matrix(1 0 0 1 46.615 34.8719)" class="st1 st2">CLK</text>
-<polyline class="st3" points="-0.1,42.6 40.1,42.6 40.1,7.4 100.1,7.4 "/>
+	 viewBox="0 0 50 25" style="enable-background:new 0 0 50 25;" xml:space="preserve" fill="currentColor">
+<path d="M30.3,16.8c-0.6,0.6-1.5,0.9-2.5,0.9c-1.2,0-2.2-0.4-2.9-1.2c-0.7-0.8-1.1-1.9-1.1-3.3c0-1.5,0.4-2.7,1.2-3.5
+	c0.7-0.7,1.6-1.1,2.7-1.1c1.4,0,2.5,0.5,3.2,1.4c0.4,0.5,0.6,1.1,0.6,1.6h-1.8c-0.1-0.4-0.3-0.7-0.4-0.9c-0.3-0.4-0.8-0.6-1.4-0.6
+	c-0.7,0-1.2,0.3-1.5,0.8c-0.4,0.5-0.6,1.3-0.6,2.2s0.2,1.7,0.6,2.2s0.9,0.7,1.5,0.7s1.1-0.2,1.4-0.6c0.2-0.2,0.3-0.6,0.5-1h1.8
+	C31.3,15.4,30.9,16.2,30.3,16.8z"/>
+<path d="M32.8,8.8h1.8v7h4.2v1.5h-6V8.8z"/>
+<path d="M47.7,17.4h-2.3l-2.6-3.7l-0.9,0.9v2.9h-1.8V8.8h1.8v3.5l3.3-3.5h2.3L44,12.4L47.7,17.4z"/>
+<polygon points="0,22.2 0,20.2 19.1,20.2 19.1,2.8 50,2.8 50,4.8 21.1,4.8 21.1,22.2 "/>
 </svg>

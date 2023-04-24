@@ -1,6 +1,6 @@
 import { Component } from "./components/Component"
 import { Drawable } from "./components/Drawable"
-import { Dict, isDefined, isNotNull, isUndefined } from "./utils"
+import { Dict, isDefined, isUndefined } from "./utils"
 
 export class RedrawManager {
 
@@ -29,7 +29,7 @@ export class RedrawManager {
             const linkedComps = this._canvasRedrawReasons[reason]!
             reasonParts.push(" (", String(linkedComps.length), "×)", ": ")
             for (const comp of linkedComps) {
-                if (isNotNull(comp)) {
+                if (comp !== null) {
                     const compAny = comp as any
                     reasonParts.push(compAny.constructor?.name ?? "Component")
                     if (isDefined(compAny.type)) {

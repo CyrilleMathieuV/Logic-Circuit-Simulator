@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generator: Adobe Illustrator 26.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 1792 1792" style="enable-background:new 0 0 1792 1792;" xml:space="preserve">
-<style type="text/css">
-	.st0{fill:none;}
-	.st1{fill:#0000F4;}
-	.st2{font-family:'Helvetica-Bold';}
-	.st3{font-size:666.667px;}
-	.st4{stroke:#000000;stroke-width:4.966;}
-	.st5{fill:none;stroke:#000000;stroke-width:180;}
-</style>
-<path class="st0" d="M-1-1h582v402H-1V-1z"/>
-<text transform="matrix(1 0 0 1 637.7435 1129.2817)" class="st1 st2 st3">&apos;X&apos;</text>
-<path class="st4" d="M2.5,286.6h430.9v95H2.5V286.6z M-0.6,478.2h430.9v95H-0.6V478.2z M0.5,1416.5h430.9v95H0.5V1416.5z
-	 M2.5,1034.2h430.9v95H2.5V1034.2z"/>
-<path class="st4" d="M2.5,659.1h430.9v95H2.5V659.1z M2.5,1222h430.9v95H2.5V1222z M2.1,846.1h430.9v95H2.1V846.1z"/>
-<rect x="462.2" y="139.4" class="st5" width="1106.1" height="1516.3"/>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1792 1792" style="enable-background:new 0 0 1792 1792;" xml:space="preserve" fill="currentColor">
+	<g fill="#8888ff" fill-opacity="1">
+		<path d="M714.4,845.3H611v-76.8c0-37.1,8.8-66.1,26.4-86.9c17.6-20.8,42.8-34.4,75.6-41v37.9
+		c-25,7.3-41.6,20.9-49.9,40.8c-4.6,10.7-6.4,20.8-5.5,30.2h56.8V845.3z" />
+		<path d="M1256.7,1182.5h-136.2l-102-182.8l-107.8,182.8H780.3L952.9,909L788.7,645.7h134l95.8,174.5l98.3-174.5h129.7
+		l-164.3,259L1256.7,1182.5z" />
+		<path d="M1417.7,724.3c0,36.7-8.9,65.6-26.8,86.7c-17.8,21.1-42.9,34.8-75.2,41.2v-38.2c23.8-7.5,40.2-20.3,49.2-38.2
+		c4.9-10.7,6.9-21.5,6.2-32.4h-57.2v-95.8h103.8V724.3z" />
+	</g>
+	<path d="M372.2,49.4v234.7H0v100h372.2v91.6H-3.1v100h375.3v80.9H0v100h372.2v87H-0.4v100h372.6v88.1H0v100h372.2v87.8H0v100h372.2
+	v94.5H-2v100h374.2v231.7h1286.1V49.4H372.2z M1478.3,1565.7H552.2V229.4h926.1V1565.7z" />
+	<rect x="2151.4" y="1368.3" style="fill:none;" width="0" height="4.1" />
 </svg>

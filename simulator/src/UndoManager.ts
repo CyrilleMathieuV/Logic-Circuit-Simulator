@@ -1,11 +1,13 @@
 import { LogicEditor } from "./LogicEditor"
 import { PersistenceManager } from "./PersistenceManager"
+import { isDefined, RepeatFunction } from "./utils"
 
 const MAX_UNDO_SNAPSHOTS = 100
 
 type Snapshot = {
     time: number
     workspace: string
+    repeatAction?: RepeatFunction
 }
 
 export class UndoManager {
@@ -22,18 +24,20 @@ export class UndoManager {
         return this._undoSnapshots.length > 1
     }
 
-    public canRedo() {
-        return this._redoSnapshots.length > 0
+    public canRedoOrRepeat() {
+        return this._redoSnapshots.length > 0 ||
+            (this._undoSnapshots.length > 0 &&
+                isDefined(this._undoSnapshots[this._undoSnapshots.length - 1].repeatAction))
     }
 
-    public takeSnapshot() {
+    public takeSnapshot(repeatAction?: RepeatFunction) {
         const now = Date.now()
         // const nowStr = new Date(now).toISOString()
         // console.log("Taking snapshot at " + nowStr)
 
         const workspace = this.editor.save()
         const workspaceStr = PersistenceManager.stringifyWorkspace(workspace, true)
-        this._undoSnapshots.push({ time: now, workspace: workspaceStr })
+        this._undoSnapshots.push({ time: now, workspace: workspaceStr, repeatAction })
         while (this._undoSnapshots.length > MAX_UNDO_SNAPSHOTS) {
             this._undoSnapshots.shift()
         }
@@ -55,14 +59,22 @@ export class UndoManager {
         // this.dump()
     }
 
-    public redo() {
-        if (!this.canRedo()) {
-            console.log("Nothing to redo")
+    public redoOrRepeat() {
+        if (!this.canRedoOrRepeat()) {
+            console.log("Nothing to redo or repeat")
             return
         }
-        const snapshot = this._redoSnapshots.pop()!
-        this._undoSnapshots.push(snapshot)
-        this.loadSnapshot(snapshot)
+        const snapshot = this._redoSnapshots.pop()
+        if (isDefined(snapshot)) {
+            this._undoSnapshots.push(snapshot)
+            this.loadSnapshot(snapshot)
+        } else {
+            const repeatAction = this._undoSnapshots[this._undoSnapshots.length - 1].repeatAction
+            if (isDefined(repeatAction)) {
+                const newRepeatAction = repeatAction()
+                this.takeSnapshot(newRepeatAction)
+            }
+        }
         // this.dump()
     }
 
@@ -84,6 +96,5 @@ export class UndoManager {
     private loadSnapshot(snapshot: Snapshot) {
         PersistenceManager.doLoadFromJson(this.editor, snapshot.workspace, true)
     }
-
 
 }

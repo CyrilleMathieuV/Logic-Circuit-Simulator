@@ -8,7 +8,7 @@
     <!-- Has to appear *after* the other bootstrap styles -->
     <style id="inlineStyle"></style>
 
-    <div class="list-group" id="leftToolbar" style="flex:none; min-width: 50px; max-width: 60px;overflow-y: scroll;display: none;">
+    <div id="leftToolbar" style="flex:none; min-width: 50px; max-width: 60px;overflow-y: scroll;display: none;">
     </div>
 
     <div id="canvas-sim" style="flex: auto; position: relative; display: flex; align-items: stretch; min-width: 0;">
@@ -25,33 +25,33 @@
             <div class="sim-toolbar-right" style="display: none;" id="rightToolbarContainer">
 
                 <div class="btn-group-vertical">
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right active sim-modification-tool" tool="edit" id="editToolButton" title="Compose ou modifie le circuit logique" style="display:none">
+                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right active sim-modification-tool" tool="edit" id="editToolButton" style="display:none">
                         <i class="svgicon" data-icon="edit"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="delete" 
                             id="deleteToolButton"
-                            title="Supprime des éléments du circuit logique" style="display:none">
+                            style="display:none">
                         <i class="svgicon" data-icon="trash"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="move"
                             id="moveToolButton"
-                            title="Déplace tout le circuit logique" style="display:none">
+                            style="display:none">
                         <i class="svgicon" data-icon="move"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="save" id="saveToolButton" title="Télécharge le circuit actuel" style="display:none">
+                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="save" id="saveToolButton" style="display:none">
                         <i class="svgicon" data-icon="download"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="screenshot" 
                             id="screenshotToolButton"
-                            title="Télécharge le circuit actuel sous forme d’image" style="display:none">
+                            style="display:none">
                         <i class="svgicon" data-icon="screenshot"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="open"
                             id="openToolButton"
-                            title="Ouvre un circuit précédemment téléchargé" style="display:none">
+                            style="display:none">
                         <i class="svgicon" data-icon="open"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="reset" id="resetToolButton" title="Réinitialise l’état de ce circuit logique">
+                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="reset" id="resetToolButton">
                         <i class="svgicon" data-icon="reset"></i>
                         <span id="resetToolButtonCaption"></span>
                         <span id="resetToolButtonDummyCaption" style="display:none; margin-left: -20px">&nbsp;</span>

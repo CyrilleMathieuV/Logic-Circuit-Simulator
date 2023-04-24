@@ -4,7 +4,6 @@
 
 #logicEditorRoot {
   font-family: 'Roboto', sans-serif;
-  /* border: 3px solid red; */
 }
 
 /* TODO would that go in some global CSS?
@@ -29,13 +28,19 @@ logic-editor:not(:defined) {
   display: inline-flex;
 }
 
+#leftToolbar {
+  display: flex;
+  flex-direction: column;
+  color: black;
+}
+
 .leftToolbarHeader {
   font-size: 80%;
   font-weight: bold;
-  background-color: lightgray;
   padding: 1px;
   /* word-break: break-all; */
   text-align: center;
+  background-color: lightgray;
 }
 
 .leftToolbarMore {
@@ -46,6 +51,23 @@ logic-editor:not(:defined) {
   cursor: pointer;
   opacity: 0.6;
   color: rgb(33, 33, 33);
+}
+
+.dark .leftToolbarHeader {
+  background-color: rgb(56, 56, 56);
+}
+
+.dark #leftToolbar {
+  background-color: #5e5e5e;
+  color: rgb(181, 181, 181);
+}
+
+.dark .leftToolbarMore {
+  color: rgb(204, 204, 204);
+}
+
+.dark #leftToolbar .list-group-item {
+  background-color: #5e5e5e;
 }
 
 .sim-toolbar-right {
@@ -115,6 +137,11 @@ logic-editor:not(:defined) {
 .truth-table tr.current {
   background: grey;
   color: rgb(255, 192, 8);
+}
+
+.truth-table th:last-child,
+.truth-table td:last-child {
+  border-left: 1px solid grey;
 }
 
 /* Tooltips by Popper */
@@ -334,4 +361,24 @@ i.svgicon svg {
 
 i.svgicon path {
   fill: currentColor;
+}
+
+
+
+i.svgimg svg {
+  width: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  font-style: normal;
+}
+
+i.svgimg {
+  color: black;
+}
+
+.dark i.svgimg {
+  color: rgb(230, 230, 230);
+}
+
+.dark .gate-label {
+  color: rgb(200, 200, 200);
 }

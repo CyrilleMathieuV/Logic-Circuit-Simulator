@@ -1,5 +1,4 @@
-import * as t from "io-ts"
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, drawWireLineToComponent, GRID_STEP } from "../drawutils"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
@@ -8,33 +7,28 @@ import { ComponentBase, defineComponent, Repr } from "./Component"
 import { DrawContext } from "./Drawable"
 
 export const TriStateBufferDef =
-    defineComponent(true, true, t.type({
-        type: t.literal("TRI"),
-    }, "TriStateBuffer"))
-
-const enum INPUT {
-    In, Enable,
-}
-
-const enum OUTPUT {
-    Out
-}
-
-const GRID_WIDTH = 7
-const GRID_HEIGHT = 4
+    defineComponent("gate", "TRI", {
+        button: { imgWidth: 50 },
+        valueDefaults: {},
+        size: { gridWidth: 7, gridHeight: 4 },
+        makeNodes: () => ({
+            ins: {
+                In: [-4, 0, "w"],
+                E: [0, -3, "n", "E (Enable)"],
+            },
+            outs: {
+                Out: [+4, 0, "e"],
+            },
+        }),
+        initialValue: () => HighImpedance as LogicValue,
+    })
 
 type TriStateBufferRepr = Repr<typeof TriStateBufferDef>
 
-export class TriStateBuffer extends ComponentBase<TriStateBufferRepr, LogicValue> {
+export class TriStateBuffer extends ComponentBase<TriStateBufferRepr> {
 
-    public constructor(editor: LogicEditor, savedData: TriStateBufferRepr | null) {
-        super(editor, HighImpedance, savedData, {
-            ins: [
-                ["In", -4, 0, "w"],
-                ["E (Enable)", 0, -3, "n"],
-            ],
-            outs: [["Out", +4, 0, "e"]],
-        })
+    public constructor(editor: LogicEditor, saved?: TriStateBufferRepr) {
+        super(editor, TriStateBufferDef, saved)
     }
 
     public toJSON() {
@@ -44,18 +38,6 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr, LogicValue
         }
     }
 
-    public get componentType() {
-        return "gate" as const
-    }
-
-    public get unrotatedWidth() {
-        return GRID_WIDTH * GRID_STEP
-    }
-
-    public get unrotatedHeight() {
-        return GRID_HEIGHT * GRID_STEP
-    }
-
     public override makeTooltip() {
         return tooltipContent(undefined, mods(
             div(S.Components.TriStateBuffer.tooltip) // TODO
@@ -63,14 +45,14 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr, LogicValue
     }
 
     protected doRecalcValue(): LogicValue {
-        const en = this.inputs[INPUT.Enable].value
+        const en = this.inputs.E.value
         if (isUnknown(en) || isHighImpedance(en)) {
             return Unknown
         }
         if (!en) {
             return HighImpedance
         }
-        const i = this.inputs[INPUT.In].value
+        const i = this.inputs.In.value
         if (isHighImpedance(i)) {
             return Unknown
         }
@@ -78,14 +60,13 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr, LogicValue
     }
 
     protected override propagateValue(newValue: LogicValue) {
-        this.outputs[OUTPUT.Out].value = newValue
+        this.outputs.Out.value = newValue
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
 
-
-        const width = GRID_WIDTH * GRID_STEP
-        const height = GRID_HEIGHT * GRID_STEP
+        const width = this.unrotatedWidth
+        const height = this.unrotatedHeight
         const left = this.posX - width / 2
         // const right = left + width
         const top = this.posY - height / 2
@@ -95,7 +76,7 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr, LogicValue
             const frameWidth = 2
             const frameMargin = 2
             g.lineWidth = frameWidth
-            g.strokeStyle = COLOR_MOUSE_OVER
+            g.strokeStyle = ctx.borderColor
             g.beginPath()
             g.rect(
                 left - frameWidth - frameMargin,
@@ -106,12 +87,11 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr, LogicValue
             g.stroke()
         }
 
-
         g.fillStyle = COLOR_BACKGROUND
         g.strokeStyle = COLOR_COMPONENT_BORDER
         g.lineWidth = 3
 
-        const gateWidth = (2 * Math.max(2, this.inputs.length)) * GRID_STEP
+        const gateWidth = (2 * Math.max(2, this.inputs._all.length)) * GRID_STEP
         const gateLeft = this.posX - gateWidth / 2
         const gateRight = this.posX + gateWidth / 2
 
@@ -122,10 +102,10 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr, LogicValue
         g.closePath()
         g.stroke()
 
-        drawWireLineToComponent(g, this.inputs[INPUT.In], gateLeft - 1, this.inputs[INPUT.In].posYInParentTransform)
-        drawWireLineToComponent(g, this.inputs[INPUT.Enable], this.inputs[INPUT.Enable].posXInParentTransform, this.posY - height / 4 - 1)
-        drawWireLineToComponent(g, this.outputs[OUTPUT.Out], gateRight + 1, this.posY)
+        drawWireLineToComponent(g, this.inputs.In, gateLeft - 1, this.inputs.In.posYInParentTransform)
+        drawWireLineToComponent(g, this.inputs.E, this.inputs.E.posXInParentTransform, this.posY - height / 4 - 1)
+        drawWireLineToComponent(g, this.outputs.Out, gateRight + 1, this.posY)
     }
 
-
 }
+TriStateBufferDef.impl = TriStateBuffer
