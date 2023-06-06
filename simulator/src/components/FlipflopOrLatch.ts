@@ -1,10 +1,9 @@
 import * as t from "io-ts"
-import { colorForBoolean, COLOR_BACKGROUND_INVALID, COLOR_COMPONENT_BORDER, drawValueText } from "../drawutils"
-import { LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND_INVALID, COLOR_COMPONENT_BORDER, colorForBoolean, drawValueText } from "../drawutils"
 import { S } from "../strings"
-import { EdgeTrigger, isUndefined, LogicValue, LogicValueRepr, toLogicValue, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { ComponentBase, defineAbstractComponent, InstantiatedComponentDef, NodesIn, NodesOut, Repr } from "./Component"
-import { ContextMenuData, DrawContext, MenuItems } from "./Drawable"
+import { EdgeTrigger, LogicValue, LogicValueRepr, Unknown, toLogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
+import { ComponentBase, InstantiatedComponentDef, NodesIn, NodesOut, Repr, defineAbstractComponent } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 
 
 export const FlipflopOrLatchDef =
@@ -29,10 +28,10 @@ export const FlipflopOrLatchDef =
             }
         },
         initialValue: (saved, defaults): [LogicValue, LogicValue] => {
-            if (isUndefined(saved)) {
+            if (saved === undefined) {
                 return [false, true]
             }
-            const state = isUndefined(saved.state) ? defaults.state : toLogicValue(saved.state)
+            const state = saved.state === undefined ? defaults.state : toLogicValue(saved.state)
             return [state, LogicValue.invert(state)]
         },
     })
@@ -51,8 +50,8 @@ export abstract class FlipflopOrLatch<TRepr extends FlipflopOrLatchRepr> extends
     protected _showContent: boolean
     protected _isInInvalidState = false
 
-    protected constructor(editor: LogicEditor, SubclassDef: InstantiatedComponentDef<TRepr, FlipflopOrLatchValue>, saved?: TRepr) {
-        super(editor, SubclassDef, saved)
+    protected constructor(parent: DrawableParent, SubclassDef: InstantiatedComponentDef<TRepr, FlipflopOrLatchValue>, saved?: TRepr) {
+        super(parent, SubclassDef, saved)
         this._showContent = saved?.showContent ?? FlipflopOrLatchDef.aults.showContent
     }
 
@@ -75,11 +74,11 @@ export abstract class FlipflopOrLatch<TRepr extends FlipflopOrLatchRepr> extends
         this.setNeedsRedraw("show content changed")
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         this.doDrawDefault(g, ctx, {
             background: this._isInInvalidState ? COLOR_BACKGROUND_INVALID : undefined,
             drawLabels: () => {
-                if (this._showContent && !this.editor.options.hideMemoryContent) {
+                if (this._showContent && !this.parent.editor.options.hideMemoryContent) {
                     FlipflopOrLatch.drawStoredValue(g, this.value[0], this.posX, this.posY, 26, false)
                 }
             },
@@ -87,7 +86,7 @@ export abstract class FlipflopOrLatch<TRepr extends FlipflopOrLatchRepr> extends
     }
 
 
-    public static drawStoredValueFrame(g: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, swapHeightWidth: boolean) {
+    public static drawStoredValueFrame(g: GraphicsRendering, x: number, y: number, width: number, height: number, swapHeightWidth: boolean) {
         if (swapHeightWidth) {
             [width, height] = [height, width]
         }
@@ -99,7 +98,7 @@ export abstract class FlipflopOrLatch<TRepr extends FlipflopOrLatchRepr> extends
         g.stroke()
     }
 
-    public static drawStoredValue(g: CanvasRenderingContext2D, value: LogicValue, x: number, y: number, cellHeight: number, swapHeightWidth: boolean) {
+    public static drawStoredValue(g: GraphicsRendering, value: LogicValue, x: number, y: number, cellHeight: number, swapHeightWidth: boolean) {
         g.fillStyle = colorForBoolean(value)
         FlipflopOrLatch.drawStoredValueFrame(g, x, y, 20, cellHeight, swapHeightWidth)
         drawValueText(g, value, x, y, { small: cellHeight < 18 })
@@ -155,8 +154,8 @@ export abstract class Flipflop<
     protected _lastClock: LogicValue = Unknown
     protected _trigger: EdgeTrigger
 
-    protected constructor(editor: LogicEditor, SubclassDef: InstantiatedComponentDef<TRepr, FlipflopOrLatchValue>, saved?: TRepr) {
-        super(editor, SubclassDef, saved)
+    protected constructor(parent: DrawableParent, SubclassDef: InstantiatedComponentDef<TRepr, FlipflopOrLatchValue>, saved?: TRepr) {
+        super(parent, SubclassDef, saved)
         this._trigger = saved?.trigger ?? FlipflopBaseDef.aults.trigger
     }
 
@@ -219,7 +218,7 @@ export abstract class Flipflop<
     }
 
     public makeStateAfterClock(): [LogicValue, LogicValue] {
-        return this.makeStateFromMainValue(this.doRecalcValueAfterClock())
+        return this.makeStateFromMainValue(LogicValue.filterHighZ(this.doRecalcValueAfterClock()))
     }
 
     protected abstract doRecalcValueAfterClock(): LogicValue
@@ -232,12 +231,12 @@ export abstract class Flipflop<
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
 
         const icon = this._showContent ? "check" : "none"
-        const toggleShowContentItem = ContextMenuData.item(icon, S.Components.Generic.contextMenu.ShowContent,
+        const toggleShowContentItem = MenuData.item(icon, S.Components.Generic.contextMenu.ShowContent,
             () => this.doSetShowContent(!this._showContent))
 
         return [
             ...makeTriggerItems(this._trigger, this.doSetTrigger.bind(this)),
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             ["mid", toggleShowContentItem],
             ...this.makeForceOutputsContextMenuItem(true),
         ]
@@ -255,7 +254,7 @@ export function makeTriggerItems(currentTrigger: EdgeTrigger, handler: (trigger:
         const caption = s.TriggerOn + " " + desc
         const action = isCurrent ? () => undefined :
             () => handler(trigger)
-        return ContextMenuData.item(icon, caption, action)
+        return MenuData.item(icon, caption, action)
     }
 
     return [

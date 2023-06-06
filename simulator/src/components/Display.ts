@@ -1,15 +1,15 @@
 import * as t from "io-ts"
-import { colorComps, colorForFraction, ColorString, COLOR_UNKNOWN, displayValuesFromArray, formatWithRadix, useCompact } from "../drawutils"
+import { COLOR_UNKNOWN, ColorString, colorComps, colorForFraction, displayValuesFromArray, formatWithRadix, useCompact } from "../drawutils"
 import { b, div, emptyMod, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isUnknown, Mode, typeOrUndefined, Unknown } from "../utils"
-import { ComponentName, ComponentNameRepr, defineParametrizedComponent, groupVertical, param, ParametrizedComponentBase, Repr, ResolvedParams } from "./Component"
-import { ContextMenuData, DrawContext, MenuItems, Orientation } from "./Drawable"
+import { InteractionResult, Mode, Unknown, isUnknown, typeOrUndefined } from "../utils"
+import { ComponentName, ComponentNameRepr, ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupVertical, param } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 
-export const OutputDisplayDef =
-    defineParametrizedComponent("out", "display", true, false, {
+export const DisplayDef =
+    defineParametrizedComponent("display", true, false, {
         variantName: ({ bits }) => `display-${bits}`,
+        idPrefix: "disp",
         button: { imgWidth: 32 },
         repr: {
             bits: typeOrUndefined(t.number),
@@ -44,44 +44,43 @@ export const OutputDisplayDef =
     })
 
 
-export type OutputDisplayRepr = Repr<typeof OutputDisplayDef>
-export type OutputDisplayParams = ResolvedParams<typeof OutputDisplayDef>
+export type DisplayRepr = Repr<typeof DisplayDef>
+export type DisplayParams = ResolvedParams<typeof DisplayDef>
 
 
-export class OutputDisplay extends ParametrizedComponentBase<OutputDisplayRepr> {
+export class Display extends ParametrizedComponentBase<DisplayRepr> {
 
     public readonly numBits: number
     private _name: ComponentName
     private _radix: number
     private _showAsUnknown: boolean
 
-    public constructor(editor: LogicEditor, params: OutputDisplayParams, saved?: OutputDisplayRepr) {
-        super(editor, OutputDisplayDef.with(params), saved)
+    public constructor(parent: DrawableParent, params: DisplayParams, saved?: DisplayRepr) {
+        super(parent, DisplayDef.with(params), saved)
 
         this.numBits = params.numBits
 
         this._name = saved?.name ?? undefined
-        this._radix = saved?.radix ?? OutputDisplayDef.aults.radix
-        this._showAsUnknown = saved?.showAsUnknown ?? OutputDisplayDef.aults.showAsUnknown
+        this._radix = saved?.radix ?? DisplayDef.aults.radix
+        this._showAsUnknown = saved?.showAsUnknown ?? DisplayDef.aults.showAsUnknown
     }
 
     public toJSON() {
         return {
-            type: "display" as const,
-            bits: this.numBits === OutputDisplayDef.aults.bits ? undefined : this.numBits,
             ...this.toJSONBase(),
+            bits: this.numBits === DisplayDef.aults.bits ? undefined : this.numBits,
             name: this._name,
-            radix: this._radix === OutputDisplayDef.aults.radix ? undefined : this._radix,
-            showAsUnknown: this._showAsUnknown === OutputDisplayDef.aults.showAsUnknown ? undefined : this._showAsUnknown,
+            radix: this._radix === DisplayDef.aults.radix ? undefined : this._radix,
+            showAsUnknown: this._showAsUnknown === DisplayDef.aults.showAsUnknown ? undefined : this._showAsUnknown,
         }
     }
 
     private get showAsUnknown() {
-        return this._showAsUnknown || this.editor.options.hideOutputColors
+        return this._showAsUnknown || this.parent.editor.options.hideOutputColors
     }
 
     public override makeTooltip() {
-        const s = S.Components.OutputDisplay.tooltip
+        const s = S.Components.Display.tooltip
         const radixStr = (() => {
             switch (this._radix) {
                 case 2: return s.RadixBinary
@@ -106,7 +105,7 @@ export class OutputDisplay extends ParametrizedComponentBase<OutputDisplayRepr> 
         return displayValuesFromArray(this.inputValues(this.inputs.In), false)
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         const [binaryStringRep, value] = this.value
         const maxValue = (1 << this.inputs.In.length) - 1
         const background = isUnknown(value) || this.showAsUnknown ? COLOR_UNKNOWN : colorForFraction(value / maxValue)
@@ -141,18 +140,19 @@ export class OutputDisplay extends ParametrizedComponentBase<OutputDisplayRepr> 
 
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
-        if (super.mouseDoubleClicked(e)) {
-            return true // already handled
+        const superChange = super.mouseDoubleClicked(e)
+        if (superChange.isChange) {
+            return superChange // already handled
         }
-        const mode = this.editor.mode
+        const mode = this.parent.mode
         if (mode >= Mode.FULL && e.altKey) {
             this.doSetShowAsUnknown(!this._showAsUnknown)
-            return true
+            return InteractionResult.SimpleChange
         } else if (mode >= Mode.DESIGN) {
             this.doSetRadix(this._radix === 10 ? 16 : 10)
-            return true
+            return InteractionResult.SimpleChange
         }
-        return false
+        return InteractionResult.NoChange
     }
 
     private doSetName(name: ComponentName) {
@@ -172,12 +172,12 @@ export class OutputDisplay extends ParametrizedComponentBase<OutputDisplayRepr> 
 
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
 
-        const s = S.Components.OutputDisplay.contextMenu
+        const s = S.Components.Display.contextMenu
         const makeItemShowAs = (desc: string, handler: () => void, isCurrent: boolean,) => {
             const icon = isCurrent ? "check" : "none"
             const caption = s.DisplayAs + " " + desc
             const action = isCurrent ? () => undefined : handler
-            return ContextMenuData.item(icon, caption, action)
+            return MenuData.item(icon, caption, action)
         }
 
         const makeItemShowRadix = (radix: number, desc: string) => {
@@ -195,15 +195,15 @@ export class OutputDisplay extends ParametrizedComponentBase<OutputDisplayRepr> 
             ["mid", makeItemShowRadix(8, s.DisplayAsOctal)],
             ["mid", makeItemShowRadix(16, s.DisplayAsHexadecimal)],
             ["mid", makeItemShowAs(s.DisplayAsUnknown, () => this.doSetShowAsUnknown(!this._showAsUnknown), this._showAsUnknown)],
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numBits, "bits"),
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             ["mid", this.makeSetNameContextMenuItem(this._name, this.doSetName.bind(this))],
         ]
     }
 
     public override keyDown(e: KeyboardEvent): void {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !e.altKey) {
             this.runSetNameDialog(this._name, this.doSetName.bind(this))
         } else {
             super.keyDown(e)
@@ -211,7 +211,7 @@ export class OutputDisplay extends ParametrizedComponentBase<OutputDisplayRepr> 
     }
 
 }
-OutputDisplayDef.impl = OutputDisplay
+DisplayDef.impl = Display
 
 function repeatString(s: string, n: number) {
     let result = ""

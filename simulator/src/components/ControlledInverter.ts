@@ -1,16 +1,16 @@
 import * as t from "io-ts"
-import { circle, colorForBoolean, COLOR_COMPONENT_BORDER, COLOR_UNKNOWN } from "../drawutils"
+import { COLOR_COMPONENT_BORDER, COLOR_UNKNOWN, circle, colorForBoolean } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { ArrayFillWith, isHighImpedance, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
-import { defineParametrizedComponent, groupVertical, param, ParametrizedComponentBase, Repr, ResolvedParams } from "./Component"
-import { DrawContext, MenuItems } from "./Drawable"
+import { ArrayFillWith, LogicValue, Unknown, isHighImpedance, isUnknown, typeOrUndefined } from "../utils"
+import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupVertical, param } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuItems } from "./Drawable"
 
 
-export const SwitchedInverterDef =
-    defineParametrizedComponent("ic", "switched-inverter", true, true, {
-        variantName: ({ bits }) => `switched-inverter-${bits}`,
+export const ControlledInverterDef =
+    defineParametrizedComponent("cnot-array", true, true, {
+        variantName: ({ bits }) => `cnot-array-${bits}`,
+        idPrefix: "cnot",
         button: { imgWidth: 50 },
         repr: {
             bits: typeOrUndefined(t.number),
@@ -29,47 +29,46 @@ export const SwitchedInverterDef =
         }),
         makeNodes: ({ numBits, gridHeight }) => ({
             ins: {
-                I: groupVertical("w", -3, 0, numBits),
+                In: groupVertical("w", -3, 0, numBits),
                 S: [0, -(gridHeight / 2 + 1), "n"],
             },
             outs: {
-                O: groupVertical("e", +3, 0, numBits),
+                Out: groupVertical("e", +3, 0, numBits),
             },
         }),
         initialValue: (saved, { numBits }) => ArrayFillWith<LogicValue>(false, numBits),
     })
 
 
-export type SwitchedInverterRepr = Repr<typeof SwitchedInverterDef>
-export type SwitchedInverterParams = ResolvedParams<typeof SwitchedInverterDef>
+export type ControlledInverterRepr = Repr<typeof ControlledInverterDef>
+export type ControlledInverterParams = ResolvedParams<typeof ControlledInverterDef>
 
 
-export class SwitchedInverter extends ParametrizedComponentBase<SwitchedInverterRepr> {
+export class ControlledInverter extends ParametrizedComponentBase<ControlledInverterRepr> {
 
     public readonly numBits: number
 
-    public constructor(editor: LogicEditor, params: SwitchedInverterParams, saved?: SwitchedInverterRepr) {
-        super(editor, SwitchedInverterDef.with(params), saved)
+    public constructor(parent: DrawableParent, params: ControlledInverterParams, saved?: ControlledInverterRepr) {
+        super(parent, ControlledInverterDef.with(params), saved)
         this.numBits = params.numBits
     }
 
     public toJSON() {
         return {
-            type: "switched-inverter" as const,
-            bits: this.numBits === SwitchedInverterDef.aults.bits ? undefined : this.numBits,
             ...this.toJSONBase(),
+            bits: this.numBits === ControlledInverterDef.aults.bits ? undefined : this.numBits,
         }
     }
 
     public override makeTooltip() {
-        const s = S.Components.SwitchedInverter.tooltip
+        const s = S.Components.ControlledInverter.tooltip
         return tooltipContent(s.title, mods(
             div(s.desc)
         ))
     }
 
     protected doRecalcValue(): LogicValue[] {
-        const input = this.inputValues(this.inputs.I)
+        const input = this.inputValues(this.inputs.In)
         const switch_ = this.inputs.S.value
 
         if (isUnknown(switch_) || isHighImpedance(switch_)) {
@@ -84,10 +83,10 @@ export class SwitchedInverter extends ParametrizedComponentBase<SwitchedInverter
     }
 
     protected override propagateValue(newValue: LogicValue[]) {
-        this.outputValues(this.outputs.O, newValue)
+        this.outputValues(this.outputs.Out, newValue)
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         this.doDrawDefault(g, ctx, {
             skipLabels: true,
             drawInside: ({ top, left, right }) => {
@@ -122,4 +121,4 @@ export class SwitchedInverter extends ParametrizedComponentBase<SwitchedInverter
     }
 
 }
-SwitchedInverterDef.impl = SwitchedInverter
+ControlledInverterDef.impl = ControlledInverter

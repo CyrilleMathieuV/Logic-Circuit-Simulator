@@ -1,17 +1,17 @@
 import * as t from "io-ts"
 import { COLOR_BACKGROUND, displayValuesFromArray, drawWireLineToComponent, strokeAsWireLine, useCompact } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { ArrayFillWith, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
-import { defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param, ParametrizedComponentBase, Repr, ResolvedParams } from "./Component"
-import { ContextMenuData, DrawContext, MenuItems } from "./Drawable"
+import { ArrayFillWith, LogicValue, Unknown, isUnknown, typeOrUndefined } from "../utils"
+import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 import { WireStyles } from "./Wire"
 
 
 export const MuxDef =
-    defineParametrizedComponent("ic", "mux", true, true, {
+    defineParametrizedComponent("mux", true, true, {
         variantName: ({ from, to }) => `mux-${from}to${to}`,
+        idPrefix: "mux",
         button: { imgWidth: 50 },
         repr: {
             from: typeOrUndefined(t.number),
@@ -22,8 +22,8 @@ export const MuxDef =
             showWiring: true,
         },
         params: {
-            to: param(4, [1, 2, 4, 8, 16]),
-            from: param(8),
+            to: param(2, [1, 2, 4, 8, 16]),
+            from: param(4),
         },
         validateParams: ({ from, to }) => {
             // reference is 'to'; 'from' is clamped to be between 2*to and 16*to
@@ -73,8 +73,8 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
     public readonly numSel: number
     private _showWiring: boolean
 
-    public constructor(editor: LogicEditor, params: MuxParams, saved?: MuxRepr) {
-        super(editor, MuxDef.with(params), saved)
+    public constructor(parent: DrawableParent, params: MuxParams, saved?: MuxRepr) {
+        super(parent, MuxDef.with(params), saved)
 
         this.numFrom = params.numFrom
         this.numTo = params.numTo
@@ -86,8 +86,9 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
 
     public override toJSON() {
         return {
-            type: "mux" as const, from: this.numFrom, to: this.numTo,
             ...super.toJSONBase(),
+            from: this.numFrom,
+            to: this.numTo,
             showWiring: (this._showWiring !== MuxDef.aults.showWiring) ? this._showWiring : undefined,
         }
     }
@@ -112,7 +113,7 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
         this.outputValues(this.outputs.Z, newValues)
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         const { top, left, bottom, right } = this.bounds()
         const dy = (right - left) / 3
 
@@ -135,7 +136,7 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
 
         // background
         g.fillStyle = COLOR_BACKGROUND
-        const outline = new Path2D()
+        const outline = g.createPath()
         outline.moveTo(left, top)
         outline.lineTo(right, top + dy)
         outline.lineTo(right, bottom - dy)
@@ -148,13 +149,13 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
             const sels = this.inputValues(this.inputs.S)
             const sel = displayValuesFromArray(sels, false)[1]
             if (!isUnknown(sel)) {
-                const neutral = this.editor.options.hideWireColors
+                const neutral = this.parent.editor.options.hideWireColors
                 const selectedInputs = this.inputs.I[sel]
                 const anchorDiffX = (right - left) / 3
-                const wireStyleStraight = this.editor.options.wireStyle === WireStyles.straight
+                const wireStyleStraight = this.parent.editor.options.wireStyle === WireStyles.straight
 
                 for (let i = 0; i < selectedInputs.length; i++) {
-                    this.editor.options.wireStyle
+                    this.parent.editor.options.wireStyle
                     g.beginPath()
                     const fromY = selectedInputs[i].posYInParentTransform
                     const toNode = this.outputs.Z[i]
@@ -192,14 +193,14 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
         const s = S.Components.MuxDemux.contextMenu
         const icon = this._showWiring ? "check" : "none"
-        const toggleShowWiringItem = ContextMenuData.item(icon, s.ShowWiring, () => {
+        const toggleShowWiringItem = MenuData.item(icon, s.ShowWiring, () => {
             this.doSetShowWiring(!this._showWiring)
         })
 
         return [
             this.makeChangeParamsContextMenuItem("outputs", s.ParamNumTo, this.numTo, "to"),
             this.makeChangeParamsContextMenuItem("inputs", s.ParamNumFrom, this.numFrom, "from", [2, 4, 8, 16].map(x => x * this.numTo)),
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             ["mid", toggleShowWiringItem],
             ...this.makeForceOutputsContextMenuItem(true),
         ]

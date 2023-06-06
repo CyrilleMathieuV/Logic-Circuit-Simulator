@@ -1,20 +1,20 @@
 import { displayValuesFromArray } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFillWith, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent, group, groupVertical, Repr } from "./Component"
-import { MenuItems } from "./Drawable"
+import { FixedArray, FixedArrayFillWith, LogicValue, Unknown, isUnknown } from "../utils"
+import { ComponentBase, Repr, defineComponent, group, groupVertical } from "./Component"
+import { DrawableParent, MenuItems } from "./Drawable"
 
 
 export const DecoderBCD4Def =
-    defineComponent("ic", "decoder-bcd4", {
+    defineComponent("dec-bcd4", {
+        idPrefix: "bcd",
         button: { imgWidth: 50 },
         valueDefaults: {},
         size: { gridWidth: 5, gridHeight: 10 },
         makeNodes: () => ({
             ins: {
-                I: group("w", [
+                In: group("w", [
                     [-4, -3, "A"],
                     [-4, -1, "B"],
                     [-4, +1, "C"],
@@ -22,7 +22,7 @@ export const DecoderBCD4Def =
                 ]),
             },
             outs: {
-                Z: groupVertical("e", 4, 0, 5, 2),
+                Out: groupVertical("e", 4, 0, 5, 2),
             },
         }),
         initialValue: () => FixedArrayFillWith(false as LogicValue, 5),
@@ -32,15 +32,12 @@ type DecoderBCD4Repr = Repr<typeof DecoderBCD4Def>
 
 export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr> {
 
-    public constructor(editor: LogicEditor, saved?: DecoderBCD4Repr) {
-        super(editor, DecoderBCD4Def, saved)
+    public constructor(parent: DrawableParent, saved?: DecoderBCD4Repr) {
+        super(parent, DecoderBCD4Def, saved)
     }
 
     public toJSON() {
-        return {
-            type: "decoder-bcd4" as const,
-            ...this.toJSONBase(),
-        }
+        return this.toJSONBase()
     }
 
     public override makeTooltip() {
@@ -50,7 +47,7 @@ export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr> {
     }
 
     protected doRecalcValue(): FixedArray<LogicValue, 5> {
-        const input = this.inputValues(this.inputs.I)
+        const input = this.inputValues(this.inputs.In)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output
@@ -84,7 +81,7 @@ export class DecoderBCD4 extends ComponentBase<DecoderBCD4Repr> {
     }
 
     protected override propagateValue(newValue: LogicValue[]) {
-        this.outputValues(this.outputs.Z, newValue, true)
+        this.outputValues(this.outputs.Out, newValue, true)
     }
 
     protected override makeComponentSpecificContextMenuItems(): MenuItems {

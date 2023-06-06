@@ -2,8 +2,17 @@
   box-sizing: border-box;
 }
 
+canvas:focus {
+  outline: none;
+}
+
 #logicEditorRoot {
   font-family: 'Roboto', sans-serif;
+  background-color: #EEEEEE;
+}
+
+#logicEditorRoot.dark {
+  background-color: #373737;
 }
 
 /* TODO would that go in some global CSS?
@@ -113,10 +122,11 @@ logic-editor:not(:defined) {
   border-color: grey;
 }
 
-.gate-label {
+#leftToolbar .barLabel {
   font-size: 52%;
   font-weight: bold;
   text-align: center;
+  word-break: break-all;
 }
 
 .truth-table {
@@ -257,7 +267,7 @@ logic-editor:not(:defined) {
 
 .menu-text {
   margin-left: 10px;
-  margin-right: 12px;
+  margin-right: 22px;
 }
 
 .menu-item-static {
@@ -281,6 +291,12 @@ logic-editor:not(:defined) {
   top: 50%;
   -webkit-transform: translateY(-50%);
   transform: translateY(-50%);
+}
+
+.menu-shortcut {
+  position: absolute;
+  right: 8px;
+  font-size: 85%;
 }
 
 .menu-item:hover>.menu-btn {
@@ -379,6 +395,159 @@ i.svgimg {
   color: rgb(230, 230, 230);
 }
 
-.dark .gate-label {
-  color: rgb(200, 200, 200);
+.dark .barLabel {
+  color: rgb(220, 220, 220);
+}
+
+svg text {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+
+/* Top bar */
+
+.topBar {
+  background-color: rgb(239, 239, 239);
+  border-left: 1px solid lightgray;
+}
+
+.dark .topBar {
+  background-color: rgb(94, 94, 94);
+  border-left-color: #525252;
+}
+
+.topBar * {
+  font: 10pt 'Roboto', sans-serif;
+}
+
+.dark .topBar * {
+  color: rgb(220, 220, 220);
+}
+
+.topBar button {
+  border: none;
+  background: none;
+  box-shadow: none;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.dark .topBar button:disabled * {
+  color: #808080;
+}
+
+.topBar button:not(:disabled, .active):hover {
+  background: #d5d5d5;
+}
+
+.topBar button:not(:disabled, .active):active {
+  background: #b2b2b2;
+  transform: translate(1px, 1px);
+}
+
+.topBar button.active {
+  background: #ffffff;
+  font-weight: bolder;
+  cursor: unset;
+}
+
+
+.dark .topBar button:not(:disabled, .active):hover {
+  background: #404040;
+}
+
+.dark .topBar button:not(:disabled, .active):active {
+  background: #313131;
+}
+
+.dark .topBar button.active {
+  background: #1E1E1E;
+}
+
+.topBar .sep {
+  border-left: 1px solid #d5d5d5;
+  margin: 0 4px;
+}
+
+.topBar .sep.fat {
+  border-left-width: 5px;
+}
+
+.dark .topBar .sep {
+  border-left-color: #525252;
+}
+
+.topBar .barLabel {
+  display: inline-flex;
+  align-items: center;
+  white-space: pre;
+  margin: 0 5px;
+  cursor: default;
+}
+
+.topBar.compact .btnLabel {
+  display: none;
+}
+
+.topBar a.barLabel {
+  color: inherit;
+  cursor: pointer;
+}
+
+.topBar .barTab {
+  flex: none;
+  display: inline-flex;
+  margin: 0 0 -3px;
+  padding: 3px;
+}
+
+.topBar .barTab.active {
+  background-color: white;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  border: 1px solid rgb(200, 200, 200);
+  border-bottom: none;
+}
+
+.dark .topBar .barTab.active {
+  background-color: rgb(30, 30, 30);
+  border-color: #555555;
+}
+
+
+.msgZone {
+  position: absolute;
+  top: -40px;
+  width: 100%;
+  display: flex;
+  visibility: hidden;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.15s ease-in-out
+}
+
+.msgZone.visible {
+  top: 10px;
+  visibility: visible;
+}
+
+.msgZone .msgBar {
+  padding: 5px 10px;
+  border-radius: 20px;
+  text-align: center;
+  max-width: 80%;
+  box-shadow: 0px 0px 5px 0px rgba(128, 128, 128, 0.5);
+  font-size: 10pt;
+  background-color: rgb(190, 190, 190, 0.2);
+}
+
+.dark .msgZone .msgBar {
+  color: rgb(220, 220, 220);
 }

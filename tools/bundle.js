@@ -25,14 +25,14 @@
         process.exit(1)
     }
 
-    if (dev) {
-        console.log("Building dev bundle")
-        await build(false)
-    }
-
     if (dist) {
         console.log("Building dist bundle")
         await build(true)
+    }
+
+    if (dev) {
+        console.log("Building dev bundle")
+        const res = await build(false)
     }
 
 })()
@@ -41,7 +41,7 @@
  * @param {boolean} dist 
  * @returns {Promise<string>}
  */
-function build(dist) {
+async function build(dist) {
 
     const minify = dist
     const suffix = dist ? "" : "-dev"
@@ -50,9 +50,10 @@ function build(dist) {
     const bundleFile = `simulator/lib/bundle${suffix}.js`
 
     const esbuild = require("esbuild")
-    return esbuild
+    const result = await esbuild
         .build({
             minify,
+            keepNames: true,
             bundle: true,
             sourcemap: true,
             loader: {
@@ -64,11 +65,19 @@ function build(dist) {
             logLevel: "info",
             entryPoints: ["simulator/src/LogicEditor.ts"],
             outfile: bundleFile,
+            metafile: dist,
         })
-        .then(() => {
-            // compute md5 hash of the bundle
+        .then(result => {
             const fs = require("fs")
             const crypto = require("crypto")
+
+            if (result.metafile) {
+                const metafilePath = 'simulator/lib/bundlemeta.json'
+                fs.writeFileSync(metafilePath, JSON.stringify(result.metafile))
+                console.log("Wrote metafile to: " + metafilePath+ "\n\n")
+            }
+
+            // compute md5 hash of the bundle
             const hash = crypto.createHash("md5")
             const bundle = fs.readFileSync(bundleFile)
             hash.update(bundle)
@@ -81,7 +90,8 @@ function build(dist) {
                 .replaceAll("{{SUFFIX}}", suffix)
                 .replaceAll("{{BUNDLE_MD5}}", md5)
             fs.writeFileSync(outHtmlFile, index)
-            return outHtmlFile
+            result.outHtmlFile = outHtmlFile
+            return result
         })
         .catch((err) => {
             console.error(err)

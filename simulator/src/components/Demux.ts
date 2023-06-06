@@ -2,17 +2,17 @@ import * as t from "io-ts"
 import { COLOR_BACKGROUND, displayValuesFromArray, drawWireLineToComponent, strokeAsWireLine, useCompact } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { IconName } from "../images"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { ArrayFillWith, HighImpedance, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
-import { defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param, ParametrizedComponentBase, Repr, ResolvedParams } from "./Component"
-import { ContextMenuData, DrawContext, MenuItems } from "./Drawable"
+import { ArrayFillWith, HighImpedance, LogicValue, Unknown, isUnknown, typeOrUndefined } from "../utils"
+import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 import { WireStyles } from "./Wire"
 
 
 export const DemuxDef =
-    defineParametrizedComponent("ic", "demux", true, true, {
+    defineParametrizedComponent("demux", true, true, {
         variantName: ({ from, to }) => `demux-${from}to${to}`,
+        idPrefix: "demux",
         button: { imgWidth: 50 },
         repr: {
             from: typeOrUndefined(t.number),
@@ -25,8 +25,8 @@ export const DemuxDef =
             disconnectedAsHighZ: false,
         },
         params: {
-            from: param(4, [1, 2, 4, 8, 16]),
-            to: param(8),
+            from: param(2, [1, 2, 4, 8, 16]),
+            to: param(4),
         },
         validateParams: ({ from, to }) => {
             // reference is 'from'; 'to' is clamped to be between 2*from and 16*from
@@ -53,7 +53,7 @@ export const DemuxDef =
 
             return {
                 ins: {
-                    I: groupVertical("w", inX, 0, numFrom),
+                    In: groupVertical("w", inX, 0, numFrom),
                     S: groupHorizontal("n", 0, selY, numSel),
                 },
                 outs: {
@@ -77,8 +77,8 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
     private _showWiring: boolean
     private _disconnectedAsHighZ: boolean
 
-    public constructor(editor: LogicEditor, params: DemuxParams, saved?: DemuxRepr) {
-        super(editor, DemuxDef.with(params), saved)
+    public constructor(parent: DrawableParent, params: DemuxParams, saved?: DemuxRepr) {
+        super(parent, DemuxDef.with(params), saved)
 
         this.numFrom = params.numFrom
         this.numTo = params.numTo
@@ -91,8 +91,9 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
 
     public override toJSON() {
         return {
-            type: "demux" as const, from: this.numFrom, to: this.numTo,
             ...super.toJSONBase(),
+            from: this.numFrom,
+            to: this.numTo,
             showWiring: (this._showWiring !== DemuxDef.aults.showWiring) ? this._showWiring : undefined,
             disconnectedAsHighZ: (this._disconnectedAsHighZ !== DemuxDef.aults.disconnectedAsHighZ) ? this._disconnectedAsHighZ : undefined,
         }
@@ -116,7 +117,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
         const disconnected = this._disconnectedAsHighZ ? HighImpedance : false
         for (let g = 0; g < this.numGroups; g++) {
             if (g === sel) {
-                const inputs = this.inputValues(this.inputs.I)
+                const inputs = this.inputValues(this.inputs.In)
                 for (const input of inputs) {
                     values.push(input)
                 }
@@ -134,12 +135,12 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
         this.outputValues(this.outputs._all, newValues)
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         const { top, left, bottom, right } = this.bounds()
         const dy = (right - left) / 3
 
         // inputs
-        for (const input of this.inputs.I) {
+        for (const input of this.inputs.In) {
             drawWireLineToComponent(g, input, left, input.posYInParentTransform)
         }
 
@@ -157,7 +158,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
         }
 
         // background
-        const outline = new Path2D()
+        const outline = g.createPath()
         outline.moveTo(left, top + dy)
         outline.lineTo(right, top)
         outline.lineTo(right, bottom)
@@ -168,17 +169,17 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
 
         // wiring
         if (this._showWiring) {
-            const neutral = this.editor.options.hideWireColors
+            const neutral = this.parent.editor.options.hideWireColors
             const sels = this.inputValues(this.inputs.S)
             const sel = displayValuesFromArray(sels, false)[1]
             if (!isUnknown(sel)) {
                 const selectedOutputs = this.outputs.Z[sel]
                 const anchorDiffX = (right - left) / 3
-                const wireStyleStraight = this.editor.options.wireStyle === WireStyles.straight
+                const wireStyleStraight = this.parent.editor.options.wireStyle === WireStyles.straight
 
-                for (let i = 0; i < this.inputs.I.length; i++) {
+                for (let i = 0; i < this.inputs.In.length; i++) {
                     g.beginPath()
-                    const fromNode = this.inputs.I[i]
+                    const fromNode = this.inputs.In[i]
                     const fromY = fromNode.posYInParentTransform
                     const toY = selectedOutputs[i].posYInParentTransform
                     g.moveTo(left + 1, fromY)
@@ -193,7 +194,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
                             right - 1, toY,
                         )
                     }
-                    strokeAsWireLine(g, this.inputs.I[i].value, fromNode.color, false, neutral)
+                    strokeAsWireLine(g, this.inputs.In[i].value, fromNode.color, false, neutral)
                 }
             }
         }
@@ -220,19 +221,19 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
 
         const s = S.Components.MuxDemux.contextMenu
         let icon: IconName = this._showWiring ? "check" : "none"
-        const toggleShowWiringItem = ContextMenuData.item(icon, s.ShowWiring, () => {
+        const toggleShowWiringItem = MenuData.item(icon, s.ShowWiring, () => {
             this.doSetShowWiring(!this._showWiring)
         })
 
         icon = this._disconnectedAsHighZ ? "check" : "none"
-        const toggleUseHighZItem = ContextMenuData.item(icon, s.UseZForDisconnected, () => {
+        const toggleUseHighZItem = MenuData.item(icon, s.UseZForDisconnected, () => {
             this.doSetDisconnectedAsHighZ(!this._disconnectedAsHighZ)
         })
 
         return [
             this.makeChangeParamsContextMenuItem("inputs", s.ParamNumFrom, this.numFrom, "from"),
             this.makeChangeParamsContextMenuItem("outputs", s.ParamNumTo, this.numTo, "to", [2, 4, 8, 16].map(x => x * this.numFrom)),
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             ["mid", toggleShowWiringItem],
             ["mid", toggleUseHighZItem],
             ...this.makeForceOutputsContextMenuItem(true),

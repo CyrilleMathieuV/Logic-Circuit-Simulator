@@ -1,14 +1,14 @@
 import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
 import { COLOR_COMPONENT_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isDefined, isUndefined, typeOrUndefined } from "../utils"
-import { ComponentBase, defineComponent, Repr } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { InteractionResult, typeOrUndefined } from "../utils"
+import { ComponentBase, Repr, defineComponent } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 
-export const LabelStringDef =
-    defineComponent("label", undefined, {
+export const LabelDef =
+    defineComponent("label", {
+        idPrefix: "label",
         button: { imgWidth: 32 },
         repr: {
             text: t.string,
@@ -24,26 +24,20 @@ export const LabelStringDef =
         makeNodes: () => ({}),
     })
 
-export type LabelStringRepr = Repr<typeof LabelStringDef>
+export type LabelRepr = Repr<typeof LabelDef>
 
-export class LabelString extends ComponentBase<LabelStringRepr> {
+export class Label extends ComponentBase<LabelRepr> {
 
     private _text: string
     // private _align: CanvasTextAlign // causes issues with mouseovers and stuff
     private _font: string
     private _cachedTextMetrics: TextMetrics | undefined = undefined
 
-    public constructor(editor: LogicEditor, saved?: LabelStringRepr) {
-        super(editor, LabelStringDef, saved)
-        if (isDefined(saved)) {
-            this._text = saved.text
-            // this._align = (saved.align as CanvasTextAlign) ?? LabelStringDefaults.align
-            this._font = saved.font ?? LabelStringDef.aults.font
-        } else {
-            this._text = LabelStringDef.aults.text
-            // this._align = LabelStringDefaults.align
-            this._font = LabelStringDef.aults.font
-        }
+    public constructor(parent: DrawableParent, saved?: LabelRepr) {
+        super(parent, LabelDef, saved)
+        this._text = saved?.text ?? LabelDef.aults.text
+        // this._align = (saved?.align as CanvasTextAlign) ?? LabelStringDefaults.align
+        this._font = saved?.font ?? LabelDef.aults.font
     }
 
     public toJSON() {
@@ -51,7 +45,7 @@ export class LabelString extends ComponentBase<LabelStringRepr> {
             ...this.toJSONBase(),
             text: this._text,
             // align: this._align === LabelStringDefaults.align ? undefined : this._align,
-            font: this._font === LabelStringDef.aults.font ? undefined : this._font,
+            font: this._font === LabelDef.aults.font ? undefined : this._font,
         }
     }
 
@@ -61,10 +55,14 @@ export class LabelString extends ComponentBase<LabelStringRepr> {
 
     public override get unrotatedHeight() {
         const metrics = this._cachedTextMetrics
-        if (isUndefined(metrics)) {
+        if (metrics === undefined) {
             return 2 * GRID_STEP
         }
         return metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+    }
+
+    public get text() {
+        return this._text
     }
 
     protected doRecalcValue(): undefined {
@@ -75,13 +73,13 @@ export class LabelString extends ComponentBase<LabelStringRepr> {
         return 2
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
 
         g.font = this._font
         g.lineWidth = 3
 
         if (ctx.isMouseOver) {
-            if (isUndefined(this._cachedTextMetrics)) {
+            if (this._cachedTextMetrics === undefined) {
                 this._cachedTextMetrics = g.measureText(this._text)
             }
             const width = this.unrotatedWidth
@@ -110,12 +108,12 @@ export class LabelString extends ComponentBase<LabelStringRepr> {
         this.setNeedsRedraw("font changed")
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const s = S.Components.LabelString.contextMenu
-        const setTextItem = ContextMenuData.item("pen", s.ChangeText, this.runSetTextDialog.bind(this))
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        const s = S.Components.Label.contextMenu
+        const setTextItem = MenuData.item("pen", s.ChangeText, this.runSetTextDialog.bind(this), "↩︎")
 
-        const setFontItem = ContextMenuData.item("font", s.Font, () => {
-            this.runSetFontDialog(this._font, LabelStringDef.aults.font, this.doSetFont.bind(this))
+        const setFontItem = MenuData.item("font", s.Font, () => {
+            this.runSetFontDialog(this._font, LabelDef.aults.font, this.doSetFont.bind(this))
         })
 
         return [
@@ -124,17 +122,19 @@ export class LabelString extends ComponentBase<LabelStringRepr> {
         ]
     }
 
-    private runSetTextDialog() {
-        const promptReturnValue = window.prompt(S.Components.LabelString.contextMenu.ChangeTextPrompt, this._text)
+    private runSetTextDialog(): InteractionResult {
+        const promptReturnValue = window.prompt(S.Components.Label.contextMenu.ChangeTextPrompt, this._text)
         if (promptReturnValue !== null) {
             // OK button pressed
-            const newText = promptReturnValue.length === 0 ? LabelStringDef.aults.text : promptReturnValue
+            const newText = promptReturnValue.length === 0 ? LabelDef.aults.text : promptReturnValue
             this.doSetText(newText)
+            return InteractionResult.SimpleChange
         }
+        return InteractionResult.NoChange
     }
 
     public override keyDown(e: KeyboardEvent): void {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !e.altKey) {
             this.runSetTextDialog()
         } else {
             super.keyDown(e)
@@ -142,12 +142,12 @@ export class LabelString extends ComponentBase<LabelStringRepr> {
     }
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
-        if (super.mouseDoubleClicked(e)) {
-            return true // already handled
+        const superChange = super.mouseDoubleClicked(e)
+        if (superChange.isChange) {
+            return superChange // already handled
         }
-        this.runSetTextDialog()
-        return true
+        return this.runSetTextDialog()
     }
 
 }
-LabelStringDef.impl = LabelString
+LabelDef.impl = Label

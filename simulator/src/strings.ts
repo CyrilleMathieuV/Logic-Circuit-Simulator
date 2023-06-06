@@ -8,10 +8,13 @@ type ComponentStrings = string | [string, string]
 
 export class Template<TPlaceholders extends string[]> {
     public constructor(public readonly templateString: string) { }
-    public expand(values: { [K in TPlaceholders[number]]: any }) {
-        return this.templateString.replace(/\$\{(?:\w+)\}/g, (placeholder) => {
-            const key = placeholder.slice(2, -1)
-            return String((values as any)[key] ?? "<<" + key + ">>")
+    public expand(values: { [K in TPlaceholders[number]]: unknown }) {
+        return this.templateString.replace(/\$(s?)\{(\w+)(\?(\w*)(:(\w*))?)?\}/g, (match, s, key, plurDecl, plural, singDecl, singular) => {
+            const value = (values as any)[key] as unknown | undefined
+            if (s === "s") {
+                return S.plural(value === undefined ? 0 : Number(value), plural, singular)
+            }
+            return String(value ?? "<<" + key + ">>")
         })
     }
 }
@@ -30,6 +33,7 @@ export function template<TText extends string>(templ: TText) {
 
 
 const Strings_fr = {
+    plural: (n: number, plural?: string, singular?: string) => Math.abs(n) < 2 ? (singular ?? "") : (plural ?? "s"),
     ComponentBar: {
         Labels: {
             More: "Plus",
@@ -40,59 +44,60 @@ const Strings_fr = {
             Layout: "Dispo- sition",
             Gates: "Portes",
             Components: "Compo- sants",
+            Custom: "Person- nalisé",
         },
         Components: RichStringEnum.withProps<ComponentStrings>()({
             Input1: ["Entrée", "IN"],
             InputN: ["Entrée multiple", "IN mult."],
             Input8: ["Entrée octet (8 bits)", "IN 8 bits"],
             Clock: ["Générateur de signal d’horloge", "Horloge"],
-            InputRandom: ["Entrée aléatoire", "Aléatoire"],
+            Random: ["Entrée aléatoire", "Aléatoire"],
             Output1: ["Sortie", "OUT"],
             OutputN: ["Sortie multiple", "OUT mult."],
             Output8: ["Sortie octet (8 bits)", "OUT 8 bits"],
-            OutputDisplayN: ["Afficheur d’une valeur", "Afficheur"],
-            OutputDisplay8: ["Affichage de 8 bits", "Aff. 8 bits"],
-            Output7Seg: ["Afficheur à 7 segments", "7 segments"],
-            Output16Seg: ["Afficheur à 16 segments", "16 segments"],
-            OutputAscii: ["Affichage d’un caractère ASCII (sur 7 bits)", "Caractère"],
-            OutputBar: ["Affichage d’un bit sous forme de segment lumineux", "Segment"],
-            OutputShiftBuffer: ["Affichage avec buffer à décalage", "Affichage à décalage"],
+            DisplayN: ["Afficheur d’une valeur", "Afficheur"],
+            Display8: ["Affichage de 8 bits", "Aff. 8 bits"],
+            Display7Seg: ["Afficheur à 7 segments", "7 segments"],
+            Display16Seg: ["Afficheur à 16 segments", "16 segments"],
+            DisplayAscii: ["Affichage d’un caractère ASCII (sur 7 bits)", "Caractère"],
+            DisplayBar: ["Affichage d’un bit sous forme de segment lumineux", "Segment"],
+            ShiftDisplay: ["Affichage avec buffer à décalage", "Affichage à décalage"],
 
             Passthrough1: ["Broche", "Broche"],
             PassthroughN: ["Broche à plusieurs entrées-sortes", "Broche (n)"],
-            LabelString: ["Étiquette", "Label"],
-            LabelRectangle: ["Rectangle de regroupement", "Groupe"],
+            Label: ["Étiquette", "Label"],
+            Rectangle: ["Rectangle de regroupement", "Groupe"],
 
-            NOT: ["Porte NON", "NON"],
-            BUF: ["Buffer (porte OUI)", "OUI"],
-            TRI: ["Sortie à 3 états", "3 états"],
-            AND: ["Porte ET", "ET"],
-            OR: ["Porte OU", "OU"],
-            XOR: ["Porte OU-X", "OU-X"],
-            NAND: ["Porte NON-ET", "NON-ET"],
-            NOR: ["Porte NON-OU", "NON-OU"],
-            XNOR: ["Porte NON-OU-X", "NON-OU-X"],
-            IMPLY: ["Porte IMPLIQUE", "IMPLIQUE"],
-            NIMPLY: ["Porte NON-IMPLIQUE", "NON-IMPL."],
-            TRANSFER: ["Fausse porte TRANSFERT à deux entrées", "TRANSF."],
+            not: ["Porte NON", "NON"],
+            buf: ["Buffer (porte OUI)", "OUI"],
+            tri: ["Sortie à 3 états", "3 états"],
+            and: ["Porte ET", "ET"],
+            or: ["Porte OU", "OU"],
+            xor: ["Porte OU-X", "OU-X"],
+            nand: ["Porte NON-ET", "NON-ET"],
+            nor: ["Porte NON-OU", "NON-OU"],
+            xnor: ["Porte NON-OU-X", "NON-OU-X"],
+            imply: ["Porte IMPLIQUE", "IMPLIQUE"],
+            nimply: ["Porte NON-IMPLIQUE", "NON-IMPL."],
+            transfer: ["Fausse porte TRANSFERT à deux entrées", "TRANSF."],
 
-            AND3: ["Porte ET à 3 entrées", "ET (3)"],
-            OR3: ["Porte OU à 3 entrées", "OU (3)"],
-            XOR3: ["Porte OU-X à 3 entrées", "OU-X (3)"],
-            NAND3: ["Porte NON-ET à 3 entrées", "NON-ET (3)"],
-            NOR3: ["Porte NON-OU à 3 entrées", "NON-OU (3)"],
-            XNOR3: ["Porte NON-OU-X à 3 entrées", "NON-OU-X (3)"],
+            and3: ["Porte ET à 3 entrées", "ET (3)"],
+            or3: ["Porte OU à 3 entrées", "OU (3)"],
+            xor3: ["Porte OU-X à 3 entrées", "OU-X (3)"],
+            nand3: ["Porte NON-ET à 3 entrées", "NON-ET (3)"],
+            nor3: ["Porte NON-OU à 3 entrées", "NON-OU (3)"],
+            xnor3: ["Porte NON-OU-X à 3 entrées", "NON-OU-X (3)"],
 
-            AND4: ["Porte ET à 4 entrées", "ET (4)"],
-            OR4: ["Porte OU à 4 entrées", "OU (4)"],
-            XOR4: ["Porte OU-X à 4 entrées", "OU-X (4)"],
-            NAND4: ["Porte NON-ET à 4 entrées", "NON-ET (4)"],
-            NOR4: ["Porte NON-OU à 4 entrées", "NON-OU (4)"],
-            XNOR4: ["Porte NON-OU-X à 4 entrées", "NON-OU-X (4)"],
+            and4: ["Porte ET à 4 entrées", "ET (4)"],
+            or4: ["Porte OU à 4 entrées", "OU (4)"],
+            xor4: ["Porte OU-X à 4 entrées", "OU-X (4)"],
+            nand4: ["Porte NON-ET à 4 entrées", "NON-ET (4)"],
+            nor4: ["Porte NON-OU à 4 entrées", "NON-OU (4)"],
+            xnor4: ["Porte NON-OU-X à 4 entrées", "NON-OU-X (4)"],
 
-            SwitchedInverter: ["Inverseur commuté", "Inv. comm."],
+            ControlledInverter: ["Inverseur commuté", "Inv. comm."],
             GateArray: ["Porte multiple", "Porte mult."],
-            TriStateBufferArray: ["Sortie à 3 états multiple", "3 états mult."],
+            TristateBufferArray: ["Sortie à 3 états multiple", "3 états mult."],
 
             HalfAdder: ["Demi-additionneur", "Demi-add."],
             Adder: ["Additionneur", "Addit."],
@@ -124,8 +129,10 @@ const Strings_fr = {
             Register: ["Registre", "Registre"],
             ShiftRegister: ["Registre à décalage", "Reg. déc."],
             RAM: ["RAM (mémoire vive)", "RAM"],
+            ROM: ["ROM (mémoire morte)", "ROM"],
 
             Counter: ["Compteur 4 bits", "Compteur"],
+            Decoder: ["Décodeur binaire vers 1-sur-n", "Décodeur"],
             Decoder7Seg: ["Décodeur 7 segments", "Déc. 7 seg."],
             Decoder16Seg: ["Décodeur ASCII vers 16 segments", "Déc. 16 seg."],
             DecoderBCD4: ["Décodeur 4 bits vers BCD sur 5 bits", "Déc. BCD"],
@@ -149,6 +156,7 @@ const Strings_fr = {
     Settings: {
         Settings: "Réglages",
         CircuitName: "Nom:",
+        DefaultFileName: "circuit",
         NameOfDownloadedFile: "Ceci sera le nom du fichier téléchargé.",
         hideWireColors: tuple("Cacher l’état des fils", "Si coché, les fils sont affichés avec une couleur neutre plutôt que de montrer s’ils véhiculent un 1 ou un 0."),
         hideInputColors: tuple("Cacher l’état des entrées", "Si coché, les entrées sont affichées avec une couleur neutre, même si elles livrent au circuit une valeur bien déterminée. S’utilise volontiers en cachant aussi l’état des fils."),
@@ -170,12 +178,35 @@ const Strings_fr = {
         WireStyleLine: "Ligne",
         WireStyleCurve: "Courbe",
     },
-    Timeline: {
-        Play: tuple("Play", "Démarre l’écoulement du temps"),
-        Pause: tuple("Pause", "Arrête l’écoulement du temps"),
-        Step: tuple(undefined, "Avance au prochain événement"),
+    TopBar: {
+        DirtyTooltip: "Le circuit a été modifié depuis la dernière sauvegarde.",
+        CircuitNameTooltip: "Nom du circuit actuellement édité; cliquez pour modifier",
+        SetCircuitName: "Tapez le nom du circuit (ou laissez vide pour le nom par défaut):",
+        CustomComponentCaptionTooltip: "Nom du sous-circuit actuellement édité; cliquez pour modifier",
+        CloseCircuit: "Retour au circuit complet",
+
+        Undo: tuple("Annuler", "Annule la dernière action"),
+        Redo: tuple("Rétablir", "Rétablit la dernière action annulée ou répète l’action précédente"),
+
+        Download: tuple("Télécharger", "Télécharge le circuit (ou les composants personnalisés avec la touche Option/Alt)"),
+        Screenshot: tuple("Screenshot", "Télécharge le circuit sous forme d’image (PNG ou SVG avec touche Option/Alt)"),
+        Open: tuple("Ouvrir", "Ouvre un circuit précédemment téléchargé"),
+        Reset: tuple("Réinitialiser", "Réinitialise l’état de ce circuit"),
+
+        TimelinePlay: tuple("Play", "Démarre l’écoulement du temps"),
+        TimelinePause: tuple("Pause", "Arrête l’écoulement du temps"),
+        TimelineStep: tuple("Pas à pas", "Avance au prochain événement"),
+        TimeLabel: "Temps: ",
+
+        Design: tuple("Concevoir", "Compose ou modifie le circuit"),
+        Delete: tuple("Supprimer", "Supprime des éléments du circuit"),
+        Move: tuple("Déplacer", "Déplace tout le circuit"),
     },
     Messages: {
+        UnsupportedFileType: template("Type de fichier non pris en charge: ${type}."),
+        LoadedDefinitions: template("${n} composant$s{n} personnalisé$s{n} chargé$s{n}"),
+        SavedToUrl: "Circuit enregistré dans l’URL",
+        NotImplemented: "Cette fonctionnalité n’est pas encore implémentée.",
         ReallyCloseWindow: "Voulez-vous vraiment fermer la fenêtre sans prendre en compte les derniers changements?",
         DevelopedBy: "Développé par ",
     },
@@ -183,10 +214,16 @@ const Strings_fr = {
         Generic: {
             contextMenu: {
                 Delete: "Supprimer",
+                Reset: "Réactiver",
+
+                MakeNewComponent: "Créer un nouveau composant…",
+                MakeNewComponentFailed: "Impossible de créer un nouveau composant.",
 
                 SetIdentifier: "Attribuer un identifiant…",
                 ChangeIdentifier: tuple("Changer l’identifiant (", ")…"),
-                SetIdentifierPrompt: "Choisissez l’identifiant à attribuer à ce composant ou laissez vide pour le supprimer:\n\n(L’identifiant sert uniquement à faire référence à ce composant via du code JavaScript externe.)",
+                SetIdentifierPrompt: "Choisissez l’identifiant unique à attribuer à ce composant:",
+                IdentifierCannotBeEmpty: "L’identifiant ne peut pas être vide.",
+                IdentifierAlreadyInUseShouldSwap: "L’identifiant est déjà utilisé par un autre composant. Voulez-vous inverser les identifiants?",
 
                 Orientation: "Orientation",
                 ChangeOrientationDesc: "Changez l’orientation avec Commande + double-clic sur le composant",
@@ -215,9 +252,9 @@ const Strings_fr = {
 
                 ShowContent: "Montrer le contenu",
 
-                ParamNumInputs: tuple("Nombre d’entrées", template("${val} entrées")),
-                ParamNumBits: tuple("Nombre de bits", template("${val} bits")),
-                ParamNumWords: tuple("Nombre de lignes", template("${val} lignes")),
+                ParamNumInputs: tuple("Nombre d’entrées", template("${val} entrée$s{val}")),
+                ParamNumBits: tuple("Nombre de bits", template("${val} bit$s{val}")),
+                ParamNumWords: tuple("Nombre de lignes", template("${val} ligne$s{val}")),
             },
 
             InputCarryInDesc: "Cin (retenue précédente)",
@@ -235,6 +272,38 @@ const Strings_fr = {
             OutputQDesc: "Q (sortie normale)",
             OutputQBarDesc: "Q̅ (sortie inversée)",
         },
+        Custom: {
+            MenuButtonSuffix: " (composant personnalisé)",
+            contextMenu: {
+                ChangeName: "Renommer…",
+                ChangeNamePrompt: "Choisissez le nom de ce composant personnalité:",
+                ChangeNameEmpty: "Le nom ne peut pas être vide.",
+                ChangeCircuit: "Modifier le circuit",
+                Delete: "Supprimer ce composant",
+                EditFromComponentMessage: "Vous pouvez modifier ce composant depuis le menu d’un composant du circuit.",
+                CannotDeleteInUse: "Impossible de supprimer ce composant car il est utilisé dans le circuit.",
+                CannotDeleteInUseBy: template("Impossible de supprimer ce composant car il est utilisé dans la définition d’un autre composant (${caption})."),
+                ConfirmDelete: "Voulez-vous vraiment supprimer ce composant personnalisé?",
+            },
+            tooltip: {
+                titleSuffix: " (composant personnalisé)",
+                desc: "Ce composant calcule ses sorties selon le circuit personnalisé que vous avez défini.",
+            },
+            messages: {
+                EmptySelection: "Aucun composant n’est sélectionné.",
+                NoInput: "Aucune entrée n’est sélectionnée.",
+                NoOutput: "Aucune sortie n’est sélectionnée.",
+                InputsOutputsMustHaveNames: "Toutes les entrées et sorties doivent avoir un nom.",
+                MissingComponents: template("Les composants suivants sont connectés à des sorties mais ne sont pas sélectionnés: ${list}."),
+                NoWires: "Aucun fil n’est présent entre les composants sélectionnés.",
+                UselessComponents: template("Les composants suivants ne sont pas connectés à des sorties et sont inutiles: ${list}."),
+                CannotIncludeClock: "Les horloges ne peuvent pas être incluses dans les composants personnalisés. Ajoutez une entrée normale, qui pourra être connectée à une horloge de l'extérieur du composant.",
+                EnterCaptionPrompt: "Entrez le nom (unique) du composant personnalisé:",
+                ComponentAlreadyExists: template("Un composant personnalisé avec l’identifiant '${id}' existe déjà."),
+                InputsOutputsChanged: "Les entrées et sorties ont changé et certaines connexions pourront être supprimées en adaptant le circuit. Voulez-vous continuer?",
+                NotInMainEditor: "Revenez d’abord à l’éditeur principal pour modifier le circuit personnalisé de ce composant.",
+            },
+        },
         Adder: {
             tooltip: {
                 title: "Additionneur",
@@ -243,15 +312,28 @@ const Strings_fr = {
         },
         AdderArray: {
             tooltip: {
-                title: template("Additionneur à ${numBits} bits"),
+                title: template("Additionneur à ${numBits} bit$s{numBits}"),
                 desc: "Additionne les deux nombres d'entrées A et B avec une retenue d’entrée Cin, et fournit les bits de somme S et une retenue de sortie Cout.",
             },
         },
         ALU: {
-            add: tuple("+", "Addition"),
-            sub: tuple("–", "Soustraction"),
-            and: tuple("ET", "ET"),
-            or: tuple("OU", "OU"),
+            "A+B": tuple("+", "Addition"),
+            "A-B": tuple("A–B", "Soustraction (A – B)"),
+            "B-A": tuple("B–A", "Soustraction (B – A)"),
+            "A+1": tuple("A+1", "A + 1"),
+            "A-1": tuple("A–1", "A – 1"),
+            "-A": tuple("–A", "Négation d’A"),
+            "A*2": tuple("A×2", "Addition d’A à lui-même (A × 2)"),
+            "A/2": tuple("A/2", "Décalage arithmétique à droite de 1 (A / 2)"),
+            "A|B": tuple("OU", "Disjonction (A OU B)"),
+            "A&B": tuple("ET", "Conjonction (A ET B)"),
+            "A|~B": tuple("OU-n", "A OU NON(B)"),
+            "A&~B": tuple("ET-n", "A ET NON(B)"),
+            "~A": tuple("A̅", "Inversion d’A"),
+            "A^B": tuple("OU-X", "Disjonction excl. (A OU-X B)"),
+            "A<<": tuple("<<", "Décalage logique à gauche de 1 de A"),
+            "A>>": tuple(">>", "Décalage logique à droite de 1 de A"),
+
             InputCinDesc: "retenue d’entrée",
             OutputCoutDesc: "retenue de sortie",
             tooltip: {
@@ -262,6 +344,7 @@ const Strings_fr = {
             },
             contextMenu: {
                 toggleShowOp: "Afficher l’opération",
+                ParamUseExtendedOpcode: "Utiliser opérations étendues",
             },
         },
         Clock: {
@@ -274,6 +357,10 @@ const Strings_fr = {
             contextMenu: {
                 Period: "Période",
                 ReplaceWithInput: "Remplacer par entrée",
+            },
+            timeline: {
+                NextRisingEdge: "Prochain flanc montant de l’horloge",
+                NextFallingEdge: "Prochain flanc descendant de l’horloge",
             },
         },
         Comparator: {
@@ -292,6 +379,12 @@ const Strings_fr = {
                 DisplayNone: "absent",
                 DisplayDecimal: "décimal",
                 DisplayHex: "hexadécimal",
+            },
+        },
+        Decoder: {
+            tooltip: {
+                title: "Décodeur binaire",
+                desc: template("Ce décodeur prend en entrée un nombre binaire codé sur ${numFrom} bit$s{numFrom} et active la sortie correspondante parmi ${numTo} (actuellement, ${n})."),
             },
         },
         Decoder7Seg: {
@@ -328,25 +421,25 @@ const Strings_fr = {
             },
         },
         Gate: {
-            NOT: tuple("NON", "NON", "La sortie est égale à l’entrée inversée."),
-            BUF: tuple("OUI", "OUI", "La sortie est égale à l’entrée."),
+            not: tuple("NON", "NON", "La sortie est égale à l’entrée inversée."),
+            buf: tuple("OUI", "OUI", "La sortie est égale à l’entrée."),
 
-            AND: tuple("ET", "ET", "La sortie vaut 1 lorsque toutes les entrées valent 1."),
-            OR: tuple("OU", "OU", "La sortie vaut 1 lorsqu’au moins une des entrées vaut 1."),
-            XOR: tuple("OU-X", "OU-X", "La sortie vaut 1 lorsqu’un nombre impair d’entrées valent 1."),
-            NAND: tuple("NON-ET", "N-ET", "Porte ET inversée: la sortie vaut 1 à moins que toutes les entrées ne valent 1."),
-            NOR: tuple("NON-OU", "N-OU", "Porte OU inversée: la sortie vaut 1 lorsque toutes les entrées valent 0."),
-            XNOR: tuple("NON-OU-X", "N-OU-X", "Porte OU-X inversée: la sortie vaut 1 lorsqu’un nombre pair d’entrées valent 1."),
+            and: tuple("ET", "ET", "La sortie vaut 1 lorsque toutes les entrées valent 1."),
+            or: tuple("OU", "OU", "La sortie vaut 1 lorsqu’au moins une des entrées vaut 1."),
+            xor: tuple("OU-X", "OU-X", "La sortie vaut 1 lorsqu’un nombre impair d’entrées valent 1."),
+            nand: tuple("NON-ET", "N-ET", "Porte ET inversée: la sortie vaut 1 à moins que toutes les entrées ne valent 1."),
+            nor: tuple("NON-OU", "N-OU", "Porte OU inversée: la sortie vaut 1 lorsque toutes les entrées valent 0."),
+            xnor: tuple("NON-OU-X", "N-OU-X", "Porte OU-X inversée: la sortie vaut 1 lorsqu’un nombre pair d’entrées valent 1."),
 
-            IMPLY: tuple("IMPLIQUE", "IMPL", "La sortie vaut 1 si la première entrée vaut 0 ou si les deux entrées valent 1."),
-            RIMPLY: tuple("IMPLIQUE (bis)", "IMPL", "La sortie vaut 1 si la seconde entrée vaut 0 ou si les deux entrées valent 1."),
-            NIMPLY: tuple("NON-IMPLIQUE", "N-IMPL", "Porte IMPLIQUE inversée: la sortie ne vaut 1 que lorsque la première entrée vaut 1 et la seconde 0."),
-            RNIMPLY: tuple("NON-IMPLIQUE (bis)", "N-IMPL", "Porte IMPLIQUE inversée: la sortie ne vaut 1 que lorsque la première entrée vaut 0 et la seconde 1."),
+            imply: tuple("IMPLIQUE", "IMPL", "La sortie vaut 1 si la première entrée vaut 0 ou si les deux entrées valent 1."),
+            rimply: tuple("IMPLIQUE (bis)", "IMPL", "La sortie vaut 1 si la seconde entrée vaut 0 ou si les deux entrées valent 1."),
+            nimply: tuple("NON-IMPLIQUE", "N-IMPL", "Porte IMPLIQUE inversée: la sortie ne vaut 1 que lorsque la première entrée vaut 1 et la seconde 0."),
+            rnimply: tuple("NON-IMPLIQUE (bis)", "N-IMPL", "Porte IMPLIQUE inversée: la sortie ne vaut 1 que lorsque la première entrée vaut 0 et la seconde 1."),
 
-            TXA: tuple("TRANSFERT-A", undefined, "La sortie est égale à la première entrée; la seconde entrée est ignorée."),
-            TXB: tuple("TRANSFERT-B", undefined, "La sortie est égale à la seconde entrée; la première entrée est ignorée."),
-            TXNA: tuple("TRANSFERT-NON-A", undefined, "La sortie est égale à la première entrée inversée; la seconde entrée est ignorée."),
-            TXNB: tuple("TRANSFERT-NON-B", undefined, "La sortie est égale à la seconde entrée inversée; la première entrée est ignorée."),
+            txa: tuple("TRANSFERT-A", undefined, "La sortie est égale à la première entrée; la seconde entrée est ignorée."),
+            txb: tuple("TRANSFERT-B", undefined, "La sortie est égale à la seconde entrée; la première entrée est ignorée."),
+            txna: tuple("TRANSFERT-NON-A", undefined, "La sortie est égale à la première entrée inversée; la seconde entrée est ignorée."),
+            txnb: tuple("TRANSFERT-NON-B", undefined, "La sortie est égale à la seconde entrée inversée; la première entrée est ignorée."),
 
 
             tooltip: {
@@ -382,7 +475,7 @@ const Strings_fr = {
         },
         Input: {
             tooltip: {
-                title: template("Entrée (${numBits} bits)"),
+                title: template("Entrée (${numBits} bit$s{numBits})"),
             },
             contextMenu: {
                 LockValue: "Verrouiller cette valeur",
@@ -391,7 +484,7 @@ const Strings_fr = {
                 ReplaceWithClock: "Remplacer par horloge",
             },
         },
-        InputRandom: {
+        Random: {
             tooltip: {
                 title: "Valeur aléatoire",
                 desc: tuple("À chaque coup d’horloge, la valeur de sortie sera 1 avec une probabilité de ", "."),
@@ -400,7 +493,7 @@ const Strings_fr = {
                 ShowProb: "Montrer la probabilité",
             },
         },
-        LabelRect: {
+        Rectangle: {
             contextMenu: {
                 Size: "Taille",
                 SizePrompt: "Entrez la taille de ce rectangle:",
@@ -440,7 +533,7 @@ const Strings_fr = {
                 PlacementCenter: "Au centre",
             },
         },
-        LabelString: {
+        Label: {
             contextMenu: {
                 ChangeText: "Changer le texte…",
                 ChangeTextPrompt: "Choisissez le texte à afficher:",
@@ -461,22 +554,22 @@ const Strings_fr = {
                 ShowWiring: "Afficher les connexions",
                 UseZForDisconnected: "Utiliser Z pour sorties déconnectées",
 
-                ParamNumFrom: tuple("Nombre d’entrées", template("${val} entrées")),
-                ParamNumTo: tuple("Nombre de sorties", template("${val} sorties")),
+                ParamNumFrom: tuple("Nombre d’entrées", template("${val} entrée$s{val}")),
+                ParamNumTo: tuple("Nombre de sorties", template("${val} sortie$s{val}")),
             },
         },
         Output: {
             tooltip: {
-                title: template("Sortie (${numBits} bits)"),
+                title: template("Sortie (${numBits} bit$s{numBits})"),
             },
         },
-        Output7Seg: {
+        Display7Seg: {
             tooltip: "Afficheur 7 segments",
         },
-        Output16Seg: {
+        Display16Seg: {
             tooltip: "Afficheur 16 segments",
         },
-        OutputAscii: {
+        DisplayAscii: {
             tooltip: {
                 title: "Afficheur de caractère ASCII",
                 desc: tuple("Affiche le caractère ASCII représenté par ses 7 entrées, actuellement ", "."),
@@ -492,7 +585,7 @@ const Strings_fr = {
                 ChangeDisplayDesc: "Changez l’affichage supplémentaire avec un double-clic sur le composant",
             },
         },
-        OutputBar: {
+        DisplayBar: {
             tooltip: {
                 title: "Afficheur lumineux",
                 ValueUnknown: "Son état est indéterminé car son entrée n’est pas connue.",
@@ -516,10 +609,10 @@ const Strings_fr = {
                 ColorYellow: "Jaune",
             },
         },
-        OutputDisplay: {
+        Display: {
             tooltip: {
-                title: template("Afficheur ${numBits} bits"),
-                desc: tuple(template("Affiche la valeur ${radixStr} de ses ${numBits} entrées, actuellement "), "."),
+                title: template("Afficheur ${numBits} bit$s{numBits}"),
+                desc: tuple(template("Affiche la valeur ${radixStr} de ses ${numBits} entrée$s{numBits}, actuellement "), "."),
 
                 RadixBinary: "binaire",
                 RadixDecimal: "décimale",
@@ -539,7 +632,7 @@ const Strings_fr = {
                 DisplayAsUnknown: "comme inconnu",
             },
         },
-        OutputShiftBuffer: {
+        ShiftDisplay: {
             tooltip: "Affichage à décalage",
             contextMenu: {
                 Decoding: "Décodage",
@@ -581,7 +674,7 @@ const Strings_fr = {
                 ShowAsUnknown: "Masquer le type",
             },
         },
-        TriStateBufferArray: {
+        TristateBufferArray: {
             tooltip: {
                 title: "Sortie à 3 états multiple",
                 desc: "Représente plusieurs sorties à trois états, contrôlées par un seul bit de contrôle.",
@@ -590,31 +683,46 @@ const Strings_fr = {
         RAM: {
             tooltip: {
                 title: "RAM (mémoire vive)",
-                desc: template("Stocke ${numWords} lignes de ${numDataBits} bits."),
+                desc: template("Stocke ${numWords} ligne$s{numWords} de ${numDataBits} bit$s{numDataBits}."),
             },
             contextMenu: {
                 SelectedDataDisplay: "Affichage des données addressées",
+                EditContent: "Éditer le contenu…",
+                EditContentPrompt: "Tapez le nouveau contenu de la mémoire en séparant les lignes par des espaces. S’il y a autant de caractères que de bits, les données sont lues comme étant du binaire, sinon, comme de l'hexadécimal.",
+                SaveContent: "Sauvegarder le contenu",
+                LoadContent: "Charger le contenu…",
+                SwapROMRAM: "Échanger ROM et RAM",
+            },
+        },
+        ROM: {
+            tooltip: {
+                title: "ROM (mémoire morte)",
+                desc: template("Stocke ${numWords} ligne$s{numWords} de ${numDataBits} bits${numDataBits}."),
             },
         },
         Register: {
             tooltip: {
                 title: "Registre",
-                desc: template("Stocke ${numBits} bits."),
+                desc: template("Stocke ${numBits} bit$s{numBits}."),
+            },
+            contextMenu: {
+                ParamHasIncDec: "Avec incrémentaiton",
+                Saturating: "Avec saturation",
             },
         },
         ShiftRegister: {
             tooltip: {
                 title: "Registre à décalage",
-                desc: template("Stocke ${numBits} bits et les décale à chaque activation."),
+                desc: template("Stocke ${numBits} bit$s{numBits} et les décale à chaque activation."),
             },
         },
-        SwitchedInverter: {
+        ControlledInverter: {
             tooltip: {
                 title: "Inverseur commuté",
                 desc: "Inverse ses entrées si le bit de contrôle S vaut 1; sinon, les sorties sont égales aux entrées.",
             },
         },
-        TriStateBuffer: {
+        TristateBuffer: {
             tooltip: "Sortie à 3 états",
         },
         Wire: {
@@ -639,16 +747,10 @@ const Strings_fr = {
                 WireStyleStraight: "Ligne droite",
                 WireStyleCurved: "Courbe",
             },
+            timeline: {
+                PropagatingValue: template("Propagation de la valeur ${val} sur le fil"),
+            },
         },
-    },
-    Palette: {
-        Design: tuple("Concevoir", "Compose ou modifie le circuit"),
-        Delete: tuple("Supprimer", "Supprime des éléments du circuit"),
-        Move: tuple("Déplacer", "Déplace tout le circuit"),
-        Download: tuple("Télécharger", "Télécharge le circuit"),
-        Screenshot: tuple("Screenshot", "Télécharge le circuit sous forme d’image"),
-        Open: tuple("Ouvrir", "Ouvre un circuit précédemment téléchargé"),
-        Reset: tuple("Réinitialiser", "Réinitialise l’état de ce circuit"),
     },
     Dialogs: {
         Generic: {
@@ -665,12 +767,14 @@ const Strings_fr = {
 }
 
 const Strings_en: Strings = {
+    plural: (n: number, plural?: string, singular?: string) => Math.abs(n) === 1 ? (singular ?? "") : (plural ?? "s"),
     ComponentBar: {
         SectionNames: {
             InputOutput: "Input/ Output",
             Gates: "Gates",
             Layout: "Layout",
             Components: "Compo- nents",
+            Custom: "Custom",
         },
         Labels: {
             More: "More",
@@ -681,53 +785,53 @@ const Strings_en: Strings = {
             InputN: ["Multiple Inputs", "IN Mult."],
             Input8: ["Byte (8-Bit) Input", "IN (8-Bit)"],
             Clock: ["Clock Generator", "Clock"],
-            InputRandom: ["Random Input", "Random"],
+            Random: ["Random Input", "Random"],
             Output1: ["Output", "OUT"],
             OutputN: ["Multiple Outputs", "OUT Mult."],
             Output8: ["Byte (8-Bit) Output", "OUT (8-Bit)"],
-            OutputDisplayN: ["Value Display", "Display"],
-            OutputDisplay8: ["Byte (8-Bit) Display", "8-Bit Displ."],
-            Output7Seg: ["7-Segment Display", "7-Segment"],
-            Output16Seg: ["16-Segment Display", "16-Segment"],
-            OutputAscii: ["ASCII Character (7-Bit) Display", "Character"],
-            OutputBar: ["Bit Display as a Light Bar", "Bar"],
-            OutputShiftBuffer: ["Display with Shift Buffer", "Shift Displ."],
+            DisplayN: ["Value Display", "Display"],
+            Display8: ["Byte (8-Bit) Display", "8-Bit Displ."],
+            Display7Seg: ["7-Segment Display", "7-Segment"],
+            Display16Seg: ["16-Segment Display", "16-Segment"],
+            DisplayAscii: ["ASCII Character (7-Bit) Display", "Character"],
+            DisplayBar: ["Bit Display as a Light Bar", "Bar"],
+            ShiftDisplay: ["Display with Shift Buffer", "Shift Displ."],
 
             Passthrough1: ["Passthrough", "Passthrough"],
             PassthroughN: ["Passthrough with multiple inputs-outputs", "Passthr. (n)"],
-            LabelString: ["Label", "Label"],
-            LabelRectangle: ["Grouping Rectangle", "Group"],
+            Label: ["Label", "Label"],
+            Rectangle: ["Grouping Rectangle", "Group"],
 
-            NOT: ["NOT Gate", "NOT"],
-            BUF: ["Buffer", "BUF"],
-            TRI: ["Tri-State Buffer", "Tri-state"],
-            AND: ["AND Gate", "AND"],
-            OR: ["OR Gate", "OR"],
-            XOR: ["XOR Gate", "XOR"],
-            NAND: ["NAND Gate", "NAND"],
-            NOR: ["NOR Gate", "NOR"],
-            XNOR: ["XNOR Gate", "XNOR"],
-            IMPLY: ["IMPLY Gate", "IMPLY"],
-            NIMPLY: ["NIMPLY Gate", "NIMPLY"],
-            TRANSFER: ["Fake 2-Input TRANSFER Gate", "TRANSF."],
+            not: ["NOT Gate", "NOT"],
+            buf: ["Buffer", "BUF"],
+            tri: ["Tristate Buffer", "Tristate"],
+            and: ["AND Gate", "AND"],
+            or: ["OR Gate", "OR"],
+            xor: ["XOR Gate", "XOR"],
+            nand: ["NAND Gate", "NAND"],
+            nor: ["NOR Gate", "NOR"],
+            xnor: ["XNOR Gate", "XNOR"],
+            imply: ["IMPLY Gate", "IMPLY"],
+            nimply: ["NIMPLY Gate", "NIMPLY"],
+            transfer: ["Fake 2-Input TRANSFER Gate", "TRANSF."],
 
-            AND3: ["3-Input AND Gate", "AND (3)"],
-            OR3: ["3-Input OR Gate", "OR (3)"],
-            XOR3: ["3-Input XOR Gate", "XOR (3)"],
-            NAND3: ["3-Input NAND Gate", "NAND (3)"],
-            NOR3: ["3-Input NOR Gate", "NOR (3)"],
-            XNOR3: ["3-Input XNOR Gate", "XNOR (3)"],
+            and3: ["3-Input AND Gate", "AND (3)"],
+            or3: ["3-Input OR Gate", "OR (3)"],
+            xor3: ["3-Input XOR Gate", "XOR (3)"],
+            nand3: ["3-Input NAND Gate", "NAND (3)"],
+            nor3: ["3-Input NOR Gate", "NOR (3)"],
+            xnor3: ["3-Input XNOR Gate", "XNOR (3)"],
 
-            AND4: ["4-Input AND Gate", "AND (4)"],
-            OR4: ["4-Input AND Gate", "OR (4)"],
-            XOR4: ["4-Input AND Gate", "XOR (4)"],
-            NAND4: ["4-Input AND Gate", "NAND (4)"],
-            NOR4: ["4-Input AND Gate", "NOR (4)"],
-            XNOR4: ["4-Input AND Gate", "XNOR (4)"],
+            and4: ["4-Input AND Gate", "AND (4)"],
+            or4: ["4-Input AND Gate", "OR (4)"],
+            xor4: ["4-Input AND Gate", "XOR (4)"],
+            nand4: ["4-Input AND Gate", "NAND (4)"],
+            nor4: ["4-Input AND Gate", "NOR (4)"],
+            xnor4: ["4-Input AND Gate", "XNOR (4)"],
 
-            SwitchedInverter: ["Switched Inverter", "Switched Inv."],
+            ControlledInverter: ["Switched Inverter", "Switched Inv."],
             GateArray: ["Gate Array", "Gate Array"],
-            TriStateBufferArray: ["Tri-State Buffer Array", "Tri-state Arr."],
+            TristateBufferArray: ["Tristate Buffer Array", "Tristate Arr."],
 
             HalfAdder: ["Half Adder", "Half Adder"],
             Adder: ["Full Adder", "Full Adder"],
@@ -759,8 +863,10 @@ const Strings_en: Strings = {
             Register: ["Register", "Register"],
             ShiftRegister: ["Shift Register", "Shift Reg."],
             RAM: ["RAM Module", "RAM"],
+            ROM: ["ROM Module", "ROM"],
 
             Counter: ["4-Bit Counter", "Counter"],
+            Decoder: ["Binary to One-of-N Decoder", "Decoder"],
             Decoder7Seg: ["7-Segment Decoder", "7-Seg. Dec."],
             Decoder16Seg: ["ASCII-to-16-Segment Decoder", "16-Seg. Dec."],
             DecoderBCD4: ["4-Bit-to-BCD Decoder", "BCD Dec."],
@@ -784,6 +890,7 @@ const Strings_en: Strings = {
     Settings: {
         Settings: "Settings",
         CircuitName: "Name:",
+        DefaultFileName: "circuit",
         NameOfDownloadedFile: "This will be the name of the downloaded file.",
         hideWireColors: tuple("Hide wire colors", "If checked, wires are shown with a neutral color instead of showing whether they carry a 1 or a 0."),
         hideInputColors: tuple("Hide input colors", "If checked, inputs are shown with a neutral color, even if they still deliver a well determined value. Can be used together with hidden wire colors."),
@@ -805,12 +912,35 @@ const Strings_en: Strings = {
         WireStyleLine: "Line",
         WireStyleCurve: "Curve",
     },
-    Timeline: {
-        Play: tuple("Play", "Starts logical time"),
-        Pause: tuple("Pause", "Stops logical time"),
-        Step: tuple(undefined, "Moves logical time to the next scheduled event"),
+    TopBar: {
+        DirtyTooltip: "The circuit has been modified since the last download/save",
+        CircuitNameTooltip: "Name of the circuit; click to change",
+        SetCircuitName: "Set the name of the circuit (or leave empty to use the default name):",
+        CustomComponentCaptionTooltip: "Name of the subcircuit currently being edited; click to change",
+        CloseCircuit: "Back to the main circuit",
+
+        Undo: tuple("Undo", "Undo the last action"),
+        Redo: tuple("Redo", "Redo the last undone action or repeat the last action"),
+
+        Download: tuple("Download", "Download the circuit (or the custom components with Option/Alt key down)"),
+        Screenshot: tuple("Screenshot", "Download the circuit as an image (PNG or SVG with Option/Alt key down)"),
+        Open: tuple("Open", "Open a previously downloaded circuit"),
+        Reset: tuple("Reset", "Reset the state of this circuit"),
+
+        TimelinePlay: tuple("Play", "Starts logical time"),
+        TimelinePause: tuple("Pause", "Stops logical time"),
+        TimelineStep: tuple("Step", "Moves logical time to the next scheduled event"),
+        TimeLabel: "Time: ",
+
+        Design: tuple("Design", "Create or modify the circuit"),
+        Delete: tuple("Delete", "Delete elements from the circuit"),
+        Move: tuple("Move", "Move the whole circuit"),
     },
     Messages: {
+        UnsupportedFileType: template("Unsupported file type: ${type}."),
+        LoadedDefinitions: template("Loaded ${n} custom component definition$s{n}"),
+        SavedToUrl: "Circuit saved to URL",
+        NotImplemented: "This feature is not implemented yet.",
         ReallyCloseWindow: "Do you really want to close the window without saving the changes?",
         DevelopedBy: "Developed by",
     },
@@ -818,10 +948,16 @@ const Strings_en: Strings = {
         Generic: {
             contextMenu: {
                 Delete: "Delete",
+                Reset: "Reset",
+
+                MakeNewComponent: "Make New Component…",
+                MakeNewComponentFailed: "Cannot create new custom component.",
 
                 SetIdentifier: "Set Identifier…",
                 ChangeIdentifier: tuple("Change Identifier (", ")…"),
-                SetIdentifierPrompt: "Choose the identifier to use for this component or leave empty to remove it:\n\n(The identifier is only used to refer to this component from external JavaScript code.)",
+                SetIdentifierPrompt: "Choose the unique identifier to use for this component:",
+                IdentifierCannotBeEmpty: "The identifier cannot be empty.",
+                IdentifierAlreadyInUseShouldSwap: "The identifier is already in use. Do you want to swap the component identifiers?",
 
                 Orientation: "Orientation",
                 ChangeOrientationDesc: "Change the orientation with Command + double click on the component",
@@ -850,9 +986,9 @@ const Strings_en: Strings = {
 
                 ShowContent: "Show Content",
 
-                ParamNumInputs: tuple("Number of Inputs", template("${val} Inputs")),
-                ParamNumBits: tuple("Number of Bits", template("${val} Bits")),
-                ParamNumWords: tuple("Number of Lines", template("${val} Lines")),
+                ParamNumInputs: tuple("Number of Inputs", template("${val} Input$s{val}")),
+                ParamNumBits: tuple("Number of Bits", template("${val} Bit$s{val}")),
+                ParamNumWords: tuple("Number of Lines", template("${val} Line$s{val}")),
             },
 
             InputCarryInDesc: "Cin (Previous Carry)",
@@ -870,6 +1006,38 @@ const Strings_en: Strings = {
             OutputQDesc: "Q (Normal Output)",
             OutputQBarDesc: "Q̅ (Inverted Output)",
         },
+        Custom: {
+            MenuButtonSuffix: " (custom component)",
+            contextMenu: {
+                ChangeName: "Rename…",
+                ChangeNamePrompt: "Enter the name of this custom component:",
+                ChangeNameEmpty: "The name cannot be empty.",
+                ChangeCircuit: "Edit Circuit",
+                Delete: "Delete Custom Component",
+                EditFromComponentMessage: "You can edit this custom component by right-clicking such a component in the circuit.",
+                CannotDeleteInUse: "Cannot delete this custom component because it is in use in the circuit.",
+                CannotDeleteInUseBy: template("Cannot delete this custom component because it is used to define another component (${caption})."),
+                ConfirmDelete: "Are you sure you want to delete this custom component?",
+            },
+            tooltip: {
+                titleSuffix: " (Custom Component)",
+                desc: "This custom component computes its outputs according to the circuit you have defined.",
+            },
+            messages: {
+                EmptySelection: "No components are selected.",
+                NoInput: "No input is selected.",
+                NoOutput: "No output is selected.",
+                InputsOutputsMustHaveNames: "All inputs and outputs must have unique (non-dynamic) names.",
+                MissingComponents: template("The following components are connected to outputs but are missing from selection: ${list}."),
+                NoWires: "There are no wires between the selected components.",
+                UselessComponents: template("The following components are not connected to outputs and are useless: ${list}."),
+                CannotIncludeClock: "Clocks cannot be included in custom components. Add a normal input, which can later be connected to an external clock.",
+                EnterCaptionPrompt: "Entrez le nom (unique) du composant personnalisé:",
+                ComponentAlreadyExists: template("A custom component definition with id '${id}' already exists."),
+                InputsOutputsChanged: "The inputs and outputs have changed and some connections may be removed by adapting the circuit. Do you want to continue?",
+                NotInMainEditor: "Please go back to the main editor to edit the custom circuit of this component.",
+            },
+        },
         Adder: {
             tooltip: {
                 title: "Adder",
@@ -883,10 +1051,23 @@ const Strings_en: Strings = {
             },
         },
         ALU: {
-            add: tuple("+", "Addition"),
-            sub: tuple("–", "Subtraction"),
-            and: tuple("AND", "AND"),
-            or: tuple("OR", "OR"),
+            "A+B": tuple("+", "Addition"),
+            "A-B": tuple("A–B", "Subtraction (A – B)"),
+            "B-A": tuple("B–A", "Subtraction (B – A)"),
+            "A+1": tuple("A+1", "A + 1"),
+            "A-1": tuple("A–1", "A – 1"),
+            "-A": tuple("–A", "Negation of A"),
+            "A*2": tuple("A×2", "Addition of A to itself (A × 2)"),
+            "A/2": tuple("A/2", "Arithmetic right shift by 1 (A/2)"),
+            "A|B": tuple("OR", "Disjunction (A OR B)"),
+            "A&B": tuple("AND", "Conjunction (A AND B)"),
+            "A|~B": tuple("ORn", "A OR NOT(B)"),
+            "A&~B": tuple("ANDn", "A AND NOT(B)"),
+            "~A": tuple("A̅", "Inversion of A"),
+            "A^B": tuple("XOR", "Excl. Disjunction (A XOR B)"),
+            "A<<": tuple("<<", "Logical Left Shift by 1 of A"),
+            "A>>": tuple(">>", "Logical Right Shift by 1 of A"),
+
             InputCinDesc: "input carry",
             OutputCoutDesc: "output carry",
             tooltip: {
@@ -897,6 +1078,7 @@ const Strings_en: Strings = {
             },
             contextMenu: {
                 toggleShowOp: "Show Operation",
+                ParamUseExtendedOpcode: "Use Extended Opcode",
             },
         },
         Clock: {
@@ -909,6 +1091,10 @@ const Strings_en: Strings = {
             contextMenu: {
                 Period: "Period",
                 ReplaceWithInput: "Replace with Input",
+            },
+            timeline: {
+                NextRisingEdge: "Next rising edge of the clock",
+                NextFallingEdge: "Next falling edge of the clock",
             },
         },
         Comparator: {
@@ -927,6 +1113,12 @@ const Strings_en: Strings = {
                 DisplayNone: "No",
                 DisplayDecimal: "Decimal",
                 DisplayHex: "Hexadecimal",
+            },
+        },
+        Decoder: {
+            tooltip: {
+                title: "Binary Decoder",
+                desc: template("Takes as input a binary number coded on ${numFrom} bit$s{numFrom} and activates the corresponding output among ${numTo} (currently, ${n})."),
             },
         },
         Decoder7Seg: {
@@ -963,25 +1155,25 @@ const Strings_en: Strings = {
             },
         },
         Gate: {
-            NOT: tuple("NOT", "NOT", "The output is the inverted input."),
-            BUF: tuple("BUF", "BUF", "The output is the same as the input."),
+            not: tuple("NOT", "NOT", "The output is the inverted input."),
+            buf: tuple("BUF", "BUF", "The output is the same as the input."),
 
-            AND: tuple("AND", "AND", "The output is 1 when all inputs are 1."),
-            OR: tuple("OR", "OR", "The output is 1 when at least one of the inputs is 1."),
-            XOR: tuple("XOR", "XOR", "The output is 1 when an odd number of inputs are 1."),
-            NAND: tuple("NAND", "NAND", "Inverted AND gate: the output is 1 unless all inputs are 1."),
-            NOR: tuple("NOR", "NOR", "Inverted OR gate: the output is 1 when all inputs are 0."),
-            XNOR: tuple("XNOR", "XNOR", "Inverted XOR gate: the output is 1 when an even number of inputs are 1."),
+            and: tuple("AND", "AND", "The output is 1 when all inputs are 1."),
+            or: tuple("OR", "OR", "The output is 1 when at least one of the inputs is 1."),
+            xor: tuple("XOR", "XOR", "The output is 1 when an odd number of inputs are 1."),
+            nand: tuple("NAND", "NAND", "Inverted AND gate: the output is 1 unless all inputs are 1."),
+            nor: tuple("NOR", "NOR", "Inverted OR gate: the output is 1 when all inputs are 0."),
+            xnor: tuple("XNOR", "XNOR", "Inverted XOR gate: the output is 1 when an even number of inputs are 1."),
 
-            IMPLY: tuple("IMPLY", "IMPL", "The output is 1 if the first input is 0 or if both inputs are 1."),
-            RIMPLY: tuple("IMPLY (bis)", "IMPL", "The output is 1 if the second input is 0 or if both inputs are 1."),
-            NIMPLY: tuple("NIMPLY", "N-IMPL", "Inverted IMPLY gate: the output is only 1 if the first input is 1 and the second one 0."),
-            RNIMPLY: tuple("NIMPLY (bis)", "N-IMPL", "Inverted IMPLY gate: la sortie ne vaut 1 que lorsque la première entrée vaut 0 et la seconde 1."),
+            imply: tuple("IMPLY", "IMPL", "The output is 1 if the first input is 0 or if both inputs are 1."),
+            rimply: tuple("IMPLY (bis)", "IMPL", "The output is 1 if the second input is 0 or if both inputs are 1."),
+            nimply: tuple("NIMPLY", "N-IMPL", "Inverted IMPLY gate: the output is only 1 if the first input is 1 and the second one 0."),
+            rnimply: tuple("NIMPLY (bis)", "N-IMPL", "Inverted IMPLY gate: la sortie ne vaut 1 que lorsque la première entrée vaut 0 et la seconde 1."),
 
-            TXA: tuple("TRANSFER-A", undefined, "The output is the same as the first input; the second input is ignored."),
-            TXB: tuple("TRANSFER-B", undefined, "The output is the same as the second input; the first input is ignored."),
-            TXNA: tuple("TRANSFER-NOT-A", undefined, "The output is the inverted first input; the second input is ignored."),
-            TXNB: tuple("TRANSFER-NOT-B", undefined, "The output is the inverted second input; the first input is ignored."),
+            txa: tuple("TRANSFER-A", undefined, "The output is the same as the first input; the second input is ignored."),
+            txb: tuple("TRANSFER-B", undefined, "The output is the same as the second input; the first input is ignored."),
+            txna: tuple("TRANSFER-NOT-A", undefined, "The output is the inverted first input; the second input is ignored."),
+            txnb: tuple("TRANSFER-NOT-B", undefined, "The output is the inverted second input; the first input is ignored."),
 
             tooltip: {
                 GateTitle: (gateType: Modifier) => mods(gateType, " Gate"),
@@ -1025,7 +1217,7 @@ const Strings_en: Strings = {
                 ReplaceWithClock: "Replace With Clock",
             },
         },
-        InputRandom: {
+        Random: {
             tooltip: {
                 title: "Random Input",
                 desc: tuple("When triggered by the clock, the output value will be 1 with probability ", "."),
@@ -1034,7 +1226,7 @@ const Strings_en: Strings = {
                 ShowProb: "Show Probability",
             },
         },
-        LabelRect: {
+        Rectangle: {
             contextMenu: {
                 Size: "Size",
                 SizePrompt: "Enter the size of this rectangle:",
@@ -1074,7 +1266,7 @@ const Strings_en: Strings = {
                 PlacementCenter: "Center",
             },
         },
-        LabelString: {
+        Label: {
             contextMenu: {
                 ChangeText: "Change Text…",
                 ChangeTextPrompt: "Type the text to display:",
@@ -1095,8 +1287,8 @@ const Strings_en: Strings = {
                 ShowWiring: "Show Internal Wiring",
                 UseZForDisconnected: "Use Z For Disconnected Pins",
 
-                ParamNumFrom: tuple("Number of Inputs", template("${val} Inputs")),
-                ParamNumTo: tuple("Number of Outputs", template("${val} Outputs")),
+                ParamNumFrom: tuple("Number of Inputs", template("${val} Input$s{val}")),
+                ParamNumTo: tuple("Number of Outputs", template("${val} Output$s{val}")),
             },
         },
         Output: {
@@ -1104,13 +1296,13 @@ const Strings_en: Strings = {
                 title: template("Output (${numBits}-Bit)"),
             },
         },
-        Output7Seg: {
+        Display7Seg: {
             tooltip: "7-Segment Display",
         },
-        Output16Seg: {
+        Display16Seg: {
             tooltip: "16-Segment Display",
         },
-        OutputAscii: {
+        DisplayAscii: {
             tooltip: {
                 title: "ASCII Character Display",
                 desc: tuple("Displays the ASCII character represented by the 7 inputs, currently ", "."),
@@ -1126,7 +1318,7 @@ const Strings_en: Strings = {
                 ChangeDisplayDesc: "Change the additional display with a double-click on the component",
             },
         },
-        OutputBar: {
+        DisplayBar: {
             tooltip: {
                 title: "Bar/LED Display",
                 ValueUnknown: "Its state is undefined because its input is unknown.",
@@ -1150,10 +1342,10 @@ const Strings_en: Strings = {
                 ColorYellow: "Yellow",
             },
         },
-        OutputDisplay: {
+        Display: {
             tooltip: {
                 title: template("${numBits}-Bit Display"),
-                desc: tuple(template("Displays the ${radixStr} value of its ${numBits} inputs, which is currently "), "."),
+                desc: tuple(template("Displays the ${radixStr} value of its ${numBits} input$s{numBits}, which is currently "), "."),
 
                 RadixBinary: "binary",
                 RadixDecimal: "decimal",
@@ -1174,7 +1366,7 @@ const Strings_en: Strings = {
                 DisplayAsUnknown: "Unkown",
             },
         },
-        OutputShiftBuffer: {
+        ShiftDisplay: {
             tooltip: "Shift Buffer Display",
             contextMenu: {
                 Decoding: "Decoding",
@@ -1216,41 +1408,56 @@ const Strings_en: Strings = {
                 ShowAsUnknown: "Hide Type",
             },
         },
-        TriStateBufferArray: {
+        TristateBufferArray: {
             tooltip: {
-                title: "Tri-State Buffer Array",
-                desc: "Represents multiple tri-state buffers switched by a single control bit.",
+                title: "Tristate Buffer Array",
+                desc: "Represents multiple tristate buffers switched by a single control bit.",
             },
         },
         RAM: {
             tooltip: {
-                title: "RAM",
-                desc: template("Stores ${numWords} rows of ${numDataBits} bits."),
+                title: "RAM (Random-Access Memory)",
+                desc: template("Stores ${numWords} row$s{numWords} of ${numDataBits} bit$s{numDataBits}."),
             },
             contextMenu: {
                 SelectedDataDisplay: "Addressed Data Display",
+                EditContent: "Edit Content…",
+                EditContentPrompt: "Type in the new memory content, separating lines with spaces. If there are as many characters as bits, the input is parsed as a binary string, and otherwise as a hexadecimal string.",
+                SaveContent: "Save Content",
+                LoadContent: "Load Content…",
+                SwapROMRAM: "Swap ROM/RAM",
+            },
+        },
+        ROM: {
+            tooltip: {
+                title: "ROM (Read-Only Memory)",
+                desc: template("Stores ${numWords} row$s{numWords} of ${numDataBits} bit$s{numDataBits}."),
             },
         },
         Register: {
             tooltip: {
                 title: "Register",
-                desc: template("Stores ${numBits} bits."),
+                desc: template("Stores ${numBits} bit$s{numBits}."),
+            },
+            contextMenu: {
+                ParamHasIncDec: "With Increment/Decrement",
+                Saturating: "Saturating",
             },
         },
         ShiftRegister: {
             tooltip: {
                 title: "Shift Register",
-                desc: template("Stores ${numBits} bits and shifts them left or right at each activation."),
+                desc: template("Stores ${numBits} bit$s{numBits} and shifts them left or right at each activation."),
             },
         },
-        SwitchedInverter: {
+        ControlledInverter: {
             tooltip: {
                 title: "Switched Inverter",
                 desc: "Inverts its inputs when the control bit S is on; otherwise, just outputs the inputs.",
             },
         },
-        TriStateBuffer: {
-            tooltip: "Tri-State Buffer",
+        TristateBuffer: {
+            tooltip: "Tristate Buffer",
         },
         Wire: {
             contextMenu: {
@@ -1274,16 +1481,10 @@ const Strings_en: Strings = {
                 WireStyleStraight: "Straight Line",
                 WireStyleCurved: "Curve",
             },
+            timeline: {
+                PropagatingValue: template("Propagation of value ${val} on wire"),
+            },
         },
-    },
-    Palette: {
-        Design: tuple("Design", "Create or modify the circuit"),
-        Delete: tuple("Delete", "Delete elements from the circuit"),
-        Move: tuple("Move", "Move the whole circuit"),
-        Download: tuple("Download", "Download the circuit"),
-        Screenshot: tuple("Screenshot", "Download the circuit as an image"),
-        Open: tuple("Open", "Open a previously downloaded circuit"),
-        Reset: tuple("Reset", "Reset the state of this circuit"),
     },
     Dialogs: {
         Generic: {
@@ -1307,8 +1508,6 @@ const langs = {
 
 export type Lang = keyof typeof langs
 
-export const DefaultLang: Lang = "en"
-
 export function isLang(lang: string): lang is Lang {
     return lang in langs
 }
@@ -1316,6 +1515,13 @@ export function isLang(lang: string): lang is Lang {
 export function setLang(l: Lang) {
     // console.log(`Setting language to '${l}'`)
     S = langs[l]
+    _lang = l
 }
 
-export let S: Strings = Strings_fr
+export function getLang(): Lang {
+    return _lang
+}
+
+export const DefaultLang: Lang = "en"
+export let S: Strings = langs[DefaultLang]
+let _lang: Lang = DefaultLang

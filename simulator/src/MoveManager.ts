@@ -1,3 +1,4 @@
+import { ComponentBase } from "./components/Component"
 import { DrawableWithPosition } from "./components/Drawable"
 import { Waypoint } from "./components/Wire"
 import { LogicEditor } from "./LogicEditor"
@@ -25,25 +26,47 @@ export class MoveManager {
         return undefined
     }
 
-    public setDrawableMoving(comp: DrawableWithPosition) {
+    public setDrawableMoving(comp: DrawableWithPosition, e?: MouseEvent | TouchEvent) {
         this.changeMovingDrawables(() => {
             this._movingDrawables.add(comp)
-        })
-    }
-    
-    public setDrawableStoppedMoving(comp: DrawableWithPosition) {
-        this.changeMovingDrawables(() => {
-            this._movingDrawables.delete(comp)
-        })
+        }, e)
     }
 
-    private changeMovingDrawables(change: () => void) {
+    public setDrawableStoppedMoving(comp: DrawableWithPosition, e?: MouseEvent | TouchEvent) {
+        this.changeMovingDrawables(() => {
+            this._movingDrawables.delete(comp)
+        }, e)
+    }
+
+    private changeMovingDrawables(change: () => void, e?: MouseEvent | TouchEvent) {
         const emptyBefore = this._movingDrawables.size === 0
         change()
         const emptyAfter = this._movingDrawables.size === 0
         if (emptyBefore !== emptyAfter) {
-            this.editor.updateCursor()
-            this.editor.redrawMgr.addReason("started or stopped moving drawables", null)
+            this.editor.updateCursor(e)
+            this.editor.editTools.redrawMgr.addReason("started or stopped moving drawables", null)
+        }
+    }
+
+    public clear() {
+        this._movingDrawables.clear()
+    }
+
+    public dump() {
+        const num = this._movingDrawables.size
+        if (num === 0) {
+            console.log("No moving drawables")
+        } else {
+            console.log(`There are ${num} moving drawables:`)
+            for (const drawable of this._movingDrawables) {
+                // class name of drawable
+                const className = drawable.constructor.name
+                if (drawable instanceof ComponentBase) {
+                    console.log(className + " - " + drawable.outputs._all[0]?.id ?? "?")
+                } else {
+                    console.log(className)
+                }
+            }
         }
     }
 

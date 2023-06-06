@@ -1,38 +1,39 @@
 import * as t from "io-ts"
 import { circle, COLOR_COMPONENT_BORDER, COLOR_UNKNOWN, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { ArrayFillWith, LogicValue, Mode, typeOrUndefined, Unknown } from "../utils"
-import { ALUDef } from "./ALU"
+import { ArrayFillUsing, ArrayFillWith, LogicValue, Mode, typeOrUndefined } from "../utils"
+import { AdderArrayDef } from "./AdderArray"
 import { defineParametrizedComponent, groupVertical, param, ParametrizedComponentBase, Repr, ResolvedParams } from "./Component"
-import { ContextMenuData, DrawContext, MenuItems } from "./Drawable"
-import { GateNType, GateNTypeRepr, GateNTypes } from "./GateTypes"
+import { DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
+import { validateGateType } from "./Gate"
+import { GateNType, GateNTypes } from "./GateTypes"
 
 
 export const GateArrayDef =
-    defineParametrizedComponent("ic", "gate-array", true, true, {
-        variantName: ({ bits }) => `gate-array-${bits}`,
+    defineParametrizedComponent("gate-array", true, true, {
+        variantName: ({ type, bits }) =>
+            // return array thus overriding default component id
+            [`gate-array`, `${type}-array`, `${type}-array-${bits}`],
+        idPrefix: "array",
         button: { imgWidth: 50 },
         repr: {
+            // type not part of specific repr, using normal type field
             bits: typeOrUndefined(t.number),
-            subtype: GateNTypeRepr,
             showAsUnknown: typeOrUndefined(t.boolean),
         },
         valueDefaults: {
-            subtype: "AND" as GateNType,
             showAsUnknown: false,
         },
         params: {
             bits: param(4, [2, 4, 8, 16]),
+            type: param("and" as GateNType, GateNTypes.values),
         },
-        validateParams: ({ bits }) => ({
-            numBits: bits,
-        }),
-        size: ({ numBits }) => ({
-            gridWidth: 4, // constant
-            gridHeight: ALUDef.size({ numBits }).gridHeight, // mimic ALU
-        }),
+        validateParams: ({ type: paramType, bits }, jsonType, defaults) => {
+            const type = validateGateType(GateNTypes, paramType, jsonType, defaults.type.defaultValue, "-array")
+            return { type, numBits: bits }
+        },
+        size: AdderArrayDef.size,
         makeNodes: ({ numBits }) => {
             const inputCenterY = 5 + Math.max(0, (numBits - 8) / 2)
             return {
@@ -55,58 +56,56 @@ export type GateArrayParams = ResolvedParams<typeof GateArrayDef>
 export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
 
     public readonly numBits: number
-    private _subtype: GateNType
+    private _type: GateNType
     private _showAsUnknown: boolean
 
-    public constructor(editor: LogicEditor, params: GateArrayParams, saved?: GateArrayRepr) {
-        super(editor, GateArrayDef.with(params), saved)
+    public constructor(parent: DrawableParent, params: GateArrayParams, saved?: GateArrayRepr) {
+        super(parent, GateArrayDef.with(params), saved)
 
         this.numBits = params.numBits
-        this._subtype = saved?.subtype ?? GateArrayDef.aults.subtype
+        this._type = params.type
         this._showAsUnknown = saved?.showAsUnknown ?? GateArrayDef.aults.showAsUnknown
     }
 
     public toJSON() {
         return {
-            type: "gate-array" as const,
-            subtype: this._subtype,
-            bits: this.numBits === GateArrayDef.aults.bits ? undefined : this.numBits,
             ...this.toJSONBase(),
+            bits: this.numBits === GateArrayDef.aults.bits ? undefined : this.numBits,
             showAsUnknown: this._showAsUnknown === GateArrayDef.aults.showAsUnknown ? undefined : this._showAsUnknown,
         }
     }
 
+    protected override jsonType(): string {
+        return `${this._type}-array`
+    }
+
+    public get type() {
+        return this._type
+    }
+
     public override makeTooltip() {
         const s = S.Components.GateArray.tooltip
-        const opDesc = S.Components.Gate[this._subtype][0]
+        const opDesc = S.Components.Gate[this._type][0]
         return tooltipContent(s.title, mods(
             div(s.desc.expand({ op: opDesc })),
         ))
     }
 
     protected doRecalcValue(): LogicValue[] {
-        const out = GateNTypes.props[this._subtype].out
-
+        const out = GateNTypes.props[this._type].out
         const a = this.inputValues(this.inputs.A)
         const b = this.inputValues(this.inputs.B)
-
-        const s = ArrayFillWith(Unknown as LogicValue, this.numBits)
-        for (let i = 0; i < this.numBits; i++) {
-            const ai = a[i]
-            const bi = b[i]
-            s[i] = out([ai, bi])
-        }
-        return s
+        return ArrayFillUsing(i => out([a[i], b[i]]), this.numBits)
     }
 
     protected override propagateValue(newValue: LogicValue[]) {
         this.outputValues(this.outputs.S, newValue)
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         this.doDrawDefault(g, ctx, {
             skipLabels: true,
-            drawInside: ({left, right}) => {
+            drawInside: ({ left, right }) => {
                 if (this._showAsUnknown) {
                     ctx.inNonTransformedFrame(() => {
                         g.fillStyle = COLOR_UNKNOWN
@@ -125,7 +124,7 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
                     let gateLeft = left + 10
                     const gateRight = right - 10
                     const pi2 = Math.PI / 2
-                    const type = this._subtype
+                    const type = this._type
 
                     const drawRightCircle = () => {
                         g.beginPath()
@@ -139,10 +138,10 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
                     }
 
                     switch (type) {
-                        case "AND":
-                        case "NAND":
-                        case "NIMPLY":
-                        case "RNIMPLY": {
+                        case "and":
+                        case "nand":
+                        case "nimply":
+                        case "rnimply": {
                             g.moveTo(this.posX, bottom)
                             g.lineTo(gateLeft, bottom)
                             g.lineTo(gateLeft, top)
@@ -151,23 +150,23 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
                             g.closePath()
                             g.stroke()
                             g.beginPath()
-                            if (type.startsWith("NAND")) {
+                            if (type.startsWith("nand")) {
                                 drawRightCircle()
                             }
-                            if (type === "NIMPLY") {
+                            if (type === "nimply") {
                                 drawLeftCircle(false)
-                            } else if (type === "RNIMPLY") {
+                            } else if (type === "rnimply") {
                                 drawLeftCircle(true)
                             }
                             break
                         }
 
-                        case "OR":
-                        case "NOR":
-                        case "XOR":
-                        case "XNOR":
-                        case "IMPLY":
-                        case "RIMPLY": {
+                        case "or":
+                        case "nor":
+                        case "xor":
+                        case "xnor":
+                        case "imply":
+                        case "rimply": {
                             g.beginPath()
                             g.moveTo(gateLeft, top)
                             g.lineTo(this.posX - 5, top)
@@ -181,15 +180,15 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
                             g.stroke()
                             const savedGateLeft = gateLeft
                             gateLeft += 2
-                            if (type.startsWith("NOR") || type.startsWith("XNOR")) {
+                            if (type.startsWith("nor") || type.startsWith("xnor")) {
                                 drawRightCircle()
                             }
-                            if (type === "IMPLY") {
+                            if (type === "imply") {
                                 drawLeftCircle(true)
-                            } else if (type === "RIMPLY") {
+                            } else if (type === "rimply") {
                                 drawLeftCircle(false)
                             }
-                            if (type.startsWith("X")) {
+                            if (type.startsWith("x")) {
                                 g.beginPath()
                                 g.moveTo(savedGateLeft - 4, bottom)
                                 g.quadraticCurveTo(this.posX - 8, this.posY, savedGateLeft - 4, top)
@@ -198,29 +197,29 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
                             break
                         }
 
-                        case "TXA":
-                        case "TXNA": {
+                        case "txa":
+                        case "txna": {
                             g.beginPath()
                             g.moveTo(gateLeft, bottom)
                             g.lineTo(gateLeft, top)
                             g.lineTo(gateRight, this.posY)
                             g.lineTo(gateLeft + 2, this.posY)
                             g.stroke()
-                            if (type === "TXNA") {
+                            if (type === "txna") {
                                 drawLeftCircle(true)
                             }
                             break
                         }
 
-                        case "TXB":
-                        case "TXNB": {
+                        case "txb":
+                        case "txnb": {
                             g.beginPath()
                             g.moveTo(gateLeft, top)
                             g.lineTo(gateLeft, bottom)
                             g.lineTo(gateRight, this.posY)
                             g.lineTo(gateLeft + 2, this.posY)
                             g.stroke()
-                            if (type === "TXNB") {
+                            if (type === "txnb") {
                                 drawLeftCircle(false)
                             }
                             break
@@ -231,8 +230,8 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
         })
     }
 
-    private doSetSubtype(newSubtype: GateNType) {
-        this._subtype = newSubtype
+    private doSetType(newSubtype: GateNType) {
+        this._type = newSubtype
         this.setNeedsRecalc()
         this.setNeedsRedraw("quad gate type changed")
     }
@@ -245,24 +244,24 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
         const s = S.Components.GateArray.contextMenu
 
-        const typeItems: ContextMenuData = []
-        for (const subtype of ["AND", "OR", "XOR", "NAND", "NOR", "XNOR", "-", "IMPLY", "RIMPLY", "NIMPLY", "RNIMPLY"] as const) {
+        const typeItems: MenuData = []
+        for (const subtype of ["and", "or", "xor", "nand", "nor", "xnor", "-", "imply", "rimply", "nimply", "rnimply"] as const) {
             if (subtype === "-") {
-                typeItems.push(ContextMenuData.sep())
+                typeItems.push(MenuData.sep())
             } else {
-                const icon = this._subtype === subtype ? "check" : "none"
-                typeItems.push(ContextMenuData.item(icon, subtype, () => {
-                    this.doSetSubtype(subtype)
+                const icon = this._type === subtype ? "check" : "none"
+                typeItems.push(MenuData.item(icon, subtype, () => {
+                    this.doSetType(subtype)
                 }))
             }
         }
 
         const items: MenuItems = [
-            ["mid", ContextMenuData.submenu("settings", s.Type, typeItems)],
+            ["mid", MenuData.submenu("settings", s.Type, typeItems)],
         ]
 
-        if (this.editor.mode >= Mode.FULL) {
-            const showAsUnknownItem = ContextMenuData.item(this._showAsUnknown ? "check" : "none", s.ShowAsUnknown, () => {
+        if (this.parent.mode >= Mode.FULL) {
+            const showAsUnknownItem = MenuData.item(this._showAsUnknown ? "check" : "none", s.ShowAsUnknown, () => {
                 this.doSetShowAsUnknown(!this._showAsUnknown)
             })
 
@@ -272,7 +271,7 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
         }
 
         items.push(
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numBits, "bits"),
             ...this.makeForceOutputsContextMenuItem(true)
         )

@@ -2,11 +2,10 @@ import * as t from "io-ts"
 import { DrawZIndex } from "../ComponentList"
 import { COLOR_COMPONENT_BORDER, COLOR_RECTANGLE_BACKGROUND, COLOR_RECTANGLE_BORDER, FONT_LABEL_DEFAULT, GRID_STEP } from "../drawutils"
 import { span, style, title } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isDefined, isUndefined, typeOrUndefined } from "../utils"
-import { ComponentBase, defineComponent, Repr } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, Drawable, DrawableWithPosition, DrawContext } from "./Drawable"
+import { InteractionResult, typeOrUndefined } from "../utils"
+import { ComponentBase, Repr, defineComponent } from "./Component"
+import { DrawContext, Drawable, DrawableParent, DrawableWithPosition, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 
 export const RectangleColor = {
     grey: "grey",
@@ -33,8 +32,9 @@ export const CaptionPosition = {
 
 export type CaptionPosition = keyof typeof CaptionPosition
 
-export const LabelRectDef =
-    defineComponent("label", "rect", {
+export const RectangleDef =
+    defineComponent("rect", {
+        idPrefix: "rect",
         button: { imgWidth: 32 },
         repr: {
             w: t.number,
@@ -64,9 +64,9 @@ export const LabelRectDef =
         makeNodes: () => ({}),
     })
 
-export type LabelRectRepr = Repr<typeof LabelRectDef>
+export type RectangleRepr = Repr<typeof RectangleDef>
 
-export class LabelRect extends ComponentBase<LabelRectRepr> {
+export class Rectangle extends ComponentBase<RectangleRepr> {
 
     private _w: number
     private _h: number
@@ -79,47 +79,33 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
     private _captionInside: boolean
     private _font: string
 
-    public constructor(editor: LogicEditor, saved?: LabelRectRepr) {
-        super(editor, LabelRectDef, saved)
-        if (isDefined(saved)) {
-            this._w = saved.w
-            this._h = saved.h
-            this._color = saved.color ?? LabelRectDef.aults.color
-            this._strokeWidth = saved.strokeWidth ?? LabelRectDef.aults.strokeWidth
-            this._noFill = saved.noFill ?? LabelRectDef.aults.noFill
-            this._rounded = saved.rounded ?? LabelRectDef.aults.rounded
-            this._caption = saved.caption ?? LabelRectDef.aults.caption
-            this._captionPos = saved.captionPos ?? LabelRectDef.aults.captionPos
-            this._captionInside = saved.captionInside ?? LabelRectDef.aults.captionInside
-            this._font = saved.font ?? LabelRectDef.aults.font
-        } else {
-            this._w = LabelRectDef.aults.width
-            this._h = LabelRectDef.aults.height
-            this._color = LabelRectDef.aults.color
-            this._strokeWidth = LabelRectDef.aults.strokeWidth
-            this._noFill = LabelRectDef.aults.noFill
-            this._rounded = LabelRectDef.aults.rounded
-            this._caption = LabelRectDef.aults.caption
-            this._captionPos = LabelRectDef.aults.captionPos
-            this._captionInside = LabelRectDef.aults.captionInside
-            this._font = LabelRectDef.aults.font
-        }
+    public constructor(parent: DrawableParent, saved?: RectangleRepr) {
+        super(parent, RectangleDef, saved)
+        this._w = saved?.w ?? RectangleDef.aults.width
+        this._h = saved?.h ?? RectangleDef.aults.height
+        this._color = saved?.color ?? RectangleDef.aults.color
+        this._strokeWidth = saved?.strokeWidth ?? RectangleDef.aults.strokeWidth
+        this._noFill = saved?.noFill ?? RectangleDef.aults.noFill
+        this._rounded = saved?.rounded ?? RectangleDef.aults.rounded
+        this._caption = saved?.caption ?? RectangleDef.aults.caption
+        this._captionPos = saved?.captionPos ?? RectangleDef.aults.captionPos
+        this._captionInside = saved?.captionInside ?? RectangleDef.aults.captionInside
+        this._font = saved?.font ?? RectangleDef.aults.font
     }
 
     public toJSON() {
         return {
-            type: "rect" as const,
             ...this.toJSONBase(),
             w: this._w,
             h: this._h,
             color: this._color,
             strokeWidth: this._strokeWidth,
-            noFill: this._noFill === LabelRectDef.aults.noFill ? undefined : this._noFill,
-            rounded: this._rounded === LabelRectDef.aults.rounded ? undefined : this._rounded,
-            caption: this._caption === LabelRectDef.aults.caption ? undefined : this._caption,
-            captionPos: this._captionPos === LabelRectDef.aults.captionPos ? undefined : this._captionPos,
-            captionInside: this._captionInside === LabelRectDef.aults.captionInside ? undefined : this._captionInside,
-            font: this._font === LabelRectDef.aults.font ? undefined : this._font,
+            noFill: this._noFill === RectangleDef.aults.noFill ? undefined : this._noFill,
+            rounded: this._rounded === RectangleDef.aults.rounded ? undefined : this._rounded,
+            caption: this._caption === RectangleDef.aults.caption ? undefined : this._caption,
+            captionPos: this._captionPos === RectangleDef.aults.captionPos ? undefined : this._captionPos,
+            captionInside: this._captionInside === RectangleDef.aults.captionInside ? undefined : this._captionInside,
+            font: this._font === RectangleDef.aults.font ? undefined : this._font,
         }
     }
 
@@ -143,7 +129,7 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
         return 0
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         const width = this._w
         const height = this._h
         const left = this.posX - width / 2
@@ -171,7 +157,7 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
             g.fill()
         }
 
-        if (isDefined(this._caption)) {
+        if (this._caption !== undefined) {
             g.fillStyle = COLOR_COMPONENT_BORDER
             g.font = this._font
             g.textAlign = "center"
@@ -263,69 +249,68 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
         return `${this._w} × ${this._h}`
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const s = S.Components.LabelRect.contextMenu
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        const s = S.Components.Rectangle.contextMenu
         const currentSizeStr = this.makeCurrentSizeString()
-        const setSizeItem = ContextMenuData.item("dimensions", s.Size + ` (${currentSizeStr})…`, () => this.runSetSizeDialog(currentSizeStr))
+        const setSizeItem = MenuData.item("dimensions", s.Size + ` (${currentSizeStr})…`, () => this.runSetSizeDialog(currentSizeStr))
 
         const makeSetStrokeWidthItem = (strokeWidth: number, desc: string) => {
             const isCurrent = this._strokeWidth === strokeWidth
             const icon = isCurrent ? "check" : "none"
-            return ContextMenuData.item(icon, desc, () => this.doSetStrokeWidth(strokeWidth))
+            return MenuData.item(icon, desc, () => this.doSetStrokeWidth(strokeWidth))
         }
 
         const makeItemUseColor = (desc: string, color: RectangleColor) => {
             const isCurrent = this._color === color
             const icon = isCurrent ? "check" : "none"
             const action = isCurrent ? () => undefined : () => this.doSetColor(color)
-            if (isDefined(color)) {
+            if (color !== undefined) {
                 const fillColorProp = this._noFill ? "" : `background-color: ${COLOR_RECTANGLE_BACKGROUND[color]}; `
                 const roundedProp = !this._rounded ? "" : "border-radius: 4px; "
                 const borderColor = COLOR_RECTANGLE_BORDER[color]
-                return ContextMenuData.item(icon, span(title(desc), style(`display: inline-block; width: 140px; height: 18px; ${fillColorProp}${roundedProp}margin-right: 8px; border: 2px solid ${borderColor}`)), action)
+                return MenuData.item(icon, span(title(desc), style(`display: inline-block; width: 140px; height: 18px; ${fillColorProp}${roundedProp}margin-right: 8px; border: 2px solid ${borderColor}`)), action)
             } else {
-                return ContextMenuData.item(icon, desc, action)
+                return MenuData.item(icon, desc, action)
             }
         }
 
-        const toggleRoundedItem = ContextMenuData.item(this._rounded ? "check" : "none", s.Rounded, () => {
+        const toggleRoundedItem = MenuData.item(this._rounded ? "check" : "none", s.Rounded, () => {
             this._rounded = !this._rounded
             this.setNeedsRedraw("rounded changed")
         })
 
-        const toggleNoFillItem = ContextMenuData.item(!this._noFill ? "check" : "none", s.WithBackgroundColor, () => {
+        const toggleNoFillItem = MenuData.item(!this._noFill ? "check" : "none", s.WithBackgroundColor, () => {
             this._noFill = !this._noFill
             this.setNeedsRedraw("nofill changed")
         })
 
-        const setCaptionItemName = isDefined(this._caption) ? s.ChangeTitle : s.SetTitle
-        const setCaptionItem = ContextMenuData.item("pen", setCaptionItemName, () => this.runSetCaptionDialog())
+        const setCaptionItemName = this._caption !== undefined ? s.ChangeTitle : s.SetTitle
+        const setCaptionItem = MenuData.item("pen", setCaptionItemName, () => this.runSetCaptionDialog(), "↩︎")
 
         const makeItemSetPlacement = (desc: string, placement: CaptionPosition) => {
             const isCurrent = this._captionPos === placement
             const icon = isCurrent ? "check" : "none"
             const action = isCurrent ? () => undefined : () => this.doSetCaptionPos(placement)
-            return ContextMenuData.item(icon, desc, action)
+            return MenuData.item(icon, desc, action)
         }
 
         const toggleCaptionInsideItems = this._captionPos === "c" ? [] : [
-            ContextMenuData.item(this._captionInside ? "check" : "none", s.InsideFrame, () => {
+            MenuData.item(this._captionInside ? "check" : "none", s.InsideFrame, () => {
                 this._captionInside = !this._captionInside
                 this.setNeedsRedraw("caption inside changed")
             }),
-            ContextMenuData.sep(),
+            MenuData.sep(),
         ]
 
-        const setFontItem = ContextMenuData.item("font", s.Font, () => {
-            this.runSetFontDialog(this._font, LabelRectDef.aults.font, this.doSetFont.bind(this))
+        const setFontItem = MenuData.item("font", s.Font, () => {
+            this.runSetFontDialog(this._font, RectangleDef.aults.font, this.doSetFont.bind(this))
         })
-
 
         return [
             ["mid", setSizeItem],
-            ["mid", ContextMenuData.submenu("palette", s.Color, [
+            ["mid", MenuData.submenu("palette", s.Color, [
                 toggleNoFillItem,
-                ContextMenuData.sep(),
+                MenuData.sep(),
                 makeItemUseColor(s.ColorYellow, RectangleColor.yellow),
                 makeItemUseColor(s.ColorRed, RectangleColor.red),
                 makeItemUseColor(s.ColorGreen, RectangleColor.green),
@@ -333,9 +318,9 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
                 makeItemUseColor(s.ColorTurquoise, RectangleColor.turquoise),
                 makeItemUseColor(s.ColorGrey, RectangleColor.grey),
             ])],
-            ["mid", ContextMenuData.submenu("strokewidth", s.Border, [
+            ["mid", MenuData.submenu("strokewidth", s.Border, [
                 makeSetStrokeWidthItem(0, s.BorderNone),
-                ContextMenuData.sep(),
+                MenuData.sep(),
                 makeSetStrokeWidthItem(1, s.Border1px),
                 makeSetStrokeWidthItem(2, s.Border2px),
                 makeSetStrokeWidthItem(3, s.Border3px),
@@ -343,10 +328,10 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
                 makeSetStrokeWidthItem(10, s.Border10px),
             ])],
             ["mid", toggleRoundedItem],
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             ["mid", setCaptionItem],
             ["mid", setFontItem],
-            ["mid", ContextMenuData.submenu("placement", s.TitlePlacement, [
+            ["mid", MenuData.submenu("placement", s.TitlePlacement, [
                 ...toggleCaptionInsideItems,
                 makeItemSetPlacement(s.PlacementTop, CaptionPosition.n),
                 makeItemSetPlacement(s.PlacementTopLeft, CaptionPosition.nw),
@@ -362,12 +347,12 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
     }
 
     private runSetSizeDialog(currentSizeStr: string) {
-        const promptReturnValue = window.prompt(S.Components.LabelRect.contextMenu.SizePrompt, currentSizeStr)
+        const promptReturnValue = window.prompt(S.Components.Rectangle.contextMenu.SizePrompt, currentSizeStr)
         if (promptReturnValue !== null) {
             let match
-            if ((match = /^(?<w>\d*)(?:(?:\s+|(?: *[×x,;] *))(?<h>\d*))?$/.exec(promptReturnValue)) !== null) {
+            if ((match = /^(?<w>\d*)((\s+|( *[×x,;] *))(?<h>\d*))?$/.exec(promptReturnValue)) !== null) {
                 const parse = (s: string | undefined, dflt: number) => {
-                    if (isUndefined(s)) {
+                    if (s === undefined) {
                         return dflt
                     }
                     const n = parseInt(s)
@@ -421,7 +406,7 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
     }
 
     private runSetCaptionDialog() {
-        const promptReturnValue = window.prompt(S.Components.LabelRect.contextMenu.SetTitlePrompt, this._caption)
+        const promptReturnValue = window.prompt(S.Components.Rectangle.contextMenu.SetTitlePrompt, this._caption)
         if (promptReturnValue !== null) {
             // OK button pressed
             const newCaption = promptReturnValue.length === 0 ? undefined : promptReturnValue
@@ -429,16 +414,15 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
         }
     }
 
-    public override mouseDoubleClicked(__e: MouseEvent | TouchEvent): boolean {
+    public override mouseDoubleClicked(__e: MouseEvent | TouchEvent): InteractionResult {
         // TODO: implement dragging for resizing the rectangle
         // don't call super, which would rotate the rectangle, this is useless here
         this.runSetSizeDialog(this.makeCurrentSizeString())
-        return true
+        return InteractionResult.SimpleChange
     }
 
-
     public override keyDown(e: KeyboardEvent): void {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !e.altKey) {
             this.runSetCaptionDialog()
         } else {
             super.keyDown(e)
@@ -446,4 +430,4 @@ export class LabelRect extends ComponentBase<LabelRectRepr> {
     }
 
 }
-LabelRectDef.impl = LabelRect
+RectangleDef.impl = Rectangle

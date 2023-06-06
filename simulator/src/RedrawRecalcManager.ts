@@ -1,6 +1,6 @@
 import { Component } from "./components/Component"
 import { Drawable } from "./components/Drawable"
-import { Dict, isDefined, isUndefined } from "./utils"
+import { Dict } from "./utils"
 
 export class RedrawManager {
 
@@ -10,7 +10,7 @@ export class RedrawManager {
     public addReason(reason: string, comp: Drawable | null) {
         const compObj = comp
         const compList = this._canvasRedrawReasons[reason]
-        if (isUndefined(compList)) {
+        if (compList === undefined) {
             this._canvasRedrawReasons[reason] = [compObj]
         } else {
             compList.push(compObj)
@@ -32,10 +32,10 @@ export class RedrawManager {
                 if (comp !== null) {
                     const compAny = comp as any
                     reasonParts.push(compAny.constructor?.name ?? "Component")
-                    if (isDefined(compAny.type)) {
+                    if (compAny.type !== undefined) {
                         reasonParts.push("_", compAny.type)
                     }
-                    if (isDefined(compAny.name)) {
+                    if (compAny.name !== undefined) {
                         reasonParts.push("('", compAny.name, "')")
                     }
                     reasonParts.push("; ")
@@ -56,60 +56,93 @@ export class RedrawManager {
     }
 }
 
-const RECALC = "recalc"
-const PROPAGATE = "propagate"
-
-type UpdateType = typeof RECALC | typeof PROPAGATE
 
 export class RecalcManager {
 
-    private _queue: Array<[Component, UpdateType, boolean]> = []
-
-    public enqueueForRecalc(comp: Component, forcePropagate: boolean) {
-        this._queue.push([comp, RECALC, forcePropagate])
-    }
+    private _propagateQueue: Array<Component> = []
+    private _recalcQueue: Array<[Component, boolean]> = []
+    public debug = false
 
     public enqueueForPropagate(comp: Component) {
-        this._queue.push([comp, PROPAGATE, false])
+        this._propagateQueue.push(comp)
+        this.log("Enqueued for propagate: " + comp)
+    }
+
+    public enqueueForRecalc(comp: Component, forcePropagate: boolean) {
+        this._recalcQueue.push([comp, forcePropagate])
+        this.log("Enqueued for recalc: " + comp)
+    }
+
+    public queueIsEmpty(): boolean {
+        return this._propagateQueue.length === 0 && this._recalcQueue.length === 0
     }
 
     public recalcAndPropagateIfNeeded(): boolean {
-        if (this._queue.length !== 0) {
-            this.recalcAndPropagate()
-            return true
+        if (this.queueIsEmpty()) {
+            return false
         }
-        return false
+        this.recalcAndPropagate()
+        return true
     }
 
     private recalcAndPropagate() {
-        let round = 1
+        // We proceed as follows: first, we propagate (from input nodes to components)
+        // all pending values. This marks some components as needing recalc, probably, and
+        // doing all propagation beforehand allows to wait with recalc until all values are
+        // propagated. Then, we recalc all components that need it, and then we loop until
+        // no new propagation/recalc is needed. We may need several loops if propagation
+        // times are set to 0, and we break out of the loop after a certain number of rounds
+        // to avoid infinite loops (e.g., a NOT gate looping back to itself)
+
+        let round = 0
+        const roundLimit = 1000
         do {
-            const currentQueue = [...this._queue]
-            // console.log(`Recalc/propagate round ${round}: ` + currentQueue.map((c) => c.toString()).join(", "))
-            this._queue = []
-            for (const [comp, udpateType, forcePropagate] of currentQueue) {
-                switch (udpateType) {
-                    case RECALC:
-                        // console.log(` -> Recalc ${comp}`)
-                        comp.recalcValue(forcePropagate)
-                        break
-                    case PROPAGATE:
-                        // console.log(` -> Propagate ${comp}`)
-                        comp.propagateCurrentValue()
-                        break
+            round++
+            if (round >= roundLimit) {
+                console.warn(`ERROR: Circular dependency; suspending updates after ${roundLimit} recalc/propagate rounds`)
+                for (const comp of [...this._propagateQueue, ...this._recalcQueue.map((r) => r[0])]) {
+                    comp.setInvalid()
+                }
+                this._propagateQueue = []
+                this._recalcQueue = []
+                break
+            }
+
+            this.log(`Recalc/propagate round ${round}: ${this._propagateQueue.length} propagate, ${this._recalcQueue.length} recalc.`)
+
+            const propagateQueue = this._propagateQueue
+            this._propagateQueue = []
+            this.log(`  PROPAG (${propagateQueue.length}) – ` + propagateQueue.map((c) => c.toString()).join("; "))
+            for (const comp of propagateQueue) {
+                try {
+                    comp.propagateCurrentValue()
+                } catch (e) {
+                    console.error("Error while propagating value of " + comp, e)
+                    comp.setInvalid()
                 }
             }
 
-            round++
-
-            // TODO smarter circular dependency tracking
-            if (round > 1000) {
-                console.log("ERROR circular dependency; suspending updates after 1000 recalc/propagate rounds")
-                break
+            const recalcQueue = this._recalcQueue
+            this._recalcQueue = []
+            this.log(`  RECALC (${recalcQueue.length}) – ` + recalcQueue.map((c) => c.toString()).join("; "))
+            for (const [comp, forcePropagate] of recalcQueue) {
+                try {
+                    comp.recalcValue(forcePropagate)
+                } catch (e) {
+                    console.error("Error while recalculating value of " + comp, e)
+                    comp.setInvalid()
+                }
             }
-        } while (this._queue.length !== 0)
 
-        // console.log(`Recalc/propagate done in ${round - 1} rounds.`)
+        } while (!this.queueIsEmpty())
+
+        this.log(`Recalc/propagate done in ${round} rounds.`)
+    }
+
+    private log(msg: string) {
+        if (this.debug) {
+            console.log(msg)
+        }
     }
 
 }

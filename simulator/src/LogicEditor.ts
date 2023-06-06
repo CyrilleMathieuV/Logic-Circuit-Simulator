@@ -1,26 +1,3 @@
-import dialogPolyfill from 'dialog-polyfill'
-import * as LZString from "lz-string"
-import * as pngMeta from 'png-metadata-writer'
-import { ComponentList, DrawZIndex } from "./ComponentList"
-import { Component, ComponentBase, ComponentState } from "./components/Component"
-import { Drawable, DrawableWithPosition, Orientation } from "./components/Drawable"
-import { LabelRect, LabelRectDef } from "./components/LabelRect"
-import { Waypoint, Wire, WireManager, WireStyle, WireStyles } from "./components/Wire"
-import { CursorMovementManager, EditorSelection } from "./CursorMovementManager"
-import { clampZoom, COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, isDarkMode, setColors, strokeSingleLine } from "./drawutils"
-import { a, applyModifierTo, attr, attrBuilder, button, cls, div, emptyMod, href, input, label, mods, option, raw, select, span, style, target, title, type } from "./htmlgen"
-import { IconName, inlineIconSvgFor, isIconName, makeIcon } from "./images"
-import { makeComponentMenuInto } from "./menuutils"
-import { MoveManager } from "./MoveManager"
-import { NodeManager } from "./NodeManager"
-import { PersistenceManager, Workspace } from "./PersistenceManager"
-import { RecalcManager, RedrawManager } from "./RedrawRecalcManager"
-import { DefaultLang, isLang, S, setLang } from "./strings"
-import { Tests } from "./Tests"
-import { Timeline, TimelineState } from "./Timeline"
-import { UndoManager } from './UndoManager'
-import { copyToClipboard, downloadBlob as downloadDataUrl, formatString, getURLParameter, isArray, isDefined, isEmbeddedInIframe, isFalsyString, isString, isTruthyString, isUndefined, isUndefinedOrNull, KeysOfByType, RichStringEnum, setVisible, showModal, targetIsFieldOrOtherInput } from "./utils"
-
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -33,7 +10,39 @@ import LogicEditorCSS from "../css/LogicEditor.css"
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import DialogPolyfillCSS from "../../node_modules/dialog-polyfill/dist/dialog-polyfill.css"
+
+import dialogPolyfill from 'dialog-polyfill'
+import { saveAs } from 'file-saver'
+import JSON5 from "json5"
+import * as LZString from "lz-string"
+import * as pngMeta from 'png-metadata-writer'
+import { ComponentFactory } from "./ComponentFactory"
+import { ComponentList, DrawZIndex } from "./ComponentList"
+import { ComponentMenu } from "./ComponentMenu"
+import { MessageBar } from "./MessageBar"
+import { MoveManager } from "./MoveManager"
+import { NodeManager } from "./NodeManager"
+import { RecalcManager, RedrawManager } from "./RedrawRecalcManager"
+import { SVGRenderingContext } from "./SVGRenderingContext"
+import { Serialization } from "./Serialization"
+import { Tests } from "./Tests"
+import { Timeline } from "./Timeline"
+import { TopBar } from "./TopBar"
+import { EditorSelection, UIEventManager } from "./UIEventManager"
+import { UndoManager } from './UndoManager'
+import { Component, ComponentBase } from "./components/Component"
+import { CustomComponent } from "./components/CustomComponent"
+import { Drawable, DrawableParent, DrawableWithPosition, EditTools, GraphicsRendering, Orientation } from "./components/Drawable"
+import { Rectangle, RectangleDef } from "./components/Rectangle"
+import { Wire, WireManager, WireStyle, WireStyles } from "./components/Wire"
+import { COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, clampZoom, isDarkMode, setDarkMode, strokeSingleLine } from "./drawutils"
 import { gallery } from './gallery'
+import { Modifier, a, attr, attrBuilder, cls, div, emptyMod, href, input, label, option, select, span, style, target, title, type } from "./htmlgen"
+import { inlineIconSvgFor, isIconName, makeIcon } from "./images"
+import { DefaultLang, S, getLang, isLang, setLang } from "./strings"
+import { InBrowser, KeysOfByType, RichStringEnum, UIDisplay, copyToClipboard, formatString, getURLParameter, isArray, isEmbeddedInIframe, isFalsyString, isString, isTruthyString, onVisible, pasteFromClipboard, setDisplay, setVisible, showModal, toggleVisible } from "./utils"
+
+
 
 enum Mode {
     STATIC,  // cannot interact in any way
@@ -82,6 +91,7 @@ const DEFAULT_EDITOR_OPTIONS = {
     hideTooltips: false,
     groupParallelWires: false,
     propagationDelay: 100,
+    allowPausePropagation: false,
     zoom: 100,
 }
 
@@ -109,7 +119,8 @@ export type DrawParams = {
     highlightColor: string | undefined,
     anythingMoving: boolean,
 }
-export class LogicEditor extends HTMLElement {
+
+export class LogicEditor extends HTMLElement implements DrawableParent {
 
     public static _globalListenersInstalled = false
 
@@ -118,16 +129,39 @@ export class LogicEditor extends HTMLElement {
         return LogicEditor._allConnectedEditors
     }
 
-    public readonly wireMgr = new WireManager(this)
-    public readonly nodeMgr = new NodeManager()
+    /// Accessible service singletons, defined once per editor ///
+
+    public readonly factory = new ComponentFactory(this)
+    public readonly eventMgr = new UIEventManager(this)
     public readonly timeline = new Timeline(this)
-    public readonly redrawMgr = new RedrawManager()
-    public readonly recalcMgr = new RecalcManager()
-    public readonly moveMgr = new MoveManager(this)
-    public readonly cursorMovementMgr = new CursorMovementManager(this)
-    public readonly undoMgr = new UndoManager(this)
+
+    // passed to an editor root when active
+    public readonly editTools: EditTools = {
+        moveMgr: new MoveManager(this),
+        undoMgr: new UndoManager(this),
+        redrawMgr: new RedrawManager(),
+        setDirty: this.setDirty.bind(this),
+        setToolCursor: this.setToolCursor.bind(this),
+    }
+
+
+    /// DrawableParent implementation ///
+
+    public isMainEditor(): this is LogicEditor { return true }
+    public get editor(): LogicEditor { return this }
 
     public readonly components = new ComponentList()
+    public readonly nodeMgr = new NodeManager()
+    public readonly wireMgr: WireManager = new WireManager(this)
+    public readonly recalcMgr = new RecalcManager()
+
+    private _ifEditing: EditTools | undefined = this.editTools
+    public get ifEditing() { return this._ifEditing }
+    public stopEditingThis() { this._ifEditing = undefined }
+    public startEditingThis(tools: EditTools) { this._ifEditing = tools }
+
+
+    /// Other internal state ///
 
     private _isEmbedded = false
     private _isSingleton = false
@@ -138,17 +172,25 @@ export class LogicEditor extends HTMLElement {
     private _options: EditorOptions = { ...DEFAULT_EDITOR_OPTIONS }
     private _hideResetButton = false
 
-    private _currentMouseAction: MouseAction = "edit"
+    private _menu: ComponentMenu | undefined = undefined
+    private _topBar: TopBar | undefined = undefined
+    private _messageBar: MessageBar | undefined = undefined
     private _toolCursor: string | null = null
     private _highlightedItems: HighlightedItems | undefined = undefined
     private _nextAnimationFrameHandle: number | null = null
 
+    private _editorRoot: DrawableParent = this
+    public get editorRoot() { return this._editorRoot }
+
     public root: ShadowRoot
     public readonly html: {
         rootDiv: HTMLDivElement,
+        centerCol: HTMLDivElement,
         canvasContainer: HTMLElement,
         mainCanvas: HTMLCanvasElement,
         leftToolbar: HTMLElement,
+        rightToolbarContainer: HTMLElement,
+        rightResetButton: HTMLButtonElement,
         tooltipElem: HTMLElement,
         tooltipContents: HTMLElement,
         mainContextMenu: HTMLElement,
@@ -163,7 +205,6 @@ export class LogicEditor extends HTMLElement {
         embedMarkdown: HTMLTextAreaElement,
     }
     public optionsHtml: {
-        nameField: HTMLInputElement,
         showGateTypesCheckbox: HTMLInputElement,
         showDisconnectedPinsCheckbox: HTMLInputElement,
         wireStylePopup: HTMLSelectElement,
@@ -174,10 +215,9 @@ export class LogicEditor extends HTMLElement {
         hideTooltipsCheckbox: HTMLInputElement,
         groupParallelWiresCheckbox: HTMLInputElement,
         propagationDelayField: HTMLInputElement,
-        zoomLevelField: HTMLInputElement,
         showUserDataLinkContainer: HTMLDivElement,
     } | undefined = undefined
-    public userdata: any = undefined
+    public userdata: string | Record<string, unknown> | undefined = undefined
 
     private _baseDrawingScale = 1
     private _actualZoomFactor = 1
@@ -188,13 +228,16 @@ export class LogicEditor extends HTMLElement {
         super()
 
         this.root = this.attachShadow({ mode: 'open' })
-        this.root.appendChild(template.content.cloneNode(true) as HTMLElement)
+        this.root.appendChild(window.Logic.template.content.cloneNode(true) as HTMLElement)
 
         const html: typeof this.html = {
             rootDiv: this.elemWithId("logicEditorRoot"),
+            centerCol: this.elemWithId("centerCol"),
             canvasContainer: this.elemWithId("canvas-sim"),
             mainCanvas: this.elemWithId("mainCanvas"),
             leftToolbar: this.elemWithId("leftToolbar"),
+            rightToolbarContainer: this.elemWithId("rightToolbarContainer"),
+            rightResetButton: this.elemWithId("rightResetButton"),
             tooltipElem: this.elemWithId("tooltip"),
             tooltipContents: this.elemWithId("tooltipContents"),
             mainContextMenu: this.elemWithId("mainContextMenu"),
@@ -211,6 +254,7 @@ export class LogicEditor extends HTMLElement {
         this.html = html
         dialogPolyfill.registerDialog(html.embedDialog)
     }
+
 
     private elemWithId<E extends Element>(id: string) {
         let elem = this.root.querySelector(`#${id}`)
@@ -240,8 +284,16 @@ export class LogicEditor extends HTMLElement {
         return this._actualZoomFactor
     }
 
+    public get isSingleton() {
+        return this._isSingleton
+    }
+
     public get options(): Readonly<EditorOptions> {
         return this._options
+    }
+
+    public get documentDisplayName(): string {
+        return this._options.name ?? S.Settings.DefaultFileName
     }
 
     public setPartialOptions(opts: Partial<EditorOptions>) {
@@ -253,9 +305,7 @@ export class LogicEditor extends HTMLElement {
         this._options = newOptions
         let optionsHtml
 
-        if (isDefined(optionsHtml = this.optionsHtml)) {
-            this.setDocumentName(newOptions.name)
-            optionsHtml.nameField.value = newOptions.name ?? ""
+        if ((optionsHtml = this.optionsHtml) !== undefined) {
             optionsHtml.hideWireColorsCheckbox.checked = newOptions.hideWireColors
             optionsHtml.hideInputColorsCheckbox.checked = newOptions.hideInputColors
             optionsHtml.hideOutputColorsCheckbox.checked = newOptions.hideOutputColors
@@ -266,25 +316,28 @@ export class LogicEditor extends HTMLElement {
             optionsHtml.hideTooltipsCheckbox.checked = newOptions.hideTooltips
             optionsHtml.groupParallelWiresCheckbox.checked = newOptions.groupParallelWires
             optionsHtml.propagationDelayField.valueAsNumber = newOptions.propagationDelay
-            optionsHtml.zoomLevelField.valueAsNumber = newOptions.zoom
 
-            optionsHtml.showUserDataLinkContainer.style.display = isDefined(this.userdata) ? "initial" : "none"
+            this.setWindowTitleFrom(newOptions.name)
+            this._topBar?.setCircuitName(this.editor.options.name)
+            this._topBar?.setZoomLevel(newOptions.zoom)
+
+            optionsHtml.showUserDataLinkContainer.style.display = this.userdata !== undefined ? "initial" : "none"
         }
 
         this._actualZoomFactor = clampZoom(newOptions.zoom)
 
-        this.redrawMgr.addReason("options changed", null)
+        this.editTools.redrawMgr.addReason("options changed", null)
     }
 
-    private setDocumentName(name: string | undefined) {
+    private setWindowTitleFrom(docName: string | undefined) {
         if (!this._isSingleton) {
             return
         }
         const defaultTitle = "Logic"
-        if (isUndefined(name)) {
+        if (docName === undefined) {
             document.title = defaultTitle
         } else {
-            document.title = `${name} – ${defaultTitle}`
+            document.title = `${docName} – ${defaultTitle}`
         }
     }
 
@@ -301,43 +354,16 @@ export class LogicEditor extends HTMLElement {
         return set ? nonDefaultOpts : undefined
     }
 
-
-    public setActiveTool(toolElement: HTMLElement) {
-        const tool = toolElement.getAttribute("tool")
-        if (isUndefinedOrNull(tool)) {
-            return
-        }
-
-        // Main edit buttons on the right
-        if (MouseActions.includes(tool)) {
-            this.wrapHandler(() => {
-                this.setCurrentMouseAction(tool)
-            })()
-            return
-        }
-
-        if (tool === "save") {
-            PersistenceManager.saveToFile(this)
-            return
-        }
-
-        if (tool === "screenshot") {
-            this.downloadSnapshotImage()
-            return
-        }
-
-        if (tool === "open") {
-            this.html.fileChooser.click()
-            return
-        }
-
-        this.setCurrentMouseAction("edit")
-        if (tool === "reset") {
-            this.wrapHandler(() => {
-                this.tryLoadFromData()
-            })()
-            return
-        }
+    public runFileChooser(accept: string, callback: (file: File) => void) {
+        const chooser = this.html.fileChooser
+        chooser.setAttribute("accept", accept)
+        chooser.addEventListener("change", () => {
+            const files = this.html.fileChooser.files
+            if (files !== null && files.length > 0) {
+                callback(files[0])
+            }
+        }, { once: true })
+        chooser.click()
     }
 
     public setToolCursor(cursor: string | null) {
@@ -345,11 +371,12 @@ export class LogicEditor extends HTMLElement {
     }
 
     private setCanvasSize() {
-        const { canvasContainer } = this.html
+        const { canvasContainer, mainCanvas } = this.html
+        mainCanvas.style.setProperty("width", "0")
+        mainCanvas.style.setProperty("height", "0")
         const w = canvasContainer.clientWidth
         const h = canvasContainer.clientHeight
         const f = window.devicePixelRatio ?? 1
-        const mainCanvas = this.html.mainCanvas
         mainCanvas.setAttribute("width", String(w * f))
         mainCanvas.setAttribute("height", String(h * f))
         mainCanvas.style.setProperty("width", w + "px")
@@ -358,51 +385,6 @@ export class LogicEditor extends HTMLElement {
     }
 
     public connectedCallback() {
-        const { rootDiv, mainCanvas } = this.html
-
-        const parentStyles = this.getAttribute("style")
-        if (parentStyles !== null) {
-            rootDiv.setAttribute("style", rootDiv.getAttribute("style") + parentStyles)
-        }
-
-        // TODO move this in SelectionMgr?
-        mainCanvas.ondragenter = () => {
-            return false
-        }
-        mainCanvas.ondragover = () => {
-            return false
-        }
-        mainCanvas.ondragend = () => {
-            return false
-        }
-        mainCanvas.ondrop = e => {
-            if (e.dataTransfer === null) {
-                return false
-            }
-
-            e.preventDefault()
-            const file = e.dataTransfer.files?.[0]
-            if (isDefined(file)) {
-                this.tryLoadFromFile(file)
-            } else {
-                const dataItems = e.dataTransfer.items
-                if (isDefined(dataItems)) {
-                    for (let i = 0; i < dataItems.length; i++) {
-                        const dataItem = dataItems[i]
-                        if (dataItem.kind === "string" && (dataItem.type === "application/json" || dataItem.type !== "text/plain")) {
-                            dataItem.getAsString(content => {
-                                e.dataTransfer!.dropEffect = "copy"
-                                this.load(content)
-                            })
-                            break
-                        }
-                    }
-                }
-            }
-            return false
-        }
-
-        this.cursorMovementMgr.registerCanvasListenersOn(this.html.mainCanvas)
         if (LogicEditor._allConnectedEditors.length === 0) {
             // set lang on first instance of editor on the page
             this.setupLang()
@@ -416,10 +398,11 @@ export class LogicEditor extends HTMLElement {
         insts.splice(insts.indexOf(this), 1)
 
         // TODO
-        // this.cursorMovementManager.unregisterCanvasListenersOn(this.html.mainCanvas)
+        // this.eventMgr.unregisterCanvasListenersOn(this.html.mainCanvas)
     }
 
     private setupLang() {
+
         const getNavigatorLanguage = () => {
             const lang = navigator.languages?.[0] ?? navigator.language
             if (lang.length > 2) {
@@ -445,6 +428,12 @@ export class LogicEditor extends HTMLElement {
     }
 
     private setup() {
+        const rootDiv = this.html.rootDiv
+        const parentStyles = this.getAttribute("style")
+        if (parentStyles !== null) {
+            rootDiv.setAttribute("style", rootDiv.getAttribute("style") + parentStyles)
+        }
+
         this._isEmbedded = isEmbeddedInIframe()
         const singletonAttr = this.getAttribute(ATTRIBUTE_NAMES.singleton)
         this._isSingleton = !this._isEmbedded && singletonAttr !== null && !isFalsyString(singletonAttr)
@@ -454,7 +443,7 @@ export class LogicEditor extends HTMLElement {
         if (this._isSingleton || this._isEmbedded) {
             const transferUrlParamToAttribute = (name: string) => {
                 const value = getURLParameter(name)
-                if (isDefined(value)) {
+                if (value !== undefined) {
                     this.setAttribute(name, value)
                 }
             }
@@ -500,7 +489,7 @@ export class LogicEditor extends HTMLElement {
                     }
                 }
             })
-            if (isDefined(this.userdata)) {
+            if (this.userdata !== undefined) {
                 console.log("Custom user data: ", this.userdata)
             }
         }
@@ -511,148 +500,23 @@ export class LogicEditor extends HTMLElement {
             // singletons manage their dark mode according to system settings
             const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)")
             darkModeQuery.onchange = () => {
-                setColors(darkModeQuery.matches)
+                setDarkMode(darkModeQuery.matches)
             }
-            setColors(darkModeQuery.matches)
+            setDarkMode(darkModeQuery.matches)
 
-            window.addEventListener("keyup", this.wrapHandler(e => {
-                if (targetIsFieldOrOtherInput(e)) {
-                    return
-                }
-                switch (e.key) {
-                    case "Escape":
-                        this.tryDeleteComponentsWhere(comp => comp.state === ComponentState.SPAWNING, false)
-                        this.wireMgr.tryCancelWire()
-                        e.preventDefault()
-                        return
-
-                    case "Backspace":
-                    case "Delete": {
-                        let selComp
-                        if (isDefined(selComp = this.cursorMovementMgr.currentSelection?.previouslySelectedElements) && selComp.size !== 0) {
-                            let anyDeleted = false
-                            for (const comp of selComp) {
-                                anyDeleted = this.tryDeleteDrawable(comp) || anyDeleted
-                            }
-                            if (anyDeleted) {
-                                this.undoMgr.takeSnapshot()
-                            }
-                        } else if ((selComp = this.cursorMovementMgr.currentMouseOverComp) !== null) {
-                            const deleted = this.tryDeleteDrawable(selComp)
-                            if (deleted) {
-                                this.undoMgr.takeSnapshot()
-                            }
-                        }
-                        e.preventDefault()
-                        return
-                    }
-
-                    case "e":
-                        this.setCurrentMouseAction("edit")
-                        e.preventDefault()
-                        return
-
-                    case "d":
-                        this.setCurrentMouseAction("delete")
-                        e.preventDefault()
-                        return
-
-                    case "m":
-                        this.setCurrentMouseAction("move")
-                        e.preventDefault()
-                        return
-
-                    case "ArrowRight":
-                        this.trySetCurrentComponentOrientation("e", e)
-                        return
-                    case "ArrowLeft":
-                        this.trySetCurrentComponentOrientation("w", e)
-                        return
-                    case "ArrowUp":
-                        this.trySetCurrentComponentOrientation("n", e)
-                        return
-                    case "ArrowDown":
-                        this.trySetCurrentComponentOrientation("s", e)
-                        return
-                }
-            }))
-
-            // TODO this should also work then not in singleton mode,
-            // but it still requires listening for keydown on the window,
-            // so we must know which was the lastest editor on screen to target
-            // this to
-            window.addEventListener("keydown", this.wrapHandler(e => {
-                const ctrlOrCommand = e.ctrlKey || e.metaKey
-                const keyLower = e.key.toLowerCase()
-                const shift = e.shiftKey || (keyLower !== e.key)
-                switch (keyLower) {
-                    case "a":
-                        if (ctrlOrCommand && this.mode >= Mode.CONNECT && !targetIsFieldOrOtherInput(e)) {
-                            this.cursorMovementMgr.selectAll()
-                            e.preventDefault()
-                        }
-                        return
-
-                    case "s":
-                        if (ctrlOrCommand && this._isSingleton) {
-                            this.saveCurrentStateToUrl()
-                            e.preventDefault()
-                        }
-                        return
-
-                    case "z":
-                        if (ctrlOrCommand && !targetIsFieldOrOtherInput(e)) {
-                            if (shift) {
-                                this.undoMgr.redoOrRepeat()
-                            } else {
-                                this.undoMgr.undo()
-                            }
-                            e.preventDefault()
-                        }
-                        return
-                    case "y":
-                        if (ctrlOrCommand && !targetIsFieldOrOtherInput(e)) {
-                            this.undoMgr.redoOrRepeat()
-                            e.preventDefault()
-                        }
-                        return
-                    case "x":
-                        if (ctrlOrCommand && !targetIsFieldOrOtherInput(e)) {
-                            this.cut()
-                            e.preventDefault()
-                        }
-                        return
-                    // case "c":
-                    // NO: this prevents the sharing code from being copied
-                    // if (ctrlOrCommand && !targetIsField()) {
-                    //     this.copy()
-                    //     e.preventDefault()
-                    // }
-                    // return
-                    case "v":
-                        if (ctrlOrCommand && !targetIsFieldOrOtherInput(e)) {
-                            this.paste()
-                            e.preventDefault()
-                        }
-                        return
-                }
-
-                const mouseOverComp = this.cursorMovementMgr.currentMouseOverComp
-                if (mouseOverComp !== null) {
-                    mouseOverComp.keyDown(e)
-                }
-            }))
+            // reexport some libs
+            window.JSON5 = JSON5
 
             // make load function available globally
             window.Logic.singleton = this
-            window.load = this.load.bind(this)
+            window.load = this.loadCircuitOrLibrary.bind(this)
             window.save = this.save.bind(this)
             window.highlight = this.highlight.bind(this)
 
-            window.adjustedTime = () => {
-                const nowAdjusted = this.timeline.adjustedTime()
-                // console.log(nowAdjusted)
-                return nowAdjusted
+            window.logicalTime = () => {
+                const time = this.timeline.logicalTime()
+                // console.log(time)
+                return time
             }
 
             this.html.canvasContainer.appendChild(
@@ -676,6 +540,8 @@ export class LogicEditor extends HTMLElement {
                     e.returnValue = S.Messages.ReallyCloseWindow
                 }
             }
+
+            this.focus()
         }
 
         // Load parameters from attributes
@@ -720,7 +586,7 @@ export class LogicEditor extends HTMLElement {
                     this._initialData = { _type: "json", json: innerScriptElem.innerHTML }
                     innerScriptElem.remove() // remove the data element to hide the raw data
                     // do this manually
-                    this.tryLoadFromData()
+                    this.tryLoadCircuitFromData()
                     this.doRedraw()
                     return true
                 } else {
@@ -746,51 +612,40 @@ export class LogicEditor extends HTMLElement {
             const elem = this.elemWithId(buttonId)
             const [name, tooltip] = isString(strings) ? [strings, undefined] : strings
             elem.insertAdjacentText("beforeend", name)
-            if (isDefined(tooltip)) {
+            if (tooltip !== undefined) {
                 elem.setAttribute("title", tooltip)
             }
         }
 
-        {
-            // set strings in the UI
-            const s = S.Palette
-            setCaption("editToolButton", s.Design)
-            setCaption("deleteToolButton", s.Delete)
-            setCaption("moveToolButton", s.Move)
-            setCaption("saveToolButton", s.Download)
-            setCaption("screenshotToolButton", s.Screenshot)
-            setCaption("openToolButton", s.Open)
-            setCaption("resetToolButtonCaption", s.Reset)
-            setCaption("settingsTitle", S.Settings.Settings)
-        }
+        // set strings in the UI
+        const s = S.Dialogs.Share
+        setCaption("settingsTitle", S.Settings.Settings)
+        setCaption("shareDialogTitle", s.title)
+        setCaption("shareDialogUrl", s.URL)
+        setCaption("shareDialogIframe", s.EmbedInIframe)
+        setCaption("shareDialogWebComp", s.EmbedWithWebComp)
+        setCaption("shareDialogMarkdown", s.EmbedInMarkdown)
+        setCaption("shareDialogClose", S.Dialogs.Generic.Close)
 
-        {
-            const s = S.Dialogs.Share
-            setCaption("shareDialogTitle", s.title)
-            setCaption("shareDialogUrl", s.URL)
-            setCaption("shareDialogIframe", s.EmbedInIframe)
-            setCaption("shareDialogWebComp", s.EmbedWithWebComp)
-            setCaption("shareDialogMarkdown", s.EmbedInMarkdown)
-            setCaption("shareDialogClose", S.Dialogs.Generic.Close)
-        }
-
-        makeComponentMenuInto(this.html.leftToolbar, this._options.showOnly)
+        this._topBar = new TopBar(this)
+        this._menu = new ComponentMenu(this.html.leftToolbar, this._options.showOnly)
+        this._messageBar = new MessageBar(this)
 
         // TODO move this to the Def of LabelRect to be cleaner
-        const groupButton = this.html.leftToolbar.querySelector("button.sim-component-button[data-category=label][data-type=rect]")
+        const groupButton = this.html.leftToolbar.querySelector("button.sim-component-button[data-type=rect]")
         if (groupButton === null) {
             console.log("ERROR: Could not find group button")
         } else {
             groupButton.addEventListener("mousedown", this.wrapHandler(e => {
-                const selectedComps = this.cursorMovementMgr.currentSelection?.previouslySelectedElements || new Set()
+                const selectedComps = this.eventMgr.currentSelection?.previouslySelectedElements || new Set()
                 if (selectedComps.size !== 0) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
 
-                    const newGroup = LabelRectDef.make<LabelRect>(this)
+                    const newGroup = RectangleDef.make<Rectangle>(this)
                     newGroup.setSpawned()
 
-                    if (newGroup instanceof LabelRect) {
+                    if (newGroup instanceof Rectangle) {
                         newGroup.wrapContents(selectedComps)
                     } else {
                         console.log("ERROR: created component is not a LabelRect")
@@ -799,15 +654,11 @@ export class LogicEditor extends HTMLElement {
             }))
         }
 
-        this.cursorMovementMgr.registerButtonListenersOn(this.root.querySelectorAll(".sim-component-button"))
+        this.eventMgr.registerCanvasListenersOn(this.html.mainCanvas)
 
-        const modifButtons = this.root.querySelectorAll("button.sim-modification-tool")
-        for (let i = 0; i < modifButtons.length; i++) {
-            const but = modifButtons[i] as HTMLElement
-            but.addEventListener("click", () => {
-                this.setActiveTool(but)
-            })
-        }
+        this.eventMgr.registerButtonListenersOn(this._menu.allFixedButtons(), false)
+
+        this.html.rightResetButton.addEventListener("click", this.wrapHandler(this.resetCircuit.bind(this)))
 
         const showModeChange = this._maxInstanceMode >= Mode.FULL
         if (showModeChange) {
@@ -827,7 +678,7 @@ export class LogicEditor extends HTMLElement {
                                     ).render()
 
                                 optionsDiv.addEventListener("click", () => {
-                                    setVisible(this.html.optionsZone, true)
+                                    toggleVisible(this.html.optionsZone)
                                 })
 
                                 return [S.Modes.FULL, optionsDiv]
@@ -859,7 +710,7 @@ export class LogicEditor extends HTMLElement {
                             copyLinkDiv
                         ).render()
 
-                    switchToModeDiv.addEventListener("click", this.wrapHandler(() => this.setMode(buttonMode)))
+                    switchToModeDiv.addEventListener("click", () => this.setMode(buttonMode))
 
                     return switchToModeDiv
                 })
@@ -870,16 +721,9 @@ export class LogicEditor extends HTMLElement {
         // this.html.embedUrlQRCode.addEventListener("click", __ => {
         //     // download
         //     const dataUrl = this.html.embedUrlQRCode.src
-        //     const filename = (this.options.name ?? "circuit") + "_qrcode.png"
+        //     const filename = this.documentDisplayName + "_qrcode.png"
         //     downloadDataUrl(dataUrl, filename)
         // })
-
-        this.html.fileChooser.addEventListener("change", __ => {
-            let files
-            if ((files = this.html.fileChooser.files) !== null && files.length > 0) {
-                this.tryLoadFromFile(files[0])
-            }
-        })
 
         const selectAllListener = (e: Event) => {
             const textArea = e.target as HTMLTextAreaElement
@@ -892,44 +736,8 @@ export class LogicEditor extends HTMLElement {
             textArea.addEventListener("focus", selectAllListener)
         }
 
-
-        const timelineControls: HTMLElement = this.elemWithId("timelineControls")!
-        const makeTimelineButton = (icon: IconName, [text, expl]: [string | undefined, string], action: () => unknown) => {
-            const but =
-                button(cls("btn btn-sm btn-outline-light sim-toolbar-button-right"),
-                    isUndefined(text) ? style("text-align: center") : emptyMod,
-                    title(expl),
-                    makeIcon(icon, 20, 20),
-                    isUndefined(text) ? raw("&nbsp;") : text,
-                ).render()
-            but.addEventListener("click", action)
-            return but
-        }
-        const playButton = makeTimelineButton("play", S.Timeline.Play, () => this.timeline.play())
-        const pauseButton = makeTimelineButton("pause", S.Timeline.Pause, () => this.timeline.pause())
-        const stepButton = makeTimelineButton("step", S.Timeline.Step, () => this.timeline.step())
-        applyModifierTo(timelineControls, mods(playButton, pauseButton, stepButton))
-
-        const showTimelineButtons = true
-        setVisible(timelineControls, showTimelineButtons)
-
-        function setTimelineButtonsVisible(state: TimelineState) {
-            if (state.hasCallbacks) {
-                // show part of the interface
-                setVisible(playButton, state.isPaused)
-                setVisible(pauseButton, !state.isPaused)
-                setVisible(stepButton, state.canStep)
-            } else {
-                // show nothing
-                setVisible(playButton, false)
-                setVisible(pauseButton, false)
-                setVisible(stepButton, false)
-            }
-        }
-
+        this.setCurrentMouseAction("edit")
         this.timeline.reset()
-        this.timeline.onStateChanged = newState => setTimelineButtonsVisible(newState)
-        setTimelineButtonsVisible(this.timeline.state)
 
         // Options
         const optionsZone = this.html.optionsZone
@@ -944,7 +752,7 @@ export class LogicEditor extends HTMLElement {
             }
             checkbox.addEventListener("change", this.wrapHandler(() => {
                 this._options[optionName] = checkbox.checked
-                this.redrawMgr.addReason("option changed: " + optionName, null)
+                this.editTools.redrawMgr.addReason("option changed: " + optionName, null)
             }))
             const section = div(
                 style("height: 20px"),
@@ -956,24 +764,6 @@ export class LogicEditor extends HTMLElement {
             }
             return checkbox
         }
-
-        const nameField = input(type("text"),
-            style("margin-left: 4px"),
-            attr("value", this.options.name ?? ""),
-            attr("placeholder", "circuit"),
-            attr("title", S.Settings.NameOfDownloadedFile),
-        ).render()
-        nameField.addEventListener("change", () => {
-            const newName = nameField.value
-            this._options.name = newName.length === 0 ? undefined : newName
-            this.setDocumentName(this._options.name)
-        })
-        optionsZone.appendChild(
-            div(
-                style("height: 20px; margin-bottom: 4px"),
-                S.Settings.CircuitName, nameField
-            ).render()
-        )
 
         const hideWireColorsCheckbox = makeCheckbox("hideWireColors", S.Settings.hideWireColors)
         const hideInputColorsCheckbox = makeCheckbox("hideInputColors", S.Settings.hideInputColors)
@@ -991,7 +781,7 @@ export class LogicEditor extends HTMLElement {
         ).render()
         wireStylePopup.addEventListener("change", this.wrapHandler(() => {
             this._options.wireStyle = wireStylePopup.value as WireStyle
-            this.redrawMgr.addReason("wire style changed", null)
+            this.editTools.redrawMgr.addReason("wire style changed", null)
         }))
         optionsZone.appendChild(
             div(
@@ -1016,28 +806,9 @@ export class LogicEditor extends HTMLElement {
             ).render()
         )
 
-        const zoomLevelField = input(type("number"),
-            style("margin: 0 2px 0 5px; width: 4em"),
-            attr("min", "0"), attr("step", "10"),
-            attr("value", String(this.options.zoom)),
-            attr("title", S.Settings.zoomLevel),
-        ).render()
-        zoomLevelField.addEventListener("change", this.wrapHandler(() => {
-            const zoom = zoomLevelField.valueAsNumber
-            this._options.zoom = zoom
-            this._actualZoomFactor = clampZoom(zoom)
-            this.redrawMgr.addReason("zoom level changed", null)
-        }))
-        optionsZone.appendChild(
-            div(
-                style("height: 20px"),
-                S.Settings.zoomLevelField[0], zoomLevelField, S.Settings.zoomLevelField[1]
-            ).render()
-        )
-
         const showUserdataLink = a(S.Settings.showUserDataLink[1], style("text-decoration: underline; cursor: pointer")).render()
         showUserdataLink.addEventListener("click", () => {
-            alert(S.Settings.userDataHeader + "\n\n" + JSON.stringify(this.userdata, undefined, 4))
+            alert(S.Settings.userDataHeader + "\n\n" + JSON5.stringify(this.userdata, undefined, 4))
         })
         const showUserDataLinkContainer = div(
             style("margin-top: 5px; display: none"),
@@ -1046,7 +817,6 @@ export class LogicEditor extends HTMLElement {
         optionsZone.appendChild(showUserDataLinkContainer)
 
         this.optionsHtml = {
-            nameField,
             hideWireColorsCheckbox,
             hideInputColorsCheckbox,
             hideOutputColorsCheckbox,
@@ -1057,14 +827,18 @@ export class LogicEditor extends HTMLElement {
             hideTooltipsCheckbox,
             groupParallelWiresCheckbox,
             propagationDelayField,
-            zoomLevelField,
             showUserDataLinkContainer,
         }
 
         // this is called once here to set the initial transform and size before the first draw, and again later
         this.setCanvasSize()
 
-        this.tryLoadFromData()
+        // force redraw the first time the canvas is visible; this also sets the size
+        onVisible(this.html.canvasContainer, () => {
+            this.redraw()
+        })
+
+        this.tryLoadCircuitFromData()
         // also triggers redraw, should be last thing called here
 
         this.setModeFromString(this.getAttribute(ATTRIBUTE_NAMES.mode))
@@ -1077,9 +851,9 @@ export class LogicEditor extends HTMLElement {
     }
 
     private findLightDOMChild<K extends keyof HTMLElementTagNameMap>(tagName: K): HTMLElementTagNameMap[K] | null {
-        tagName = tagName.toUpperCase() as any
-        for (const child of Array.from(this.children)) {
-            if (child.tagName === tagName) {
+        const TAGNAME = tagName.toUpperCase()
+        for (const child of this.children) {
+            if (child.tagName === TAGNAME) {
                 return child as HTMLElementTagNameMap[K]
             }
         }
@@ -1091,6 +865,9 @@ export class LogicEditor extends HTMLElement {
             return
         }
 
+        window.decompress = LZString.decompressFromEncodedURIComponent
+        window.decodeOld = LogicEditor.decodeFromURLOld
+
         window.formatString = formatString
 
         // make gallery available globally
@@ -1100,7 +877,7 @@ export class LogicEditor extends HTMLElement {
             // console.log({ x: e.clientX, y: e.clientY })
             for (const editor of LogicEditor._allConnectedEditors) {
                 const canvasContainer = editor.html.canvasContainer
-                if (isDefined(canvasContainer)) {
+                if (canvasContainer !== undefined) {
                     const canvasPos = canvasContainer.getBoundingClientRect()
                     // console.log(canvasContainer.getBoundingClientRect(), { x: e.clientX - canvasPos.left, y: e.clientY - canvasPos.top })
                     editor.mouseX = e.clientX - canvasPos.left
@@ -1113,10 +890,10 @@ export class LogicEditor extends HTMLElement {
         window.addEventListener("resize", () => {
             for (const editor of LogicEditor._allConnectedEditors) {
                 const canvasContainer = editor.html.canvasContainer
-                if (isDefined(canvasContainer)) {
+                if (canvasContainer !== undefined) {
                     editor.wrapHandler(() => {
                         editor.setCanvasSize()
-                        editor.redrawMgr.addReason("window resized", null)
+                        editor.editTools.redrawMgr.addReason("window resized", null)
                     })()
                 }
             }
@@ -1125,7 +902,7 @@ export class LogicEditor extends HTMLElement {
 
         let pixelRatioMediaQuery: undefined | MediaQueryList
         const registerPixelRatioListener = () => {
-            if (isDefined(pixelRatioMediaQuery)) {
+            if (pixelRatioMediaQuery !== undefined) {
                 pixelRatioMediaQuery.onchange = null
             }
 
@@ -1134,7 +911,8 @@ export class LogicEditor extends HTMLElement {
             pixelRatioMediaQuery.onchange = () => {
                 for (const editor of LogicEditor._allConnectedEditors) {
                     editor.wrapHandler(() => {
-                        editor.redrawMgr.addReason("devicePixelRatio changed", null)
+                        editor.setCanvasSize()
+                        editor.editTools.redrawMgr.addReason("devicePixelRatio changed", null)
                     })()
                 }
                 registerPixelRatioListener()
@@ -1144,7 +922,7 @@ export class LogicEditor extends HTMLElement {
 
         document.body.addEventListener("themechanged", (e) => {
             const isDark = Boolean((e as any).detail?.is_dark_theme)
-            setColors(isDark)
+            setDarkMode(isDark)
         })
 
         LogicEditor._globalListenersInstalled = true
@@ -1162,7 +940,7 @@ export class LogicEditor extends HTMLElement {
 
             // console.log(`Display/interaction is ${wantedModeStr} - ${mode}`)
 
-            this.redrawMgr.addReason("mode changed", null)
+            this.editTools.redrawMgr.addReason("mode changed", null)
 
             // update mode active button
             this.root.querySelectorAll(".sim-mode-tool").forEach((elem) => {
@@ -1177,55 +955,31 @@ export class LogicEditor extends HTMLElement {
                 this.setCurrentMouseAction("edit")
             }
 
-            type LeftMenuDisplay = "show" | "hide" | "inactive"
+            const showComponentsAndEditControls: UIDisplay =
+                mode >= Mode.DESIGN ? "show" :
+                    (this._maxInstanceMode === Mode.FULL ? "inactive" : "hide")
 
-            const showLeftMenu: LeftMenuDisplay =
-                (this._maxInstanceMode !== Mode.FULL)
-                    ? (mode >= Mode.DESIGN) ? "show" : "hide"
-                    : (mode >= Mode.DESIGN) ? "show" : "inactive"
-
-            const showRightEditControls = mode >= Mode.CONNECT
-            const modifButtons = this.root.querySelectorAll("button.sim-modification-tool")
-            for (let i = 0; i < modifButtons.length; i++) {
-                const but = modifButtons[i] as HTMLElement
-                setVisible(but, showRightEditControls)
-            }
-
+            const showEditControls = showComponentsAndEditControls === "show"
             const showReset = mode >= Mode.TRYOUT && !this._hideResetButton
-            const showRightMenu = showReset || showRightEditControls
-            const showOnlyReset = showReset && !showRightEditControls
+            const showOnlyReset = showReset && !showEditControls
             const hideSettings = mode < Mode.FULL
 
-            setVisible(this.elemWithId("resetToolButton"), showReset)
-            setVisible(this.elemWithId("resetToolButtonCaption"), !showOnlyReset)
-            setVisible(this.elemWithId("resetToolButtonDummyCaption"), showOnlyReset)
+            this._topBar?.setButtonStateFromMode({ showComponentsAndEditControls, showReset }, mode)
+
+            setVisible(this.html.rightToolbarContainer, showOnlyReset)
 
             if (hideSettings) {
                 setVisible(this.html.optionsZone, false)
             }
 
-            const leftToolbar = this.html.leftToolbar
-            switch (showLeftMenu) {
-                case "hide":
-                    leftToolbar.style.removeProperty("visibility")
-                    leftToolbar.style.display = "none"
-                    break
-                case "show":
-                    leftToolbar.style.removeProperty("visibility")
-                    leftToolbar.style.removeProperty("display")
-                    break
-                case "inactive":
-                    leftToolbar.style.visibility = "hidden"
-                    leftToolbar.style.removeProperty("display")
-                    break
-            }
+            setDisplay(this.html.leftToolbar, showComponentsAndEditControls)
 
-            // const showTxGates = mode >= Mode.FULL && (isUndefined(showOnly) || showOnly.includes("TX") || showOnly.includes("TXA"))
+            // const showTxGates = mode >= Mode.FULL && (showOnly === undefined || showOnly.includes("TX") || showOnly.includes("TXA"))
             // const txGateButton = this.root.querySelector("button[data-type=TXA]") as HTMLElement
             // setVisible(txGateButton, showTxGates)
 
-            const rightToolbarContainer: HTMLElement = this.elemWithId("rightToolbarContainer")
-            setVisible(rightToolbarContainer, showRightMenu)
+            this.focus()
+
         })()
     }
 
@@ -1237,38 +991,87 @@ export class LogicEditor extends HTMLElement {
         this.setMode(mode)
     }
 
-    public tryLoadFromFile(file: File) {
+    public setCircuitName(name: string | undefined) {
+        this._options.name = (name === undefined || name.length === 0) ? undefined : name
+        this._topBar?.setCircuitName(name)
+        this.setWindowTitleFrom(this._options.name)
+    }
+
+    public setZoomLevel(zoom: number) {
+        this._options.zoom = zoom
+        this._actualZoomFactor = clampZoom(zoom)
+        this.editTools.redrawMgr.addReason("zoom level changed", null)
+    }
+
+    public updateCustomComponentButtons() {
+        if (this._menu !== undefined) {
+            this._menu.updateCustomComponentButtons(this.factory.customDefs())
+            this.eventMgr.registerButtonListenersOn(this._menu.allCustomButtons(), true)
+        }
+        this._topBar?.updateCustomComponentCaption()
+    }
+
+    public override focus() {
+        this.html.mainCanvas.focus()
+    }
+
+    public tryLoadFrom(file: File) {
         if (file.type === "application/json" || file.type === "text/plain") {
+            // JSON files can be circuits or libraries
             const reader = new FileReader()
-            reader.onload = e => {
-                const content = e.target?.result?.toString()
-                if (isDefined(content)) {
-                    this.load(content)
+            reader.onload = () => {
+                const content = reader.result?.toString()
+                if (content !== undefined) {
+                    this.loadCircuitOrLibrary(content)
                 }
             }
             reader.readAsText(file, "utf-8")
+
         } else if (file.type === "image/png") {
+            // PNG files may contain a circuit in the metadata
             const reader = new FileReader()
-            reader.onload = e => {
-                const content = e.target?.result
+            reader.onload = () => {
+                const content = reader.result
                 if (content instanceof ArrayBuffer) {
                     const uintArray2 = new Uint8Array(content)
                     const pngMetadata = pngMeta.readMetadata(uintArray2)
                     const compressedJSON = pngMetadata.tEXt?.Description
                     if (isString(compressedJSON)) {
                         this._initialData = { _type: "compressed", str: compressedJSON }
-                        this.tryLoadFromData()
+                        this.wrapHandler(() => {
+                            this.tryLoadCircuitFromData()
+                        })()
                     }
                 }
             }
             reader.readAsArrayBuffer(file)
+
+        } else if (file.type === "image/svg+xml") {
+            // SVG files may contain a circuit in the metadata
+            const reader = new FileReader()
+            reader.onload = e => {
+                const content = e.target?.result?.toString()
+                if (content !== undefined) {
+
+                    const temp = document.createElement("div")
+                    temp.innerHTML = content
+                    const metadata = temp.querySelector("svg metadata")
+                    const json = metadata?.textContent
+                    temp.remove()
+                    if (json !== undefined && json !== null) {
+                        this.loadCircuitOrLibrary(json)
+                    }
+                }
+            }
+            reader.readAsText(file, "utf-8")
+
         } else {
-            console.log("Unsupported file type", file.type)
+            this.showMessage(S.Messages.UnsupportedFileType.expand({ type: file.type }))
         }
     }
 
-    public tryLoadFromData() {
-        if (isUndefined(this._initialData)) {
+    public tryLoadCircuitFromData() {
+        if (this._initialData === undefined) {
             return
         }
 
@@ -1279,7 +1082,7 @@ export class LogicEditor extends HTMLElement {
             fetch(url, { mode: "cors" }).then(response => response.text()).then(json => {
                 console.log(`Loaded initial data from URL '${url}'`)
                 this._initialData = { _type: "json", json }
-                this.tryLoadFromData()
+                this.tryLoadCircuitFromData()
             })
 
             // TODO try fetchJSONP if this fails?
@@ -1292,7 +1095,7 @@ export class LogicEditor extends HTMLElement {
         if (this._initialData._type === "json") {
             // already decompressed
             try {
-                error = PersistenceManager.doLoadFromJson(this, this._initialData.json)
+                error = Serialization.loadCircuitOrLibrary(this, this._initialData.json)
             } catch (e) {
                 error = String(e) + " (JSON)"
             }
@@ -1301,36 +1104,68 @@ export class LogicEditor extends HTMLElement {
             let decodedData
             try {
                 decodedData = LZString.decompressFromEncodedURIComponent(this._initialData.str)
+                if (this._initialData.str.length !== 0 && (decodedData?.length ?? 0) === 0) {
+                    throw new Error("zero decoded length")
+                }
             } catch (err) {
                 error = String(err) + " (LZString)"
 
                 // try the old, uncompressed way of storing the data in the URL
                 try {
-                    decodedData = decodeURIComponent(atob(this._initialData.str.replace(/-/g, "+").replace(/_/g, "/").replace(/%3D/g, "=")))
+                    decodedData = LogicEditor.decodeFromURLOld(this._initialData.str)
+                    error = undefined
                 } catch (e) {
                     // swallow error from old format
                 }
             }
 
-            if (isUndefined(error) && isString(decodedData)) {
+            if (error === undefined && isString(decodedData)) {
                 // remember the decompressed/decoded value
-                error = PersistenceManager.doLoadFromJson(this, decodedData!)
-                if (isUndefined(error)) {
+                error = Serialization.loadCircuitOrLibrary(this, decodedData)
+                if (error === undefined) {
                     this._initialData = { _type: "json", json: decodedData }
                 }
             }
         }
 
 
-        if (isDefined(error)) {
+        if (error !== undefined) {
             console.log("ERROR could not not load initial data: " + error)
+        } else {
+            this.clearDirty()
         }
     }
 
-    public load(jsonStringOrObject: string | Record<string, unknown>) {
+    public resetCircuit() {
+        this.editor.tryLoadCircuitFromData()
+    }
+
+    public tryCloseCustomComponentEditor() {
+        const editorRoot = this.editor.editorRoot
+        if (!(editorRoot instanceof CustomComponent)) {
+            return false
+        }
+        const def = editorRoot.customDef
+        const error = this.editor.factory.tryModifyCustomComponent(def, editorRoot)
+        if (error !== undefined) {
+            if (error.length !== 0) {
+                window.alert(error)
+            }
+            return true // handled, even if with error
+        }
+        for (const type of this.factory.getCustomComponentTypesWhichUse(def.type)) {
+            // console.log(`Updating custom component type '${type}'`)
+            this.components.updateCustomComponents(type)
+        }
+        this.setEditorRoot(this.editor)
+        this.editTools.undoMgr.takeSnapshot()
+        return true
+    }
+
+    public loadCircuitOrLibrary(jsonStringOrObject: string | Record<string, unknown>) {
         this.wrapHandler(
             (jsonStringOrObject: string | Record<string, unknown>) =>
-                PersistenceManager.doLoadFromJson(this, jsonStringOrObject)
+                Serialization.loadCircuitOrLibrary(this, jsonStringOrObject)
         )(jsonStringOrObject)
     }
 
@@ -1338,71 +1173,65 @@ export class LogicEditor extends HTMLElement {
         if (this.mode >= Mode.CONNECT) {
             // other modes can't be dirty
             this._isDirty = true
+            this._topBar?.setDirty(true)
         }
+    }
+
+    public clearDirty() {
+        this._isDirty = false
+        this._topBar?.setDirty(false)
     }
 
     public setDark(dark: boolean) {
         this.html.rootDiv.classList.toggle("dark", dark)
     }
 
-    public tryDeleteDrawable(comp: Drawable): boolean {
-        if (comp instanceof ComponentBase) {
-            const numDeleted = this.tryDeleteComponentsWhere(c => c === comp, true)
-            return numDeleted !== 0
-        } else if (comp instanceof Wire) {
-            this.wireMgr.deleteWire(comp)
-            return true
-        } else if (comp instanceof Waypoint) {
-            comp.removeFromParent()
-            return true
+    public setEditorRoot(newRoot: DrawableParent) {
+        if (newRoot === this._editorRoot) {
+            return
         }
-        return false
-    }
 
-    public trySetCurrentComponentOrientation(orient: Orientation, e: Event) {
-        const currentMouseOverComp = this.cursorMovementMgr.currentMouseOverComp
-        if (isDefined(currentMouseOverComp) && currentMouseOverComp instanceof DrawableWithPosition && currentMouseOverComp.canRotate()) {
-            currentMouseOverComp.doSetOrient(orient)
-            e.preventDefault()
-            e.stopPropagation()
+        if (this._editorRoot !== undefined) {
+            this._editorRoot.stopEditingThis()
         }
-    }
 
-    public tryDeleteComponentsWhere(cond: (e: Component) => boolean, onlyOne: boolean) {
-        const numDeleted = this.components.tryDeleteWhere(cond, onlyOne)
-        if (numDeleted > 0) {
-            this.cursorMovementMgr.clearPopperIfNecessary()
-            this.redrawMgr.addReason("component(s) deleted", null)
-        }
-        return numDeleted
+        this._editorRoot = newRoot
+        newRoot.startEditingThis(this.editTools)
+
+        const [customComp, typesToHide] = !(newRoot instanceof CustomComponent) ? [undefined, []] : [newRoot, this.factory.getCustomComponentTypesWhichUse(newRoot.customDef.type)]
+
+        this._menu?.setCustomComponentsHidden(typesToHide)
+        this._topBar?.setEditingCustomComponent(customComp?.customDef)
+
+        this._highlightedItems = undefined
+        this.eventMgr.currentSelection = undefined
+        this.eventMgr.clearPopperIfNecessary()
+        this.eventMgr.updateMouseOver([this.mouseX, this.mouseY], false)
+        this.editTools.moveMgr.clear()
+        this.editTools.redrawMgr.addReason("editor context changed", null)
+
+        this.focus()
     }
 
     public setCurrentMouseAction(action: MouseAction) {
-        this._currentMouseAction = action
         this.setToolCursor(MouseActions.props[action].cursor)
-
-        const toolButtons = this.root.querySelectorAll(".sim-modification-tool")
-        for (let i = 0; i < toolButtons.length; i++) {
-            const toolButton = toolButtons[i] as HTMLElement
-            const setActive = toolButton.getAttribute("tool") === action
-            if (setActive) {
-                toolButton.classList.add("active")
-            } else {
-                toolButton.classList.remove("active")
-            }
-        }
-
-        this.cursorMovementMgr.setHandlersFor(action)
-        this.redrawMgr.addReason("mouse action changed", null)
+        this._topBar?.setActiveTool(action)
+        this.eventMgr.setHandlersFor(action)
+        this.editTools.redrawMgr.addReason("mouse action changed", null)
     }
 
-    public updateCursor() {
+    public updateCursor(e?: MouseEvent | TouchEvent) {
         this.html.canvasContainer.style.cursor =
-            this.moveMgr.areDrawablesMoving()
+            this.editTools.moveMgr.areDrawablesMoving()
                 ? "grabbing"
                 : this._toolCursor
-                ?? this.cursorMovementMgr.currentMouseOverComp?.cursorWhenMouseover
+                ?? this.eventMgr.currentMouseOverComp?.cursorWhenMouseover(e)
                 ?? "default"
+    }
+
+    public showMessage(msg: Modifier) {
+        this._messageBar?.showMessage(msg, 2000)
+        // console.log(String(msg))
     }
 
     public lengthOfPath(svgPathDesc: string): number {
@@ -1506,7 +1335,11 @@ export class LogicEditor extends HTMLElement {
     private guessAdequateCanvasSize(applyZoom: boolean): [number, number] {
         let rightmostX = Number.NEGATIVE_INFINITY, leftmostX = Number.POSITIVE_INFINITY
         let lowestY = Number.NEGATIVE_INFINITY, highestY = Number.POSITIVE_INFINITY
-        for (const comp of this.components.all()) {
+        const drawables: DrawableWithPosition[] = [...this.components.all()]
+        for (const wire of this.wireMgr.wires) {
+            drawables.push(...wire.waypoints)
+        }
+        for (const comp of drawables) {
             const cx = comp.posX
             const width = comp.width
             const left = cx - width / 2
@@ -1589,26 +1422,27 @@ export class LogicEditor extends HTMLElement {
 
     public saveCurrentStateToUrl() {
         const [fullJson, compressedUriSafeJson] = this.fullJsonStateAndCompressedForUri()
-        console.log("Saved to URL:\n" + fullJson)
+        console.log("Saved to URL compressed version of:\n" + fullJson)
         this.saveToUrl(compressedUriSafeJson)
     }
 
-    public save(): Workspace {
-        return PersistenceManager.buildWorkspace(this)
+    public save() {
+        return Serialization.buildCircuitObject(this)
     }
 
     public saveToUrl(compressedUriSafeJson: string) {
         if (this._isSingleton) {
             history.pushState(null, "", this.fullUrlForMode(MAX_MODE_WHEN_SINGLETON, compressedUriSafeJson))
-            this._isDirty = false
+            this.clearDirty()
+            this.showMessage(S.Messages.SavedToUrl)
         }
     }
 
     private fullJsonStateAndCompressedForUri(): [string, string] {
-        const jsonObj = PersistenceManager.buildWorkspace(this)
-        const jsonFull = PersistenceManager.stringifyWorkspace(jsonObj, false)
-        PersistenceManager.removeShowOnlyFrom(jsonObj)
-        const jsonForUri = PersistenceManager.stringifyWorkspace(jsonObj, true)
+        const jsonObj = Serialization.buildCircuitObject(this)
+        const jsonFull = Serialization.stringifyObject(jsonObj, false)
+        Serialization.removeShowOnlyFrom(jsonObj)
+        const jsonForUri = Serialization.stringifyObject(jsonObj, true)
 
         // We did this in the past, but now we're compressing things a bit
         // const encodedJson1 = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "%3D")
@@ -1620,15 +1454,35 @@ export class LogicEditor extends HTMLElement {
 
     private fullUrlForMode(mode: Mode, compressedUriSafeJson: string): string {
         const loc = window.location
-        const showOnlyParam = isUndefined(this._options.showOnly) ? "" : `&${ATTRIBUTE_NAMES.showonly}=${this._options.showOnly.join(",")}`
-        return `${loc.protocol}//${loc.host}${loc.pathname}?${ATTRIBUTE_NAMES.mode}=${Mode[mode].toLowerCase()}${showOnlyParam}&${ATTRIBUTE_NAMES.data}=${compressedUriSafeJson}`
+        const showOnlyParam = this._options.showOnly === undefined ? "" : `&${ATTRIBUTE_NAMES.showonly}=${this._options.showOnly.join(",")}`
+        const currentLang = getLang()
+        const hasCorrectLangParam = new URL(loc.href).searchParams.get(ATTRIBUTE_NAMES.lang) === currentLang
+        const langParam = !hasCorrectLangParam ? "" // no param, keep default lang
+            : `&${ATTRIBUTE_NAMES.lang}=${currentLang}` // keep currently set lang
+        return `${loc.protocol}//${loc.host}${loc.pathname}?${ATTRIBUTE_NAMES.mode}=${Mode[mode].toLowerCase()}${langParam}${showOnlyParam}&${ATTRIBUTE_NAMES.data}=${compressedUriSafeJson}`
     }
 
-    private async toPNG(heightHint?: number) {
-        return new Promise<Blob | null>((resolve) => {
+    public toBase64(blob: Blob | null | undefined): Promise<string | undefined> {
+        return new Promise((resolve, __) => {
+            if (blob === null || blob === undefined) {
+                resolve(undefined)
+                return
+            }
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                const dataURL = reader.result as string
+                const asBase64 = dataURL.substring(dataURL.indexOf(",") + 1)
+                resolve(asBase64)
+            }
+            reader.readAsDataURL(blob)
+        })
+    }
+
+    public async toPNG(withMetadata: boolean, heightHint?: number): Promise<Blob | undefined> {
+        const pngBareBlob = await new Promise<Blob | null>((resolve) => {
             const drawingScale = 3 // super retina
             let [width, height] = this.guessAdequateCanvasSize(false)
-            if (isDefined(heightHint)) {
+            if (heightHint !== undefined) {
                 height = heightHint
             }
             width *= drawingScale
@@ -1640,62 +1494,55 @@ export class LogicEditor extends HTMLElement {
             tmpCanvas.width = width
             tmpCanvas.height = height
 
-            const g = tmpCanvas.getContext('2d')!
+            const g = LogicEditor.getGraphics(tmpCanvas)
             const wasDark = isDarkMode()
             if (wasDark) {
-                setColors(false)
+                setDarkMode(false)
             }
             this.doDrawWithContext(g, width, height, transform, transform, true, true)
             if (wasDark) {
-                setColors(true)
+                setDarkMode(true)
             }
             tmpCanvas.toBlob(resolve, 'image/png')
             tmpCanvas.remove()
-
-            // TODO this was an attempt at generating SVG rather than PNG
-            // const svgCtx = new C2S(width, height)
-            // this.doDrawWithContext(svgCtx)
-            // const serializedSVG = svgCtx.getSerializedSvg()
-            // console.log(serializedSVG)
         })
-    }
 
-    public async toPNGBase64(heightHint?: number) {
-        const blob = await this.toPNG(heightHint)
-        if (blob === null) {
-            return null
-        }
-        return new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                let dataURL = reader.result as string
-                const prefix = "data:image/png;base64,"
-                if (dataURL.startsWith(prefix)) {
-                    dataURL = dataURL.substring(prefix.length)
-                }
-                resolve(dataURL)
-            }
-            reader.readAsDataURL(blob)
-        })
-    }
-
-    public async downloadSnapshotImage() {
-        const pngBareBlob = await this.toPNG()
         if (pngBareBlob === null) {
-            return
+            return undefined
         }
-        const [__, compressedUriSafeJson] = this.fullJsonStateAndCompressedForUri()
 
+        if (!withMetadata) {
+            return pngBareBlob
+        }
+
+        // else, add metadata
+        const compressedUriSafeJson = this.fullJsonStateAndCompressedForUri()[1]
         const pngBareData = new Uint8Array(await pngBareBlob.arrayBuffer())
         const pngChunks = pngMeta.extractChunks(pngBareData)
         pngMeta.insertMetadata(pngChunks, { "tEXt": { "Description": compressedUriSafeJson } })
-        const pngCompletedBlob = new Blob([pngMeta.encodeChunks(pngChunks)], { type: "image/png" })
-
-        const filename = (this.options.name ?? "circuit") + ".png"
-        const url = URL.createObjectURL(pngCompletedBlob)
-        downloadDataUrl(url, filename)
+        return new Blob([pngMeta.encodeChunks(pngChunks)], { type: "image/png" })
     }
 
+    public async toSVG(withMetadata: boolean): Promise<Blob> {
+        const metadata = !withMetadata ? undefined
+            : Serialization.stringifyObject(Serialization.buildCircuitObject(this), false)
+
+        const [width, height] = this.guessAdequateCanvasSize(false)
+        const id = new DOMMatrix()
+        const svgCtx = new SVGRenderingContext({ width, height, metadata })
+        this.doDrawWithContext(svgCtx, width, height, id, id, true, true)
+        const serializedSVG = svgCtx.getSerializedSvg()
+        return Promise.resolve(new Blob([serializedSVG], { type: "image/svg+xml" }))
+    }
+
+    public async download(data: Promise<Blob | undefined>, extension: string) {
+        const blob = await data
+        if (blob === undefined) {
+            return
+        }
+        const filename = this.documentDisplayName + extension
+        saveAs(blob, filename)
+    }
 
     public recalcPropagateAndDrawIfNeeded() {
         if (this._nextAnimationFrameHandle !== null) {
@@ -1705,20 +1552,20 @@ export class LogicEditor extends HTMLElement {
 
         const __recalculated = this.recalcMgr.recalcAndPropagateIfNeeded()
 
-        if (this.wireMgr.isAddingWire) {
-            this.redrawMgr.addReason("adding a wire", null)
+        const redrawMgr = this.editTools.redrawMgr
+        if (this._editorRoot.wireMgr.isAddingWire) {
+            redrawMgr.addReason("adding a wire", null)
         }
 
-        const redrawReasons = this.redrawMgr.getReasonsAndClear()
-        if (isUndefined(redrawReasons)) {
+        const redrawReasons = redrawMgr.getReasonsAndClear()
+        if (redrawReasons === undefined) {
             return
         }
 
         // console.log("Drawing " + (__recalculated ? "with" : "without") + " recalc, reasons:\n    " + redrawReasons)
-        // console.log("Drawing")
         this.doRedraw()
 
-        if (this.redrawMgr.hasReasons()) {
+        if (redrawMgr.hasReasons()) {
             // an animation is running
             this._nextAnimationFrameHandle = requestAnimationFrame(() => {
                 this._nextAnimationFrameHandle = null
@@ -1728,7 +1575,7 @@ export class LogicEditor extends HTMLElement {
     }
 
     public highlight(refs: string | string[] | undefined) {
-        if (isUndefined(refs)) {
+        if (refs === undefined) {
             this._highlightedItems = undefined
             return
         }
@@ -1739,14 +1586,14 @@ export class LogicEditor extends HTMLElement {
 
         const highlightComps: Component[] = []
         for (const comp of this.components.all()) {
-            if (isDefined(comp.ref) && refs.includes(comp.ref)) {
+            if (comp.ref !== undefined && refs.includes(comp.ref)) {
                 highlightComps.push(comp)
             }
         }
 
         const highlightWires: Wire[] = []
         for (const wire of this.wireMgr.wires) {
-            if (isDefined(wire.ref) && refs.includes(wire.ref)) {
+            if (wire.ref !== undefined && refs.includes(wire.ref)) {
                 highlightWires.push(wire)
             }
         }
@@ -1759,18 +1606,20 @@ export class LogicEditor extends HTMLElement {
 
         const start = this.timeline.unadjustedTime()
         this._highlightedItems = { comps: highlightComps, wires: highlightWires, start }
-        this.redrawMgr.addReason("highlighting component", null)
+        this.editTools.redrawMgr.addReason("highlighting component", null)
         this.recalcPropagateAndDrawIfNeeded()
     }
 
     public redraw() {
         this.setCanvasSize()
-        this.redrawMgr.addReason("explicit redraw call", null)
+        this.editTools.redrawMgr.addReason("explicit redraw call", null)
         this.recalcPropagateAndDrawIfNeeded()
     }
 
     private doRedraw() {
-        const g = this.html.mainCanvas.getContext("2d")!
+        // const timeBefore = performance.now()
+        this._topBar?.updateTimeLabelIfNeeded()
+        const g = LogicEditor.getGraphics(this.html.mainCanvas)
         const mainCanvas = this.html.mainCanvas
         const baseDrawingScale = this._baseDrawingScale
 
@@ -1779,9 +1628,11 @@ export class LogicEditor extends HTMLElement {
         const baseTransform = new DOMMatrix(`scale(${this._baseDrawingScale})`)
         const contentTransform = baseTransform.scale(this._actualZoomFactor)
         this.doDrawWithContext(g, width, height, baseTransform, contentTransform, false, false)
+        // const timeAfter = performance.now()
+        // console.log(`Drawing took ${timeAfter - timeBefore}ms`)
     }
 
-    private doDrawWithContext(g: CanvasRenderingContext2D, width: number, height: number, baseTransform: DOMMatrixReadOnly, contentTransform: DOMMatrixReadOnly, skipBorder: boolean, transparentBackground: boolean) {
+    private doDrawWithContext(g: GraphicsRendering, width: number, height: number, baseTransform: DOMMatrixReadOnly, contentTransform: DOMMatrixReadOnly, skipBorder: boolean, transparentBackground: boolean) {
         g.setTransform(baseTransform)
         g.lineCap = "square"
         g.textBaseline = "middle"
@@ -1810,7 +1661,7 @@ export class LogicEditor extends HTMLElement {
 
         const highlightedItems = this._highlightedItems
         let highlightColor: string | undefined = undefined
-        if (isDefined(highlightedItems)) {
+        if (highlightedItems !== undefined) {
             const HOLD_TIME = 2000
             const FADE_OUT_TIME = 200
             const START_ALPHA = 0.4
@@ -1841,13 +1692,16 @@ export class LogicEditor extends HTMLElement {
                 g.shadowBlur = 0 // reset
 
                 // will make it run until alpha is 0
-                this.redrawMgr.addReason("highlight animation", null)
+                this.editTools.redrawMgr.addReason("highlight animation", null)
             }
         }
 
         // draw grid if moving comps
-        const isMovingComponent = this.moveMgr.areDrawablesMoving()
+        const moveMgr = this.editTools.moveMgr
+        // moveMgr.dump()
+        const isMovingComponent = moveMgr.areDrawablesMoving()
         if (isMovingComponent) {
+            g.beginGroup("grid")
             const widthAdjusted = width / this._actualZoomFactor
             const heightAdjusted = height / this._actualZoomFactor
             const step = GRID_STEP //* 2
@@ -1863,11 +1717,13 @@ export class LogicEditor extends HTMLElement {
                 g.lineTo(width, y)
             }
             g.stroke()
+            g.endGroup()
         }
 
         // draw guidelines when moving waypoint
-        const singleMovingWayoint = this.moveMgr.getSingleMovingWaypoint()
-        if (isDefined(singleMovingWayoint)) {
+        const singleMovingWayoint = moveMgr.getSingleMovingWaypoint()
+        if (singleMovingWayoint !== undefined) {
+            g.beginGroup("guides")
             const guides = singleMovingWayoint.getPrevAndNextAnchors()
             g.strokeStyle = COLOR_GRID_LINES_GUIDES
             g.lineWidth = 1.5
@@ -1879,68 +1735,99 @@ export class LogicEditor extends HTMLElement {
                 g.lineTo(width, guide.posY)
             }
             g.stroke()
+            g.endGroup()
         }
 
         // draw border according to mode
         if (!skipBorder && (this._mode >= Mode.CONNECT || this._maxInstanceMode === MAX_MODE_WHEN_SINGLETON)) {
+            g.beginGroup("border")
             g.setTransform(baseTransform)
             g.strokeStyle = COLOR_BORDER
             g.lineWidth = 2
-            g.strokeRect(0, 0, width, height)
             if (this._maxInstanceMode === MAX_MODE_WHEN_SINGLETON && this._mode < this._maxInstanceMode) {
+                g.strokeRect(0, 0, width, height)
                 const h = this.guessAdequateCanvasSize(true)[1]
                 strokeSingleLine(g, 0, h, width, h)
 
                 g.fillStyle = COLOR_BACKGROUND_UNUSED_REGION
                 g.fillRect(0, h, width, height - h)
+            } else {
+                // skip border where the top tab is
+                const myX = this.html.mainCanvas.getBoundingClientRect().x
+                const [x1, x2] = this._topBar?.getActiveTabCoords() ?? [0, 0]
+                g.beginPath()
+                g.moveTo(x1 - myX, 0)
+                g.lineTo(0, 0)
+                g.lineTo(0, height)
+                g.lineTo(width, height)
+                g.lineTo(width, 0)
+                g.lineTo(x2 - myX, 0)
+                g.stroke()
             }
             g.setTransform(contentTransform)
+            g.endGroup()
         }
 
         // const currentScale = this._currentScale
         // g.scale(currentScale, currentScale)
 
-        const drawTime = this.timeline.adjustedTime()
+        const drawTime = this.timeline.logicalTime()
         g.strokeStyle = COLOR_COMPONENT_BORDER
-        const currentMouseOverComp = this.cursorMovementMgr.currentMouseOverComp
+        const currentMouseOverComp = this.eventMgr.currentMouseOverComp
         const drawParams: DrawParams = {
             drawTime,
             currentMouseOverComp,
             highlightedItems,
             highlightColor,
             currentSelection: undefined,
-            anythingMoving: this.moveMgr.areDrawablesMoving(),
+            anythingMoving: moveMgr.areDrawablesMoving(),
         }
-        const currentSelection = this.cursorMovementMgr.currentSelection
+        const currentSelection = this.eventMgr.currentSelection
         drawParams.currentSelection = currentSelection
         const drawComp = (comp: Component) => {
-            comp.draw(g, drawParams)
-            for (const node of comp.allNodes()) {
-                node.draw(g, drawParams) // never show nodes as selected
+            g.beginGroup(comp.constructor.name)
+            try {
+                comp.draw(g, drawParams)
+                for (const node of comp.allNodes()) {
+                    node.draw(g, drawParams) // never show nodes as selected
+                }
+            } finally {
+                g.endGroup()
             }
         }
 
+        const root = this._editorRoot
+
         // draw background components
-        for (const comp of this.components.withZIndex(DrawZIndex.Background)) {
+        g.beginGroup("background")
+        for (const comp of root.components.withZIndex(DrawZIndex.Background)) {
             drawComp(comp)
         }
+        g.endGroup()
 
         // draw wires
-        this.wireMgr.draw(g, drawParams) // never show wires as selected
+        g.beginGroup("wires")
+        root.wireMgr.draw(g, drawParams) // never show wires as selected
+        g.endGroup()
 
         // draw normal components
-        for (const comp of this.components.withZIndex(DrawZIndex.Normal)) {
+        g.beginGroup("components")
+        for (const comp of root.components.withZIndex(DrawZIndex.Normal)) {
             drawComp(comp)
         }
+        g.endGroup()
 
         // draw overlays
-        for (const comp of this.components.withZIndex(DrawZIndex.Overlay)) {
+        g.beginGroup("overlays")
+        for (const comp of root.components.withZIndex(DrawZIndex.Overlay)) {
             drawComp(comp)
         }
+        g.endGroup()
 
         // draw selection
         let selRect
-        if (isDefined(currentSelection) && isDefined(selRect = currentSelection.currentlyDrawnRect)) {
+        if (currentSelection !== undefined && (selRect = currentSelection.currentlyDrawnRect) !== undefined) {
+            g.beginGroup("selection")
             g.lineWidth = 1.5
             g.strokeStyle = "rgb(100,100,255)"
             g.fillStyle = "rgba(100,100,255,0.2)"
@@ -1948,6 +1835,7 @@ export class LogicEditor extends HTMLElement {
             g.rect(selRect.x, selRect.y, selRect.width, selRect.height)
             g.stroke()
             g.fill()
+            g.endGroup()
         }
 
     }
@@ -1957,21 +1845,50 @@ export class LogicEditor extends HTMLElement {
         console.log("cut")
     }
 
-    public copy() {
-        if (isUndefined(this.cursorMovementMgr.currentSelection)) {
-            // copy URL
-            copyToClipboard(window.location.href)
-            return
+    public copy(): boolean {
+        if (this.eventMgr.currentSelectionEmpty()) {
+            return false
         }
-        // TODO stubs
-        console.log("copy")
+        const componentsToInclude: Component[] = []
+        for (const elem of this.eventMgr.currentSelection?.previouslySelectedElements ?? []) {
+            if (elem instanceof ComponentBase) {
+                componentsToInclude.push(elem)
+            }
+        }
+
+        // TODO check if we're copying custom components to include their def?
+        // ... but then, beware of duplicated custom components if pasting into the same circuit,
+        // or find some compatibility criterion for component defs (e.g., number of in/out nodes
+        // and names) that would seem enough to determine they are the same (beyond their id/name)
+        const reprs = Serialization.buildComponentsAndWireObject(componentsToInclude, [this.mouseX, this.mouseY])
+        if (reprs.components === undefined && reprs.wires === undefined) {
+            return false
+        }
+
+        const jsonStr = Serialization.stringifyObject(reprs, false)
+        console.log("Copied:\n" + jsonStr)
+        copyToClipboard(jsonStr)
+        this.focus()
+        return true
     }
 
     public paste() {
-        // TODO stubs
-        console.log("paste")
+        const jsonStr = pasteFromClipboard()
+        if (jsonStr === undefined) {
+            return
+        }
+        const errorOrComps = Serialization.pasteComponents(this, jsonStr)
+        if (isString(errorOrComps)) {
+            console.log(errorOrComps)
+        } else {
+            const selection = new EditorSelection(undefined)
+            for (const comp of errorOrComps) {
+                selection.toggle(comp)
+            }
+            this.eventMgr.currentSelection = selection
+        }
+        this.focus()
     }
-
 
     public wrapHandler<T extends unknown[], R>(f: (...params: T) => R): (...params: T) => R {
         return (...params: T) => {
@@ -1980,9 +1897,25 @@ export class LogicEditor extends HTMLElement {
             return result
         }
     }
+
+    public static decodeFromURLOld(str: string) {
+        return decodeURIComponent(atob(str.replace(/-/g, "+").replace(/_/g, "/").replace(/%3D/g, "=")))
+    }
+
+    public static getGraphics(canvas: HTMLCanvasElement): GraphicsRendering {
+        const g = canvas.getContext("2d")! as GraphicsRendering
+        g.createPath = (path?: Path2D | string) => new Path2D(path)
+        g.beginGroup = () => undefined
+        g.endGroup = () => undefined
+        return g
+    }
 }
 
 export class LogicStatic {
+
+    public constructor(
+        public readonly template: HTMLTemplateElement,
+    ) { }
 
     public singleton: LogicEditor | undefined
 
@@ -2005,43 +1938,54 @@ export class LogicStatic {
     }
 
     public printUndoStack() {
-        this.singleton?.undoMgr.dump()
+        this.singleton?.editTools.undoMgr.dump()
     }
 
-    public tests = new Tests()
+    public readonly tests = new Tests()
+
+    public readonly Serialization = Serialization
+
+    public readonly setDarkMode = setDarkMode
 
 }
 
-const template = (() => {
-    const template = document.createElement('template')
-    template.innerHTML = LogicEditorTemplate
-    const styles = [LogicEditorCSS, DialogPolyfillCSS]
-    template.content.querySelector("#inlineStyle")!.innerHTML = styles.join("\n\n\n")
 
-    template.content.querySelectorAll("i.svgicon").forEach((_iconElem) => {
-        const iconElem = _iconElem as HTMLElement
-        const iconName = iconElem.dataset.icon ?? "question"
-        if (isIconName(iconName)) {
-            iconElem.innerHTML = inlineIconSvgFor(iconName)
-        } else {
-            console.log(`Unknown icon name '${iconName}'`)
-        }
-    })
-    return template
-})()
-// cannot be in setup function because 'template' var is not assigned until that func returns
-// and promotion of elems occurs during this 'customElements.define' call
-window.Logic = new LogicStatic()
-window.customElements.define('logic-editor', LogicEditor)
-document.addEventListener("toggle", e => {
-    if (!(e.target instanceof HTMLDetailsElement)) {
-        return
-    }
-    if (e.target.open) {
-        e.target.querySelectorAll("logic-editor").forEach(el => {
-            if (el instanceof LogicEditor) {
-                el.redraw()
+if (InBrowser) {
+    // cannot be in setup function because 'template' var is not assigned until that func returns
+    // and promotion of elems occurs during this 'customElements.define' call
+    const template = (() => {
+        const template = document.createElement('template')
+        template.innerHTML = LogicEditorTemplate
+        const styles = [LogicEditorCSS, DialogPolyfillCSS]
+        template.content.querySelector("#inlineStyle")!.innerHTML = styles.join("\n\n\n")
+
+        template.content.querySelectorAll("i.svgicon").forEach((_iconElem) => {
+            const iconElem = _iconElem as HTMLElement
+            const iconName = iconElem.dataset.icon ?? "question"
+            if (isIconName(iconName)) {
+                iconElem.innerHTML = inlineIconSvgFor(iconName)
+            } else {
+                console.log(`Unknown icon name '${iconName}'`)
             }
         })
-    }
-}, true)
+        return template
+    })()
+    window.Logic = new LogicStatic(template)
+    window.customElements.define('logic-editor', LogicEditor)
+    document.addEventListener("toggle", e => {
+        if (!(e.target instanceof HTMLDetailsElement)) {
+            return
+        }
+        if (e.target.open) {
+            e.target.querySelectorAll("logic-editor").forEach(el => {
+                if (el instanceof LogicEditor) {
+                    el.redraw()
+                }
+            })
+        }
+    }, true)
+
+} else {
+    // TODO
+    console.log("cli")
+}

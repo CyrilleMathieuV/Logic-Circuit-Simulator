@@ -1,14 +1,15 @@
 import { COLOR_COMPONENT_BORDER } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isHighImpedance, isUnknown, LogicValue, Unknown } from "../utils"
-import { defineParametrizedComponent, Repr, ResolvedParams } from "./Component"
+import { LogicValue, Unknown, isHighImpedance, isUnknown } from "../utils"
+import { Repr, ResolvedParams, defineParametrizedComponent } from "./Component"
+import { DrawableParent, GraphicsRendering } from "./Drawable"
 import { RegisterBase, RegisterBaseDef } from "./Register"
 
 export const ShiftRegisterDef =
-    defineParametrizedComponent("out", "shift-register", true, true, {
-        variantName: ({ bits }) => `shift-register-${bits}`,
+    defineParametrizedComponent("shift-reg", true, true, {
+        variantName: ({ bits }) => `shift-reg-${bits}`,
+        idPrefix: "reg",
         ...RegisterBaseDef,
         makeNodes: (params, defaults) => {
             const base = RegisterBaseDef.makeNodes(params, defaults)
@@ -29,15 +30,12 @@ export type ShiftRegisterParams = ResolvedParams<typeof ShiftRegisterDef>
 
 export class ShiftRegister extends RegisterBase<ShiftRegisterRepr> {
 
-    public constructor(editor: LogicEditor, params: ShiftRegisterParams, saved?: ShiftRegisterRepr) {
-        super(editor, ShiftRegisterDef, params, saved)
+    public constructor(parent: DrawableParent, params: ShiftRegisterParams, saved?: ShiftRegisterRepr) {
+        super(parent, ShiftRegisterDef, params, saved)
     }
 
     public toJSON() {
-        return {
-            type: "shift-register" as const,
-            ...this.toJSONBase(),
-        }
+        return this.toJSONBase()
     }
 
     public override makeTooltip() {
@@ -54,13 +52,13 @@ export class ShiftRegister extends RegisterBase<ShiftRegisterRepr> {
         if (isUnknown(dirIsRight) || isHighImpedance(dirIsRight)) {
             return this.makeStateFromMainValue(Unknown)
         }
-        const d = this.inputs.D.value
+        const d = LogicValue.filterHighZ(this.inputs.D.value)
         const current = this.value
         const next = dirIsRight ? [...current.slice(1), d] : [d, ...current.slice(0, -1)]
         return next
     }
 
-    protected override doDrawGenericCaption(g: CanvasRenderingContext2D) {
+    protected override doDrawGenericCaption(g: GraphicsRendering) {
         g.font = `bold 13px sans-serif`
         g.fillStyle = COLOR_COMPONENT_BORDER
         g.textAlign = "center"

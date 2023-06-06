@@ -1,7 +1,6 @@
 <div id="logicEditorRoot" style="width: 100%; height: 100%; display: flex; align-items: stretch;">
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" integrity="sha384-zCbKRCUGaJDkqS1kPbPd7TveP5iyJE0EjAuZQTgFLD2ylzuqKfdKlfG/eSrtxUkn" crossorigin="anonymous">
-
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF" crossorigin="anonymous"></script>
 
@@ -11,71 +10,40 @@
     <div id="leftToolbar" style="flex:none; min-width: 50px; max-width: 60px;overflow-y: scroll;display: none;">
     </div>
 
-    <div id="canvas-sim" style="flex: auto; position: relative; display: flex; align-items: stretch; min-width: 0;">
+    <div id="centerCol" style="flex: auto; display: flex; flex-direction: column; justify-content: stretch;">
 
-        <!-- Simulator Canvas -->
-        <canvas id="mainCanvas"></canvas>
+        <div id="canvas-sim" style="flex: auto; position: relative; display: flex; align-items: stretch; min-width: 0; max-width: 100%; overflow: hidden;">
 
-        <!-- In-Canvas Toolbar -->
-        <div style="padding: 5px;
-        position: absolute; top: 10px; right: 10px;display:flex; flex-direction: column; align-items: flex-end;">
-            <div class="sim-toolbar-right" style="margin-bottom: 15px; display: none;" id="modeChangeMenu">
-            </div>
+            <canvas id="mainCanvas" tabindex="0" style="flex:auto"></canvas>
 
-            <div class="sim-toolbar-right" style="display: none;" id="rightToolbarContainer">
+            <div style="padding: 5px;
+            position: absolute; top: 10px; right: 10px;display:flex; flex-direction: column; align-items: flex-end;">
+                <div class="sim-toolbar-right" style="margin-bottom: 15px; display: none;" id="modeChangeMenu">
+                </div>
 
-                <div class="btn-group-vertical">
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right active sim-modification-tool" tool="edit" id="editToolButton" style="display:none">
-                        <i class="svgicon" data-icon="edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="delete" 
-                            id="deleteToolButton"
-                            style="display:none">
-                        <i class="svgicon" data-icon="trash"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="move"
-                            id="moveToolButton"
-                            style="display:none">
-                        <i class="svgicon" data-icon="move"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="save" id="saveToolButton" style="display:none">
-                        <i class="svgicon" data-icon="download"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="screenshot" 
-                            id="screenshotToolButton"
-                            style="display:none">
-                        <i class="svgicon" data-icon="screenshot"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="open"
-                            id="openToolButton"
-                            style="display:none">
-                        <i class="svgicon" data-icon="open"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right sim-modification-tool" tool="reset" id="resetToolButton">
-                        <i class="svgicon" data-icon="reset"></i>
-                        <span id="resetToolButtonCaption"></span>
-                        <span id="resetToolButtonDummyCaption" style="display:none; margin-left: -20px">&nbsp;</span>
-                    </button>
-                    <div class="btn-group" id="timelineControls">
-
+                <div class="sim-toolbar-right" style="display: none;" id="rightToolbarContainer">
+                    <div class="btn-group-vertical">
+                        <button type="button" class="btn btn-sm btn-outline-light sim-toolbar-button-right" tool="reset" id="rightResetButton">
+                            <i class="svgicon" data-icon="reset"></i>
+                            <span style="margin-left: -20px">&nbsp;</span>
+                        </button>
                     </div>
+                </div>
 
+                <div class="sim-toolbar-right" style="display: none; flex-direction:column; align-items: stretch; font-size: 75%; padding: 5px" data-prev-display="flex" id="optionsZone">
+                    <div style="height: 20px; display: flex">
+                        <b style="flex:auto; margin-right:5px" id="settingsTitle"></b>
+                        <i class="svgicon" data-icon="close" style="cursor: pointer; margin-left: 5px; color: rgb(112, 112, 112)" id="closeOptions"></i>
+                    </div>
                 </div>
 
 
+
             </div>
-
-            <div class="sim-toolbar-right" style="display: none; flex-direction:column; align-items: stretch; margin-top: 15px; font-size: 75%; padding: 5px" data-prev-display="flex" id="optionsZone">
-                <div style="height: 20px; display: flex">
-                    <b style="flex:auto; margin-right:5px" id="settingsTitle"></b>
-                    <i class="svgicon" data-icon="close" style="cursor: pointer; margin-left: 5px; color: rgb(112, 112, 112)" id="closeOptions"></i>
-                </div>
-            </div>
-
-
-
         </div>
+
     </div>
+
 
     <dialog id="embedDialog" style="display: none; border: 1px solid gray; border-radius: 10px; box-shadow: 0px 0px 16px 5px rgba(0,0,0,0.2); padding: 5px 10px; width: 100%; max-width: 600px;">
         <div style="display: flex; flex-direction: column; font-size: 80%">
@@ -111,7 +79,7 @@
         </div>
     </dialog>
 
-    <input id="fileChooser" type="file" accept="text/plain|image/png|application/json" style="display:none"></input>
+    <input id="fileChooser" type="file" style="display:none"></input>
 
     <div id="tooltip" role="tooltip" style="display:none">
         <div id="tooltipContents"></div>

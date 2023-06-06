@@ -13,15 +13,15 @@ export type GateTypes<TGateType extends string> = RichStringEnum<TGateType, Gate
 
 
 export const Gate1Types = RichStringEnum.withProps<GateTypeProps>()({
-    NOT: {
+    not: {
         out: ([in_]) => (in_ === false) ? true : (in_ === true) ? false : Unknown,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NOT,
+        fullShortDesc: () => S.Components.Gate.not,
     },
-    BUF: {
+    buf: {
         out: ([in_]) => (in_ === true) ? true : (in_ === false) ? false : Unknown,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.BUF,
+        fullShortDesc: () => S.Components.Gate.buf,
     },
 })
 export type Gate1Type = typeof Gate1Types.type
@@ -29,35 +29,35 @@ export const Gate1TypeRepr = t.keyof(Gate1Types.props)
 
 
 export const Gate2toNTypes = RichStringEnum.withProps<GateTypeProps>()({
-    AND: {
+    and: {
         out: logicAnd,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.AND,
+        fullShortDesc: () => S.Components.Gate.and,
     },
-    OR: {
+    or: {
         out: logicOr,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.OR,
+        fullShortDesc: () => S.Components.Gate.or,
     },
-    XOR: {
+    xor: {
         out: logicXor,
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.XOR,
+        fullShortDesc: () => S.Components.Gate.xor,
     },
-    NAND: {
+    nand: {
         out: ins => LogicValue.invert(logicAnd(ins)),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NAND,
+        fullShortDesc: () => S.Components.Gate.nand,
     },
-    NOR: {
+    nor: {
         out: ins => LogicValue.invert(logicOr(ins)),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NOR,
+        fullShortDesc: () => S.Components.Gate.nor,
     },
-    XNOR: {
+    xnor: {
         out: ins => LogicValue.invert(logicXor(ins)),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.XNOR,
+        fullShortDesc: () => S.Components.Gate.xnor,
     },
 })
 /** Gate types applicable to gates with inputs 2 to N (_not_ all gate 2 inputs) */
@@ -67,47 +67,47 @@ export const Gate2toNTypeRepr = t.keyof(Gate2toNTypes.props)
 
 export const Gate2OnlyTypes = RichStringEnum.withProps<GateTypeProps>()({
     // less common gates
-    IMPLY: {
+    imply: {
         out: ins => logicImply(ins[0], ins[1]),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.IMPLY,
+        fullShortDesc: () => S.Components.Gate.imply,
     },
-    RIMPLY: {
+    rimply: {
         out: ins => logicImply(ins[1], ins[0]),
         includeInContextMenu: false, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.RIMPLY,
+        fullShortDesc: () => S.Components.Gate.rimply,
     },
-    NIMPLY: {
+    nimply: {
         out: ins => LogicValue.invert(logicImply(ins[0], ins[1])),
         includeInContextMenu: true, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.NIMPLY,
+        fullShortDesc: () => S.Components.Gate.nimply,
     },
-    RNIMPLY: {
+    rnimply: {
         out: ins => LogicValue.invert(logicImply(ins[1], ins[0])),
         includeInContextMenu: false, includeInPoseAs: true,
-        fullShortDesc: () => S.Components.Gate.RNIMPLY,
+        fullShortDesc: () => S.Components.Gate.rnimply,
     },
 
     // observing only one input
-    TXA: {
+    txa: {
         out: ins => ins[0],
         includeInContextMenu: true, includeInPoseAs: false,
-        fullShortDesc: () => S.Components.Gate.TXA,
+        fullShortDesc: () => S.Components.Gate.txa,
     },
-    TXB: {
+    txb: {
         out: ins => ins[1],
         includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: () => S.Components.Gate.TXB,
+        fullShortDesc: () => S.Components.Gate.txb,
     },
-    TXNA: {
+    txna: {
         out: ins => LogicValue.invert(ins[0]),
         includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: () => S.Components.Gate.TXNA,
+        fullShortDesc: () => S.Components.Gate.txna,
     },
-    TXNB: {
+    txnb: {
         out: ins => LogicValue.invert(ins[1]),
         includeInContextMenu: false, includeInPoseAs: false,
-        fullShortDesc: () => S.Components.Gate.TXNB,
+        fullShortDesc: () => S.Components.Gate.txnb,
     },
 })
 /** Some special gate types applicable to gates with 2 inputs only (_not_ all gate 2 inputs) */

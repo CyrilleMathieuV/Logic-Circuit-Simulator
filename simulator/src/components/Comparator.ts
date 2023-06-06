@@ -1,13 +1,13 @@
 import { COLOR_COMPONENT_BORDER } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isHighImpedance, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent, Repr } from "./Component"
-import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { LogicValue, Unknown, isHighImpedance, isUnknown } from "../utils"
+import { ComponentBase, Repr, defineComponent } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuItems } from "./Drawable"
 
 export const ComparatorDef =
-    defineComponent("ic", "comparator", {
+    defineComponent("comp", {
+        idPrefix: "comp",
         button: { imgWidth: 50 },
         valueDefaults: {},
         size: { gridWidth: 5, gridHeight: 7 },
@@ -32,15 +32,12 @@ type ComparatorRepr = Repr<typeof ComparatorDef>
 
 export class Comparator extends ComponentBase<ComparatorRepr> {
 
-    public constructor(editor: LogicEditor, saved?: ComparatorRepr) {
-        super(editor, ComparatorDef, saved)
+    public constructor(parent: DrawableParent, saved?: ComparatorRepr) {
+        super(parent, ComparatorDef, saved)
     }
 
     public toJSON() {
-        return {
-            type: "comparator" as const,
-            ...this.toJSONBase(),
-        }
+        return this.toJSONBase()
     }
 
     public override makeTooltip() {
@@ -74,7 +71,7 @@ export class Comparator extends ComponentBase<ComparatorRepr> {
         this.outputs.Eq.value = newValue.eq
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         this.doDrawDefault(g, ctx, () => {
             g.fillStyle = COLOR_COMPONENT_BORDER
             g.font = "bold 11px sans-serif"
@@ -84,14 +81,9 @@ export class Comparator extends ComponentBase<ComparatorRepr> {
         })
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const forceOutputItem = this.makeForceOutputsContextMenuItem()
-        if (isUndefined(forceOutputItem)) {
-            return []
-        }
-        return [
-            ["mid", forceOutputItem],
-        ]
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        return this.makeForceOutputsContextMenuItem()
     }
+
 }
 ComparatorDef.impl = Comparator

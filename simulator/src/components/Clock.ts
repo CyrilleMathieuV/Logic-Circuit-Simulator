@@ -1,15 +1,15 @@
 import * as t from "io-ts"
 import { COLOR_COMPONENT_BORDER } from "../drawutils"
 import { br, emptyMod, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isDefined, LogicValue, typeOrUndefined } from "../utils"
-import { ComponentNameRepr, ComponentState, defineComponent, Repr } from "./Component"
-import { ContextMenuData, DrawContext, MenuItems } from "./Drawable"
+import { LogicValue, typeOrUndefined } from "../utils"
+import { ComponentNameRepr, ComponentState, Repr, defineComponent } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 import { InputBase, InputDef } from "./Input"
 
 export const ClockDef =
-    defineComponent("in", "clock", {
+    defineComponent("clock", {
+        idPrefix: "clock",
         button: { imgWidth: 50 },
         repr: {
             name: ComponentNameRepr,
@@ -45,29 +45,32 @@ export class Clock extends InputBase<ClockRepr> {
     private _phase: number
     private _showLabel: boolean
 
-    public constructor(editor: LogicEditor, saved?: ClockRepr) {
+    public constructor(parent: DrawableParent, saved?: ClockRepr) {
         // 'undefined as any' is a hack to get around the fact that InputBase is parametrized
         // and Clock is not. As long as we don't try to change nonexitent params, it's fine.
-        super(editor, [ClockDef, undefined as any], saved)
+        super(parent, [ClockDef, undefined as any], saved)
 
         this._period = saved?.period ?? ClockDef.aults.period
-        this._dutycycle = isDefined(saved?.dutycycle) ? saved!.dutycycle % 100 : ClockDef.aults.dutycycle
-        this._phase = isDefined(saved?.phase) ? saved!.phase % this._period : ClockDef.aults.phase
+        this._dutycycle = (saved?.dutycycle !== undefined) ? saved.dutycycle % 100 : ClockDef.aults.dutycycle
+        this._phase = (saved?.phase !== undefined) ? saved.phase % this._period : ClockDef.aults.phase
         this._showLabel = saved?.showLabel ?? ClockDef.aults.showLabel
 
         // sets the value and schedules the next tick
-        this.tickCallback(editor.timeline.adjustedTime())
+        this.tickCallback()
     }
 
     public toJSON() {
         return {
-            type: "clock" as const,
             ...this.toJSONBase(),
             period: this._period,
             dutycycle: (this._dutycycle === ClockDef.aults.dutycycle) ? undefined : this._dutycycle,
             phase: (this._phase === ClockDef.aults.phase) ? undefined : this._phase,
             showLabel: (this._showLabel === ClockDef.aults.showLabel) ? undefined : this._showLabel,
         }
+    }
+
+    protected override toStringDetails(): string {
+        return `period=${this._period} duty=${this._dutycycle} phase=${this._phase}`
     }
 
     public override makeTooltip() {
@@ -81,8 +84,8 @@ export class Clock extends InputBase<ClockRepr> {
             ))
     }
 
-    private currentClockValue(time: number): [boolean, number] {
-        const myTime = time - this._phase
+    private currentClockValue(logicalTime: number): [boolean, number] {
+        const myTime = logicalTime - this._phase
         let timeOverPeriod = myTime % this._period
         if (timeOverPeriod < 0) {
             timeOverPeriod += this._period
@@ -98,23 +101,26 @@ export class Clock extends InputBase<ClockRepr> {
             value = false
             timeOverLastTick = timeOverPeriod - onDuration
         }
-        const lastTick = time - timeOverLastTick
+        const lastTick = logicalTime - timeOverLastTick
         const nextTick = lastTick + (value ? onDuration : offDuration)
 
         return [value, nextTick]
     }
 
-    private tickCallback(theoreticalTime: number) {
-        const [value, nextTick] = this.currentClockValue(theoreticalTime)
+    private tickCallback() {
+        const timeline = this.parent.editor.timeline
+        const [value, nextTick] = this.currentClockValue(timeline.logicalTime())
         this.doSetValue([value])
         if (this.state !== ComponentState.DEAD) {
-            this.editor.timeline.scheduleAt(nextTick, "next tick for clock value " + (!value),
-                time => this.tickCallback(time)
-            )
+            const s = S.Components.Clock.timeline
+            const desc = value ? s.NextFallingEdge : s.NextRisingEdge
+            timeline.scheduleAt(nextTick, () => {
+                this.tickCallback()
+            }, desc, true)
         }
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         super.doDraw(g, ctx)
 
         if (!this._showLabel) {
@@ -168,25 +174,26 @@ export class Clock extends InputBase<ClockRepr> {
             [2000, "2 s (0.5 Hz)"],
             [4000, "4 s (0.25 Hz)"],
             [8000, "8 s (0.125 Hz)"],
+            [16000, "8 s (0.0625 Hz)"],
         ]
 
         const makeItemSetPeriod = (data: [number, string]) => {
             const [period, desc] = data
             const isCurrent = this._period === period
             const icon = isCurrent ? "check" : "none"
-            return ContextMenuData.item(icon, desc, () => this.doSetPeriod(period))
+            return MenuData.item(icon, desc, () => this.doSetPeriod(period))
         }
 
         const replaceWithInputItem =
-            ContextMenuData.item("replace", s.ReplaceWithInput, () => {
-                this.replaceWithComponent(InputDef.make(this.editor, { bits: 1 }))
+            MenuData.item("replace", s.ReplaceWithInput, () => {
+                this.replaceWithComponent(InputDef.make(this.parent, { bits: 1 }))
             })
 
         return [
             ...super.makeComponentSpecificContextMenuItems(),
-            ["mid", ContextMenuData.sep()],
-            ["mid", ContextMenuData.submenu("timer", s.Period, periodPresets.map(makeItemSetPeriod))],
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
+            ["mid", MenuData.submenu("timer", s.Period, periodPresets.map(makeItemSetPeriod))],
+            ["mid", MenuData.sep()],
             ["mid", replaceWithInputItem],
         ]
     }

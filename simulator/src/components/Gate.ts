@@ -1,18 +1,18 @@
 import * as t from "io-ts"
-import { LogicEditor } from "../LogicEditor"
 import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_DARK_RED, COLOR_GATE_NAMES, COLOR_UNKNOWN, ColorString, GRID_STEP, PATTERN_STRIPED_GRAY, circle, drawWireLineToComponent } from "../drawutils"
 import { Modifier, ModifierObject, asValue, b, cls, div, emptyMod, mods, table, tbody, td, th, thead, tooltipContent, tr } from "../htmlgen"
 import { S } from "../strings"
-import { ArrayFillUsing, LogicValue, Mode, Unknown, deepEquals, isDefined, isUndefined, isUnknown, typeOrUndefined } from "../utils"
+import { ArrayFillUsing, Expand, InteractionResult, LogicValue, Mode, RichStringEnum, Unknown, deepEquals, isUnknown, typeOrUndefined } from "../utils"
 import { ExtractParamDefs, ExtractParams, InstantiatedComponentDef, NodesIn, NodesOut, ParametrizedComponentBase, Repr, ResolvedParams, SomeParamCompDef, defineParametrizedComponent, groupVertical, param } from "./Component"
-import { ContextMenuData, ContextMenuItem, DrawContext, MenuItems } from "./Drawable"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItem, MenuItems } from "./Drawable"
 import { Gate1Type, Gate1TypeRepr, Gate1Types, Gate2OnlyTypes, Gate2toNTypes, GateNType, GateNTypeRepr, GateNTypes, GateTypes } from "./GateTypes"
 
 type GateRepr = Gate1Repr | GateNRepr
 
+
 export abstract class GateBase<
     TRepr extends GateRepr,
-    TGateType extends TRepr["type"] = TRepr["type"],
+    TGateType extends TRepr["poseAs"] & string = TRepr["poseAs"] & string,
     TParamDefs extends ExtractParamDefs<TRepr> = ExtractParamDefs<TRepr>
 > extends ParametrizedComponentBase<
     TRepr,
@@ -29,27 +29,29 @@ export abstract class GateBase<
     private _poseAs: TGateType | undefined
     private _showAsUnknown: boolean
 
-    protected constructor(editor: LogicEditor, SubclassDef: [InstantiatedComponentDef<TRepr, LogicValue>, SomeParamCompDef<TParamDefs>], type: TGateType, saved?: TRepr) {
-        super(editor, SubclassDef, saved)
+    protected constructor(parent: DrawableParent, SubclassDef: [InstantiatedComponentDef<TRepr, LogicValue>, SomeParamCompDef<TParamDefs>], type: TGateType, saved?: TRepr) {
+        super(parent, SubclassDef, saved)
 
         this._type = type
         this._poseAs = saved?.poseAs as TGateType ?? undefined
         this._showAsUnknown = saved?.showAsUnknown ?? false
     }
 
-    protected toGateJSON(numBits: number | undefined) {
+    protected override toJSONBase() {
         return {
-            type: this._type,
-            bits: numBits,
             ...super.toJSONBase(),
             showAsUnknown: (this._showAsUnknown) ? true : undefined,
             poseAs: this._poseAs,
         }
     }
 
+    protected override jsonType() {
+        return this._type
+    }
+
     protected abstract gateTypes(numBits: number): GateTypes<TGateType>
 
-    public get type() {
+    public get type(): TGateType {
         return this._type
     }
 
@@ -127,33 +129,36 @@ export abstract class GateBase<
         const gateIsUnspecified = myIns.includes(Unknown)
         const explanation = gateIsUnspecified
             ? mods(desc + " " + s.UndeterminedOutputBecauseInputUnknown)
-            : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.BecauseInputIs + " ", ...myIns.map(asValue), ", " + s.AccordingToTruthTable)
+            : mods(desc + " " + s.ThisOutput + " ", asValue(myOut), " " + s.BecauseInputIs + " ", ...myIns.map(asValue))
 
         const fullShortDesc = gateProps.fullShortDesc()
         const header = (() => {
             switch (this.type) {
-                case "NOT": return mods(s.Inverter[0], b(S.Components.Gate.NOT[0]), s.Inverter[1])
-                case "BUF": return mods(s.Buffer[0], b(S.Components.Gate.BUF[0]), s.Buffer[1])
+                case "not": return mods(s.Inverter[0], b(S.Components.Gate.not[0]), s.Inverter[1])
+                case "buf": return mods(s.Buffer[0], b(S.Components.Gate.buf[0]), s.Buffer[1])
                 default: return s.GateTitle(b(fullShortDesc[0]))
             }
         })()
 
+        const explanationAndTable = this.numBits <= 4 ?
+            mods(explanation, ", " + s.AccordingToTruthTable, div(makeTruthTable(genTruthTableData())))
+            : mods(explanation, ".")
+
         return makeGateTooltip(this.numBits,
             header,
             fullShortDesc[2],
-            explanation,
-            makeTruthTable(genTruthTableData())
+            explanationAndTable,
         )
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         const gateType = this._showAsUnknown
             ? Unknown
             : this.poseAs ?? this.type
         this.drawGate(g, gateType, gateType !== this.type && !this._showAsUnknown, ctx)
     }
 
-    private drawGate(g: CanvasRenderingContext2D, type: TGateType | Unknown, isFake: boolean, ctx: DrawContext) {
+    private drawGate(g: GraphicsRendering, type: TGateType | Unknown, isFake: boolean, ctx: DrawContext) {
         const numBits = this.numBits
         const output = this.outputs.Out
 
@@ -204,58 +209,67 @@ export abstract class GateBase<
             for (let i = 0; i < numBits; i++) {
                 const input = this.inputs.In[i]
                 const short = i === 0 ? shortUp : shortDown
-                let rightEnd = gateLeft - 1
+                let rightEnd = gateLeft + (isORLike ? type.includes("x") ? -1 : 5 : 0)
                 if (short) {
                     rightEnd -= 9
                 }
                 if (isORLike) {
                     if (numBits === 3) {
-                        rightEnd += 3
+                        rightEnd += 1
                         if (i === 1) {
                             rightEnd += 4
                         }
                     } else if (numBits === 4) {
-                        rightEnd += 3
+                        rightEnd += 2
                         if (i === 1 || i === 2) {
                             rightEnd += 8
                         }
+                    } else if (numBits > 4) {
+                        rightEnd += 76
                     }
                 }
                 drawWireLineToComponent(g, input, rightEnd, input.posYInParentTransform)
             }
-            drawWireLineToComponent(g, output, gateRight + 1, this.posY)
+            drawWireLineToComponent(g, output, gateRight - 1, this.posY)
         }
 
-        const showAsFake = isFake && this.editor.mode >= Mode.FULL
+        const showAsFake = isFake && this.parent.mode >= Mode.FULL
         const gateBorderColor: ColorString = showAsFake ? COLOR_DARK_RED : COLOR_COMPONENT_BORDER
         const gateFill = showAsFake ? PATTERN_STRIPED_GRAY : COLOR_BACKGROUND
-        g.lineWidth = 3
-        g.strokeStyle = gateBorderColor
-        g.fillStyle = gateFill
-        g.beginPath()
+        const prepareMainFill = () => {
+            g.lineWidth = 3
+            g.strokeStyle = gateBorderColor
+            g.fillStyle = gateFill
+        }
 
         switch (type) {
-            case "NOT":
-            case "BUF":
+            case "not":
+            case "buf": {
+                drawWireEnds()
+                prepareMainFill()
+                g.beginPath()
                 g.moveTo(gateLeft, top)
                 g.lineTo(gateRight, this.posY)
                 g.lineTo(gateLeft, bottom)
                 g.closePath()
                 g.fill()
                 g.stroke()
-                if (type === "NOT") {
+                if (type === "not") {
                     drawRightCircle()
                 }
-                drawWireEnds()
                 nameDeltaX -= 6
                 break
+            }
 
-
-
-            case "AND":
-            case "NAND":
-            case "NIMPLY":
-            case "RNIMPLY": {
+            case "and":
+            case "nand":
+            case "nimply":
+            case "rnimply": {
+                const shortDown = type === "nimply"
+                const shortUp = type === "rnimply"
+                drawWireEnds(shortUp, shortDown)
+                prepareMainFill()
+                g.beginPath()
                 g.moveTo(this.posX, bottom)
                 g.lineTo(gateLeft, bottom)
                 g.lineTo(gateLeft, top)
@@ -269,30 +283,28 @@ export abstract class GateBase<
                 g.lineWidth = 3
                 g.stroke()
                 g.beginPath()
-                if (type.startsWith("NAND")) {
+                if (type.startsWith("nand")) {
                     drawRightCircle()
                 }
-                let shortUp = false, shortDown = false
-                if (type === "NIMPLY") {
+                if (shortDown) {
                     drawLeftCircle(false)
-                    shortDown = true
-                } else if (type === "RNIMPLY") {
+                } else if (shortUp) {
                     drawLeftCircle(true)
-                    shortUp = true
                 }
-                drawWireEnds(shortUp, shortDown)
                 nameDeltaX -= 1
                 break
             }
 
-
-
-            case "OR":
-            case "NOR":
-            case "XOR":
-            case "XNOR":
-            case "IMPLY":
-            case "RIMPLY": {
+            case "or":
+            case "nor":
+            case "xor":
+            case "xnor":
+            case "imply":
+            case "rimply": {
+                const shortUp = type === "imply"
+                const shortDown = type === "rimply"
+                drawWireEnds(shortUp, shortDown, true)
+                prepareMainFill()
                 g.beginPath()
                 g.moveTo(gateLeft, top)
                 g.lineTo(this.posX - 15, top)
@@ -307,18 +319,15 @@ export abstract class GateBase<
                 g.stroke()
                 const savedGateLeft = gateLeft
                 gateLeft += 4
-                if (type.startsWith("NOR") || type.startsWith("XNOR")) {
+                if (type.startsWith("nor") || type.startsWith("xnor")) {
                     drawRightCircle()
                 }
-                let shortUp = false, shortDown = false
-                if (type === "IMPLY") {
+                if (shortUp) {
                     drawLeftCircle(true)
-                    shortUp = true
-                } else if (type === "RIMPLY") {
+                } else if (shortDown) {
                     drawLeftCircle(false)
-                    shortDown = true
                 }
-                if (type.startsWith("X")) {
+                if (type.startsWith("x")) {
                     gateLeft = savedGateLeft - 2
                     g.beginPath()
                     g.moveTo(savedGateLeft - 6, bottom)
@@ -327,48 +336,49 @@ export abstract class GateBase<
                     g.strokeStyle = gateBorderColor
                     g.stroke()
                 }
-                drawWireEnds(shortUp, shortDown, true)
                 nameDeltaX -= 1
                 break
             }
 
-            case "TXA":
-            case "TXNA": {
+            case "txa":
+            case "txna": {
+                const shortLeft = type === "txna"
+                drawWireEnds(shortLeft, false)
+                prepareMainFill()
                 g.beginPath()
                 g.moveTo(gateLeft, bottom)
                 g.lineTo(gateLeft, top)
-                g.lineTo(gateRight, this.posY)
-                g.lineTo(gateLeft + 2, this.posY)
+                g.lineTo(gateRight, this.posY + 0.5)
+                g.lineTo(gateLeft + 2, this.posY + 0.5)
                 g.fill()
                 g.stroke()
-                let shortLeft = false
-                if (type === "TXNA") {
+                if (shortLeft) {
                     drawLeftCircle(true)
-                    shortLeft = true
                 }
-                drawWireEnds(shortLeft, false)
                 break
             }
 
-            case "TXB":
-            case "TXNB": {
+            case "txb":
+            case "txnb": {
+                const shortLeft = type === "txnb"
+                drawWireEnds(false, shortLeft)
+                prepareMainFill()
                 g.beginPath()
                 g.moveTo(gateLeft, top)
                 g.lineTo(gateLeft, bottom)
-                g.lineTo(gateRight, this.posY)
-                g.lineTo(gateLeft + 2, this.posY)
+                g.lineTo(gateRight, this.posY - 0.5)
+                g.lineTo(gateLeft + 2, this.posY - 0.5)
                 g.fill()
                 g.stroke()
-                let shortLeft = false
-                if (type === "TXNB") {
+                if (shortLeft) {
                     drawLeftCircle(false)
-                    shortLeft = true
                 }
-                drawWireEnds(false, shortLeft)
                 break
             }
 
-            case "?":
+            case "?": {
+                drawWireEnds()
+                prepareMainFill()
                 g.strokeStyle = COLOR_UNKNOWN
                 g.beginPath()
                 g.moveTo(gateLeft, top)
@@ -379,7 +389,6 @@ export abstract class GateBase<
                 g.fill()
                 g.stroke()
                 g.lineWidth = 0
-                drawWireEnds()
 
                 ctx.inNonTransformedFrame(() => {
                     g.fillStyle = COLOR_UNKNOWN
@@ -388,11 +397,12 @@ export abstract class GateBase<
                     g.fillText('?', this.posX, this.posY)
                 })
                 break
+            }
         }
 
-        if (this.editor.options.showGateTypes && !isUnknown(type)) {
+        if (this.parent.editor.options.showGateTypes && !isUnknown(type)) {
             const gateShortName = this.gateTypes(this.numBits).props[type].fullShortDesc()[1]
-            if (isDefined(gateShortName)) {
+            if (gateShortName !== undefined) {
                 g.fillStyle = COLOR_GATE_NAMES
                 g.textAlign = "center"
                 g.font = "bold 13px sans-serif"
@@ -406,18 +416,18 @@ export abstract class GateBase<
     }
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
-        if (this.editor.mode >= Mode.FULL && e.altKey) {
+        if (this.parent.mode >= Mode.FULL && e.altKey) {
             this.doSetShowAsUnknown(!this._showAsUnknown)
-            return true
+            return InteractionResult.SimpleChange
         }
-        return false
+        return super.mouseDoubleClicked(e)
     }
 
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
         const items: MenuItems = [
             ["start", this.makeReplaceByMenuItem()],
         ]
-        if (this.editor.mode >= Mode.FULL) {
+        if (this.parent.mode >= Mode.FULL) {
             items.push(
                 ["mid", this.makePoseAsMenuItem()],
                 ...this.makeForceOutputsContextMenuItem()
@@ -426,43 +436,43 @@ export abstract class GateBase<
         return items
     }
 
-    private makeReplaceByMenuItem(): ContextMenuItem {
+    private makeReplaceByMenuItem(): MenuItem {
         const gateTypes = this.gateTypes(this.numBits)
         const s = S.Components.Gate.contextMenu
         const otherTypes = gateTypes.values.filter(t => t !== this._type && gateTypes.props[t].includeInContextMenu)
-        return ContextMenuData.submenu("replace", s.ReplaceBy, [
+        return MenuData.submenu("replace", s.ReplaceBy, [
             ...otherTypes.map(newType => {
                 const gateProps = gateTypes.props[newType]
-                return ContextMenuData.item(undefined, s.GateTempl.expand({ type: gateProps.fullShortDesc()[0] }), () => {
+                return MenuData.item(undefined, s.GateTempl.expand({ type: gateProps.fullShortDesc()[0] }), () => {
                     this.doSetType(newType)
                 })
             }),
-            ContextMenuData.sep(),
-            ContextMenuData.text(s.VariantChangeDesc),
+            MenuData.sep(),
+            MenuData.text(s.VariantChangeDesc),
         ])
     }
 
-    private makePoseAsMenuItem(): ContextMenuItem {
+    private makePoseAsMenuItem(): MenuItem {
         const gateTypes = this.gateTypes(this.numBits)
         const s = S.Components.Gate.contextMenu
         const otherTypes = gateTypes.values.filter(t => t !== this._type && gateTypes.props[t].includeInPoseAs)
         const currentShowAsUnknown = this._showAsUnknown
         const currentPoseAs = this.poseAs
-        return ContextMenuData.submenu("questioncircled", s.ShowAs, [
-            ContextMenuData.item(!currentShowAsUnknown && isUndefined(currentPoseAs) ? "check" : "none",
+        return MenuData.submenu("questioncircled", s.ShowAs, [
+            MenuData.item(!currentShowAsUnknown && currentPoseAs === undefined ? "check" : "none",
                 s.NormalGateTempl.expand({ type: gateTypes.props[this._type].fullShortDesc()[0] }), () => {
                     this.poseAs = undefined
                     this.doSetShowAsUnknown(false)
                 }),
-            ContextMenuData.item(currentShowAsUnknown ? "check" : "none",
+            MenuData.item(currentShowAsUnknown ? "check" : "none",
                 s.UnknownGate, () => {
                     this.poseAs = undefined
                     this.doSetShowAsUnknown(true)
                 }),
-            ContextMenuData.sep(),
+            MenuData.sep(),
             ...otherTypes.map(newType => {
                 const gateProps = gateTypes.props[newType]
-                return ContextMenuData.item(!currentShowAsUnknown && newType === currentPoseAs ? "check" : "none",
+                return MenuData.item(!currentShowAsUnknown && newType === currentPoseAs ? "check" : "none",
                     s.GateTempl.expand({ type: gateProps.fullShortDesc()[0] }), () => {
                         this.doSetShowAsUnknown(false)
                         this.poseAs = newType
@@ -473,21 +483,46 @@ export abstract class GateBase<
 
 }
 
+export function validateGateType<TGateType extends string>(GateTypes: RichStringEnum<string, any>, typeFromParam: TGateType, typeFromJson: string | undefined, defaultFromDef: TGateType, jsonTypeSuffix?: string): TGateType {
+    let typeToValidate
+    if (typeFromJson === undefined) {
+        typeToValidate = typeFromParam
+    } else {
+        if (jsonTypeSuffix !== undefined && typeFromJson.endsWith(jsonTypeSuffix)) {
+            typeToValidate = typeFromJson.slice(0, -jsonTypeSuffix.length)
+        } else {
+            typeToValidate = typeFromJson
+        }
+    }
+    if (!GateTypes.includes(typeToValidate)) {
+        console.error(`Invalid gate type: '${typeToValidate}'`)
+        return defaultFromDef
+    }
+    return typeToValidate as TGateType
+}
+
 
 
 export const Gate1Def =
-    defineParametrizedComponent("gate", undefined, true, true, {
-        variantName: ({ type }) => `${type}`,
+    defineParametrizedComponent("gate1", true, true, {
+        variantName: ({ type }) =>
+            // return array thus overriding default component id
+            [type],
         button: { imgWidth: 50 },
         repr: {
-            type: Gate1TypeRepr,
+            // type not part of specific repr, using normal type field
             poseAs: typeOrUndefined(Gate1TypeRepr),
             showAsUnknown: typeOrUndefined(t.boolean),
         },
         valueDefaults: {},
         params: {
-            type: param("NOT" as Gate1Type),
+            type: param("not" as Gate1Type),
         },
+        validateParams: ({ type: paramType }, jsonType, defaults) => {
+            const type = validateGateType(Gate1Types, paramType, jsonType, defaults.type.defaultValue)
+            return { type }
+        },
+        idPrefix: ({ type }) => type,
         size: () => ({
             gridWidth: 7, gridHeight: 4,
         }),
@@ -498,7 +533,7 @@ export const Gate1Def =
         initialValue: () => false as LogicValue,
     })
 
-export type Gate1Repr = Repr<typeof Gate1Def>
+export type Gate1Repr = Expand<Repr<typeof Gate1Def>>
 export type Gate1Params = ResolvedParams<typeof Gate1Def>
 
 
@@ -506,25 +541,26 @@ export class Gate1 extends GateBase<Gate1Repr> {
 
     public get numBits() { return 1 }
 
-    public constructor(editor: LogicEditor, params: Gate1Params, saved?: Gate1Repr) {
-        super(editor, Gate1Def.with(params), params.type, saved)
+    public constructor(parent: DrawableParent, params: Gate1Params, saved?: Gate1Repr) {
+        super(parent, Gate1Def.with(params), params.type, saved)
     }
 
     protected gateTypes() { return Gate1Types }
 
-    public toJSON() {
-        return this.toGateJSON(undefined)
+    public toJSON(): Gate1Repr {
+        return super.toJSONBase()
     }
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
-        if (super.mouseDoubleClicked(e)) {
-            return true // already handled
+        const superChange = super.mouseDoubleClicked(e)
+        if (superChange.isChange) {
+            return superChange // already handled
         }
-        if (this.editor.mode >= Mode.DESIGN) {
-            this.doSetType(this.type === "BUF" ? "NOT" : "BUF")
-            return true
+        if (this.parent.mode >= Mode.DESIGN) {
+            this.doSetType(this.type === "buf" ? "not" : "buf")
+            return InteractionResult.SimpleChange
         }
-        return false
+        return InteractionResult.NoChange
     }
 
 }
@@ -533,23 +569,26 @@ Gate1Def.impl = Gate1
 
 
 export const GateNDef =
-    defineParametrizedComponent("gate", undefined, true, true, {
-        variantName: ({ type }) => `${type}`,
+    defineParametrizedComponent("gate", true, true, {
+        variantName: ({ type, bits }) =>
+            // return array thus overriding default component id
+            [type, `${type}-${bits}`],
         button: { imgWidth: 50 },
         repr: {
-            type: GateNTypeRepr,
+            // type not part of specific repr, using normal type field
             poseAs: typeOrUndefined(GateNTypeRepr),
             showAsUnknown: typeOrUndefined(t.boolean),
         },
         valueDefaults: {},
         params: {
-            type: param("NAND" as GateNType),
             bits: param(2, [2, 3, 4, 7, 8, 16]),
+            type: param("and" as GateNType),
         },
-        validateParams: ({ type: type_, bits }, defs) => {
-            const type = (bits > 2 && !Gate2toNTypes.includes(type_)) ? defs.type.defaultValue : type_
+        validateParams: ({ type: paramType, bits }, jsonType, defaults) => {
+            const type = validateGateType((bits > 2) ? Gate2toNTypes : GateNTypes, paramType, jsonType, defaults.type.defaultValue)
             return { type, numBits: bits }
         },
+        idPrefix: ({ type }) => type,
         size: ({ numBits }) => ({
             gridWidth: 7 + Math.max(0, numBits - 2) * 2,
             gridHeight: 4 + Math.max(0, numBits - 2) * 2,
@@ -572,13 +611,12 @@ export const GateNDef =
 export type GateNRepr = Repr<typeof GateNDef>
 export type GateNParams = ResolvedParams<typeof GateNDef>
 
-
 export class GateN extends GateBase<GateNRepr> {
 
     public readonly numBits: number
 
-    public constructor(editor: LogicEditor, params: GateNParams, saved?: GateNRepr) {
-        super(editor, GateNDef.with(params), params.type, saved)
+    public constructor(parent: DrawableParent, params: GateNParams, saved?: GateNRepr) {
+        super(parent, GateNDef.with(params), params.type, saved)
         this.numBits = params.numBits
     }
 
@@ -587,39 +625,41 @@ export class GateN extends GateBase<GateNRepr> {
     }
 
     public toJSON() {
-        return this.toGateJSON(
-            this.numBits !== GateNDef.aults.bits ? this.numBits : undefined
-        )
+        return {
+            ...this.toJSONBase(),
+            bits: this.numBits !== GateNDef.aults.bits ? this.numBits : undefined,
+        }
     }
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
-        if (super.mouseDoubleClicked(e)) {
-            return true // already handled
+        const superChange = super.mouseDoubleClicked(e)
+        if (superChange.isChange) {
+            return superChange // already handled
         }
-        if (this.editor.mode >= Mode.DESIGN) {
+        if (this.parent.mode >= Mode.DESIGN) {
             // switch to IMPLY / NIMPLY variant
             const newType = (() => {
                 switch (this.type) {
-                    case "IMPLY": return "RIMPLY"
-                    case "RIMPLY": return "IMPLY"
+                    case "imply": return "rimply"
+                    case "rimply": return "imply"
 
-                    case "NIMPLY": return "RNIMPLY"
-                    case "RNIMPLY": return "NIMPLY"
+                    case "nimply": return "rnimply"
+                    case "rnimply": return "nimply"
 
-                    case "TXA": return "TXB"
-                    case "TXB": return "TXNA"
-                    case "TXNA": return "TXNB"
-                    case "TXNB": return "TXA"
+                    case "txa": return "txb"
+                    case "txb": return "txna"
+                    case "txna": return "txnb"
+                    case "txnb": return "txa"
 
                     default: return undefined
                 }
             })()
-            if (isDefined(newType)) {
+            if (newType !== undefined) {
                 this.doSetType(newType)
-                return true
+                return InteractionResult.SimpleChange
             }
         }
-        return false
+        return InteractionResult.NoChange
     }
 
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
@@ -627,7 +667,7 @@ export class GateN extends GateBase<GateNRepr> {
 
         const changeBitsItems: MenuItems = Gate2OnlyTypes.includes(this.type) ? [] : [
             this.makeChangeParamsContextMenuItem("inputs", s.ParamNumInputs, this.numBits, "bits"),
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
         ]
 
         return [
@@ -666,7 +706,8 @@ function makeTruthTable([header, rows]: readonly [string[], TruthTableRowData[]]
         tbody(...htmlRows)
     )
 }
-function makeGateTooltip(nInput: number, title: Modifier, description: Modifier, explanation: Modifier, truthTable: Modifier): ModifierObject {
-    const maxWidth = 200 + (Math.max(0, nInput - 2)) * 50
-    return tooltipContent(title, mods(div(description), div(explanation), div(truthTable)), maxWidth)
+function makeGateTooltip(numBits: number, title: Modifier, description: Modifier, explanationAndTable: Modifier): ModifierObject {
+    const numBitsDisplay = Math.min(4, numBits)
+    const maxWidth = 200 + (Math.max(0, numBitsDisplay - 2)) * 50
+    return tooltipContent(title, mods(div(description), div(explanationAndTable)), maxWidth)
 }

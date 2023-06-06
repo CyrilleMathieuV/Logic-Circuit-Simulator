@@ -1,15 +1,15 @@
 import * as t from "io-ts"
 import { COLOR_COMPONENT_BORDER, COLOR_UNKNOWN, displayValuesFromArray, formatWithRadix } from "../drawutils"
 import { b, div, emptyMod, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isDefined, isUnknown, Mode, typeOrUndefined } from "../utils"
-import { ComponentBase, ComponentName, ComponentNameRepr, defineComponent, groupVertical, Repr } from "./Component"
-import { ContextMenuData, ContextMenuItem, ContextMenuItemPlacement, DrawContext, Orientation } from "./Drawable"
+import { InteractionResult, Mode, isUnknown, typeOrUndefined } from "../utils"
+import { ComponentBase, ComponentName, ComponentNameRepr, Repr, defineComponent, groupVertical } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 
 
-export const OutputAsciiDef =
-    defineComponent("out", "ascii", {
+export const DisplayAsciiDef =
+    defineComponent("ascii", {
+        idPrefix: "disp",
         button: { imgWidth: 32 },
         repr: {
             name: ComponentNameRepr,
@@ -26,26 +26,23 @@ export const OutputAsciiDef =
         initialValue: (): [string, number | "?"] => ["0000000", 0],
     })
 
-type OutputAsciiRepr = Repr<typeof OutputAsciiDef>
+export type DisplayAsciiRepr = Repr<typeof DisplayAsciiDef>
 
-export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
+export class DisplayAscii extends ComponentBase<DisplayAsciiRepr> {
 
-    private _name: ComponentName = undefined
-    private _additionalReprRadix: number | undefined = undefined
-    private _showAsUnknown = false
+    private _name: ComponentName
+    private _additionalReprRadix: number | undefined
+    private _showAsUnknown: boolean
 
-    public constructor(editor: LogicEditor, saved?: OutputAsciiRepr) {
-        super(editor, OutputAsciiDef, saved)
-        if (isDefined(saved)) {
-            this._name = saved.name
-            this._additionalReprRadix = saved.additionalReprRadix
-            this._showAsUnknown = saved.showAsUnknown ?? false
-        }
+    public constructor(parent: DrawableParent, saved?: DisplayAsciiRepr) {
+        super(parent, DisplayAsciiDef, saved)
+        this._name = saved?.name ?? undefined
+        this._additionalReprRadix = saved?.additionalReprRadix ?? undefined
+        this._showAsUnknown = saved?.showAsUnknown ?? false
     }
 
     public toJSON() {
         return {
-            type: "ascii" as const,
             ...this.toJSONBase(),
             name: this._name,
             additionalReprRadix: this._additionalReprRadix,
@@ -54,11 +51,11 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
     }
 
     private get showAsUnknown() {
-        return this._showAsUnknown || this.editor.options.hideOutputColors
+        return this._showAsUnknown || this.parent.editor.options.hideOutputColors
     }
 
     public override makeTooltip() {
-        const s = S.Components.OutputAscii.tooltip
+        const s = S.Components.DisplayAscii.tooltip
         const [binaryStringRep, value] = this.value
 
         return tooltipContent(s.title, mods(
@@ -80,7 +77,7 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
         return displayValuesFromArray(values, false)
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         const [binaryStringRep, value] = this.value
         let mainText: string
         let mainTextFont: string
@@ -92,7 +89,7 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
             }
             mainText = "?"
         } else {
-            mainText = OutputAscii.numberToAscii(value)
+            mainText = DisplayAscii.numberToAscii(value)
             if (value < 32) {
                 // non-printable
                 mainTextFont = "16px sans-serif"
@@ -106,7 +103,7 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
             componentName: [this._name, true, mainText],
             drawLabels: (ctx, { width, height }) => {
                 const isVertical = Orientation.isVertical(this.orient)
-                const hasAdditionalRepresentation = isDefined(this._additionalReprRadix)
+                const hasAdditionalRepresentation = this._additionalReprRadix !== undefined
                 let mainTextPosY = this.posY + (isVertical ? 4 : 0)
 
                 g.font = "9px sans-serif"
@@ -156,13 +153,14 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
     }
 
     public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
-        if (super.mouseDoubleClicked(e)) {
-            return true // already handled
+        const superChange = super.mouseDoubleClicked(e)
+        if (superChange.isChange) {
+            return superChange // already handled
         }
-        const mode = this.editor.mode
+        const mode = this.parent.mode
         if (mode >= Mode.FULL && e.altKey) {
             this.doSetShowAsUnknown(!this._showAsUnknown)
-            return true
+            return InteractionResult.SimpleChange
         } else if (mode >= Mode.DESIGN) {
             this.doSetAdditionalDisplayRadix((() => {
                 switch (this._additionalReprRadix) {
@@ -172,9 +170,9 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
                     default: return undefined
                 }
             })())
-            return true
+            return InteractionResult.SimpleChange
         }
-        return false
+        return InteractionResult.NoChange
     }
 
     private doSetName(name: ComponentName) {
@@ -192,13 +190,13 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
         this.setNeedsRedraw("additional display radix changed")
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
 
-        const s = S.Components.OutputAscii.contextMenu
+        const s = S.Components.DisplayAscii.contextMenu
 
         const makeItemShowAs = (desc: string, handler: () => void, isCurrent: boolean,) => {
             const icon = isCurrent ? "check" : "none"
-            return ContextMenuData.item(icon, desc, handler)
+            return MenuData.item(icon, desc, handler)
         }
 
         const makeItemShowRadix = (radix: number | undefined, desc: string) => {
@@ -209,22 +207,22 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
         }
 
         return [
-            ["mid", ContextMenuData.submenu("eye", s.AdditionalDisplay, [
+            ["mid", MenuData.submenu("eye", s.AdditionalDisplay, [
                 makeItemShowRadix(undefined, s.DisplayNone),
                 makeItemShowRadix(10, s.DisplayDecimal),
                 makeItemShowRadix(16, s.DisplayHex),
-                ContextMenuData.sep(),
-                ContextMenuData.text(s.ChangeDisplayDesc),
+                MenuData.sep(),
+                MenuData.text(s.ChangeDisplayDesc),
             ])],
             ["mid", makeItemShowAs(S.Components.Generic.contextMenu.ShowAsUnknown, () => this.doSetShowAsUnknown(!this._showAsUnknown), this._showAsUnknown)],
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             ["mid", this.makeSetNameContextMenuItem(this._name, this.doSetName.bind(this))],
         ]
     }
 
 
     public override keyDown(e: KeyboardEvent): void {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !e.altKey) {
             this.runSetNameDialog(this._name, this.doSetName.bind(this))
         } else {
             super.keyDown(e)
@@ -232,4 +230,4 @@ export class OutputAscii extends ComponentBase<OutputAsciiRepr> {
     }
 
 }
-OutputAsciiDef.impl = OutputAscii
+DisplayAsciiDef.impl = DisplayAscii

@@ -1,18 +1,10 @@
 import { drawWaypoint, GRID_STEP, isOverWaypoint, NodeStyle, WAYPOINT_DIAMETER } from "../drawutils"
-import { LogicEditor } from "../LogicEditor"
-import { HighImpedance, InteractionResult, isDefined, isUndefined, isUnknown, LogicValue, Mode, RepeatFunction, toLogicValue, Unknown } from "../utils"
-import { ComponentState, InputNodeRepr, NodeGroup, OutputNodeRepr } from "./Component"
-import { DrawableWithPosition, DrawContext, Orientation } from "./Drawable"
+import { HighImpedance, InteractionResult, isUnknown, LogicValue, Mode, RepeatFunction, toLogicValue, Unknown } from "../utils"
+import { Component, InputNodeRepr, NodeGroup, OutputNodeRepr } from "./Component"
+import { DrawableWithPosition, DrawContext, GraphicsRendering, Orientation } from "./Drawable"
 import { Wire } from "./Wire"
 
-
-
-// This should just be Component, but it then has some cyclic 
-// type definition issue which causes problems
-type NodeParent = DrawableWithPosition & { isMoving: boolean, state: ComponentState, setNeedsRecalc(): void, allowsForcedOutputs: boolean, alwaysDrawMultiOutNodes: boolean }
-
 export type Node = NodeIn | NodeOut
-
 
 export const WireColor = {
     black: "black",
@@ -27,7 +19,7 @@ export const DEFAULT_WIRE_COLOR = WireColor.black
 
 export type WireColor = keyof typeof WireColor
 
-abstract class NodeBase<N extends Node> extends DrawableWithPosition {
+export abstract class NodeBase<N extends Node> extends DrawableWithPosition {
 
     public readonly id: number
     private _isAlive = true
@@ -37,9 +29,8 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
     protected _color: WireColor = DEFAULT_WIRE_COLOR
 
     public constructor(
-        editor: LogicEditor,
+        public readonly component: Component,
         nodeSpec: InputNodeRepr | OutputNodeRepr,
-        public readonly parent: NodeParent,
         public readonly group: NodeGroup<N> | undefined,
         public readonly shortName: string,
         public readonly fullName: string,
@@ -48,20 +39,20 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
         public readonly hasTriangle: boolean,
         relativePosition: Orientation,
     ) {
-        super(editor)
+        super(component.parent)
         this.id = nodeSpec.id
         if ("force" in nodeSpec) {
             this._forceValue = toLogicValue(nodeSpec.force)
         }
-        if ("color" in nodeSpec && isDefined(nodeSpec.color)) {
+        if ("color" in nodeSpec && nodeSpec.color !== undefined) {
             this._color = nodeSpec.color
         }
-        if ("initialValue" in nodeSpec && isDefined(nodeSpec.initialValue)) {
+        if ("initialValue" in nodeSpec && nodeSpec.initialValue !== undefined) {
             const initialValue = toLogicValue(nodeSpec.initialValue)
             this._initialValue = initialValue
             this._value = initialValue
         }
-        this.editor.nodeMgr.addLiveNode(this.asNode)
+        this.parent.nodeMgr.addLiveNode(this.asNode)
         this.updatePositionFromParent()
         this.doSetOrient(relativePosition)
     }
@@ -70,7 +61,7 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
         return this as unknown as Node
     }
 
-    public get isOutput(): boolean {
+    public isOutput(): this is NodeOut {
         return Node.isOutput(this.asNode)
     }
 
@@ -99,15 +90,14 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
     }
 
     public override isOver(x: number, y: number) {
-        return this.editor.mode >= Mode.CONNECT
-            && this.acceptsMoreConnections
+        return this.parent.mode >= Mode.CONNECT
             && isOverWaypoint(x, y, this.posX, this.posY)
     }
 
     public destroy() {
         this.preDestroy()
         this._isAlive = false
-        this.editor.nodeMgr.removeLiveNode(this.asNode)
+        this.parent.nodeMgr.removeLiveNode(this.asNode)
     }
 
     protected abstract preDestroy(): void
@@ -116,16 +106,16 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
         return false
     }
 
-    protected doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
-        const mode = this.editor.mode
+    protected doDraw(g: GraphicsRendering, ctx: DrawContext) {
+        const mode = this.parent.mode
         if (mode < Mode.CONNECT && !this.forceDraw()) {
             return
         }
 
-        const showForced = isDefined(this._forceValue) && mode >= Mode.FULL
+        const showForced = this._forceValue !== undefined && mode >= Mode.FULL
         const showForcedWarning = mode >= Mode.FULL && !isUnknown(this._value) && !isUnknown(this.value) && this._value !== this.value
-        const parentOrientIsVertical = Orientation.isVertical(this.parent.orient)
-        const neutral = this.editor.options.hideWireColors
+        const parentOrientIsVertical = Orientation.isVertical(this.component.orient)
+        const neutral = this.parent.editor.options.hideWireColors
         drawWaypoint(g, ctx, this.posX, this.posY, this.nodeDisplayStyle, this.value, ctx.isMouseOver, neutral, showForced, showForcedWarning, parentOrientIsVertical)
     }
 
@@ -136,7 +126,7 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
     }
 
     public get value(): LogicValue {
-        return isDefined(this._forceValue) ? this._forceValue : this._value
+        return this._forceValue !== undefined ? this._forceValue : this._value
     }
 
     public set value(val: LogicValue) {
@@ -183,16 +173,17 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
     public abstract get isDisconnected(): boolean
 
     public get posXInParentTransform() {
-        return this.parent.posX + this._gridOffsetX * GRID_STEP
+        return this.component.posX + this._gridOffsetX * GRID_STEP
     }
 
     public get posYInParentTransform() {
-        return this.parent.posY + this._gridOffsetY * GRID_STEP
+        return this.component.posY + this._gridOffsetY * GRID_STEP
     }
 
     public updatePositionFromParent() {
+        const component = this.component
         const [appliedGridOffsetX, appliedGridOffsetY] = (() => {
-            switch (this.parent.orient) {
+            switch (component.orient) {
                 case "e": return [+this._gridOffsetX, +this._gridOffsetY]
                 case "w": return [-this._gridOffsetX, -this._gridOffsetY]
                 case "s": return [-this._gridOffsetY, +this._gridOffsetX]
@@ -200,14 +191,14 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
             }
         })()
         return super.trySetPosition(
-            this.parent.posX + appliedGridOffsetX * GRID_STEP,
-            this.parent.posY + appliedGridOffsetY * GRID_STEP,
+            component.posX + appliedGridOffsetX * GRID_STEP,
+            component.posY + appliedGridOffsetY * GRID_STEP,
             false
         ) ?? [this.posX, this.posY]
     }
 
     public get wireProlongDirection(): Orientation {
-        switch (this.parent.orient) {
+        switch (this.component.orient) {
             case "e":
                 switch (this.orient) {
                     case "e": return "w"
@@ -235,61 +226,24 @@ abstract class NodeBase<N extends Node> extends DrawableWithPosition {
         }
     }
 
-    public override get cursorWhenMouseover() {
+    public override cursorWhenMouseover(__e?: MouseEvent | TouchEvent) {
         return "crosshair"
     }
 
     public override mouseDown(__: MouseEvent | TouchEvent) {
-        this.editor.wireMgr.addNode(this.asNode)
+        this.parent.wireMgr.startDraggingFrom(this.asNode)
         return { wantsDragEvents: false }
     }
 
     public override mouseUp(__: MouseEvent | TouchEvent) {
-        const newWire = this.editor.wireMgr.addNode(this.asNode)
-        if (isUndefined(newWire)) {
+        const newWire = this.parent.wireMgr.stopDraggingOn(this.asNode)
+        if (newWire === undefined) {
             return InteractionResult.NoChange
         }
-        return this.tryMakeRepeatableConnection(newWire)
-    }
-
-    private tryMakeRepeatableConnection(newWire: Wire) {
-        // if we just connected a group, we can repeat if there are
-        // more free nodes in the group
-        const startGroup = newWire.startNode.group
-        const endGroup = newWire.endNode?.group
-        if (isUndefined(startGroup) || isUndefined(endGroup)) {
-            return InteractionResult.SimpleChange
-        }
-
-        const startNodeIndex = startGroup.indexOf(newWire.startNode)
-        const endNodeIndex = endGroup.indexOf(newWire.endNode!)
-
-        const wireMgr = this.editor.wireMgr
-        const makeRepeatFunction = function makeRepeatFunction(startNodeIndex: number, endNodeIndex: number): RepeatFunction | undefined {
-            if (startNodeIndex >= startGroup.nodes.length - 1 ||
-                !startGroup.nodes[startNodeIndex + 1].acceptsMoreConnections ||
-                endNodeIndex >= endGroup.nodes.length - 1 ||
-                !endGroup.nodes[endNodeIndex + 1].acceptsMoreConnections) {
-                return undefined
-            }
-
-            return () => {
-                wireMgr.addNode(startGroup.nodes[startNodeIndex + 1])
-                const newWire = wireMgr.addNode(endGroup.nodes[endNodeIndex + 1])
-                if (isUndefined(newWire)) {
-                    return undefined
-                }
-                return makeRepeatFunction(startNodeIndex + 1, endNodeIndex + 1)
-            }
-
-        }
-
-        const repeat = makeRepeatFunction(startNodeIndex, endNodeIndex)
-        if (isUndefined(repeat)) {
-            return InteractionResult.SimpleChange
-        }
-
-        return InteractionResult.RepeatableChange(repeat)
+        return tryMakeRepeatableNodeAction(newWire.startNode, newWire.endNode, (startNode, endNode) => {
+            const newWire = this.parent.wireMgr.addWire(startNode, endNode, true)
+            return newWire !== undefined
+        })
     }
 
 }
@@ -317,7 +271,7 @@ export class NodeIn extends NodeBase<NodeIn> {
 
     protected preDestroy() {
         if (this._incomingWire !== null) {
-            this.editor.wireMgr.deleteWire(this._incomingWire)
+            this.parent.wireMgr.deleteWire(this._incomingWire)
         }
     }
 
@@ -338,7 +292,7 @@ export class NodeIn extends NodeBase<NodeIn> {
     }
 
     protected propagateNewValue(__newValue: LogicValue) {
-        this.parent.setNeedsRecalc()
+        this.component.setNeedsRecalc()
     }
 
     protected get nodeDisplayStyle() {
@@ -380,8 +334,8 @@ export class NodeOut extends NodeBase<NodeOut> {
 
     protected preDestroy() {
         // we need to make a copy of the array because the wires will remove themselves from the array
-        for (const wire of [... this._outgoingWires]) {
-            this.editor.wireMgr.deleteWire(wire)
+        for (const wire of [...this._outgoingWires]) {
+            this.parent.wireMgr.deleteWire(wire)
         }
     }
 
@@ -414,19 +368,19 @@ export class NodeOut extends NodeBase<NodeOut> {
 
     protected override propagateColor(color: WireColor) {
         for (const wire of this._outgoingWires) {
-            wire.endNode?.doSetColor(color)
+            wire.endNode.doSetColor(color)
         }
     }
 
     protected propagateNewValue(newValue: LogicValue) {
-        const now = this.editor.timeline.adjustedTime()
+        const now = this.parent.editor.timeline.logicalTime()
         for (const wire of this._outgoingWires) {
-            wire.propageNewValue(newValue, now)
+            wire.propagateNewValue(newValue, now)
         }
     }
 
     protected override forceDraw() {
-        return this._outgoingWires.length > 1 && this.parent.alwaysDrawMultiOutNodes
+        return this._outgoingWires.length > 1 && this.component.alwaysDrawMultiOutNodes
     }
 
     protected get nodeDisplayStyle() {
@@ -434,11 +388,12 @@ export class NodeOut extends NodeBase<NodeOut> {
         return disconnected ? NodeStyle.OUT_DISCONNECTED : NodeStyle.OUT_CONNECTED
     }
 
-    public override mouseDoubleClicked(e: MouseEvent | TouchEvent) {
-        if (super.mouseDoubleClicked(e)) {
-            return true // already handled
+    public override mouseDoubleClicked(e: MouseEvent | TouchEvent): InteractionResult {
+        const superChange = super.mouseDoubleClicked(e)
+        if (superChange.isChange) {
+            return superChange // already handled
         }
-        if (this.editor.mode >= Mode.FULL && e.altKey && this.isOutput && this.parent.allowsForcedOutputs) {
+        if (this.parent.mode >= Mode.FULL && e.altKey && this.isOutput() && this.component.allowsForcedOutputs) {
             this.forceValue = (() => {
                 switch (this._forceValue) {
                     case undefined: return Unknown
@@ -448,9 +403,9 @@ export class NodeOut extends NodeBase<NodeOut> {
                     case true: return undefined
                 }
             })()
-            return true
+            return InteractionResult.SimpleChange
         }
-        return false
+        return InteractionResult.NoChange
     }
 
 }
@@ -459,4 +414,42 @@ export const Node = {
     isOutput(node: Node): node is NodeOut {
         return node._tag === "_nodeout"
     },
+}
+
+export function tryMakeRepeatableNodeAction(startNode: NodeOut, endNode: NodeIn, handleNodes: (startNode: NodeOut, endNode: NodeIn) => boolean): InteractionResult {
+    // if we just connected a group, we can repeat if there are
+    // more free nodes in the group
+    const startGroup = startNode.group
+    const endGroup = endNode.group
+    if (startGroup === undefined || endGroup === undefined) {
+        return InteractionResult.SimpleChange
+    }
+
+    const startIndex = startGroup.indexOf(startNode)
+    const startIncrement = startIndex < startGroup.nodes.length - 1 ? 1 : -1
+    const endIndex = endGroup.indexOf(endNode)
+    const endIncrement = endIndex < endGroup.nodes.length - 1 ? 1 : -1
+
+    const makeRepeatFunction = function makeRepeatFunction(startIndex: number, endIndex: number): false | RepeatFunction {
+        if (startIndex >= startGroup.nodes.length || startIndex < 0
+            || endIndex >= endGroup.nodes.length || endIndex < 0) {
+            return false
+        }
+
+        return () => {
+            const success = handleNodes(startGroup.nodes[startIndex], endGroup.nodes[endIndex])
+            if (success) {
+                return makeRepeatFunction(startIndex + startIncrement, endIndex + endIncrement)
+            }
+            return false
+        }
+
+    }
+
+    const repeat = makeRepeatFunction(startIndex + startIncrement, endIndex + endIncrement)
+    if (repeat === false) {
+        return InteractionResult.SimpleChange
+    }
+
+    return InteractionResult.RepeatableChange(repeat)
 }

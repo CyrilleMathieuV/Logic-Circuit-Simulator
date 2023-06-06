@@ -1,11 +1,13 @@
-
 import { isLeft } from "fp-ts/lib/Either"
 import * as t from "io-ts"
 import { PathReporter } from "io-ts/lib/PathReporter"
+import JSON5 from "json5"
 import { Add } from "ts-arithmetic"
 
 export type Dict<T> = Record<string, T | undefined>
 export type TimeoutHandle = NodeJS.Timeout
+
+export const InBrowser = typeof window !== 'undefined'
 
 // Better types for an Object.keys() replacement
 export function keysOf<K extends keyof any>(d: Record<K, any>): K[]
@@ -53,7 +55,7 @@ export class RichStringEnum<K extends keyof any, P> {
         return defs
     }
 
-    public includes(val: string | number | symbol | null | undefined): val is K {
+    public includes(val: unknown): val is K {
         return this.values.includes(val as any)
     }
 
@@ -79,7 +81,7 @@ export function tuple<T extends readonly any[]>(...items: [...T]): [...T] {
 export function mergeWhereDefined<A, B>(a: A, b: B): A & PickDefined<B> {
     const obj: any = { ...a }
     for (const [k, v] of Object.entries(b as any)) {
-        if (isDefined(v)) {
+        if (v !== undefined) {
             obj[k] = v
         }
     }
@@ -165,23 +167,15 @@ export function defineADTStatics<
 
 // Series of type-assertion functions
 
-export function isUndefined(v: unknown): v is undefined {
-    return typeof v === "undefined"
-}
-
-export function isDefined<T>(v: T | undefined): v is T {
-    return typeof v !== "undefined"
-}
-
-export function isUndefinedOrNull(v: unknown): v is undefined | null {
-    return v === null || isUndefined(v)
-}
+// We *don't* have isUndefined, etc. functions as they
+// do not improve readability or correctness (see for clarifications
+// https://stackoverflow.com/a/22053469/390581)
 
 export function isString(v: unknown): v is string {
     return typeof v === "string"
 }
 
-export function isArray(arg: unknown): arg is Array<any> {
+export function isArray(arg: unknown): arg is any[] {
     return Array.isArray(arg)
 }
 
@@ -191,20 +185,16 @@ export function isArray(arg: unknown): arg is Array<any> {
 //     return typeof arg === "function"
 // }
 
-export function isEmpty(container: { length: number } | { size: number }): boolean {
-    return ("length" in container ? container.length : container.size) === 0
-}
-
-export function nonEmpty(container: { length: number } | { size: number }): boolean {
-    return !isEmpty(container)
-}
-
 export function isNumber(arg: unknown): arg is number {
     return typeof arg === "number"
 }
 
 export function isBoolean(arg: unknown): arg is boolean {
     return typeof arg === "boolean"
+}
+
+export function isRecord(arg: unknown): arg is Record<string, unknown> {
+    return typeof arg === "object" && arg !== null
 }
 
 
@@ -284,13 +274,23 @@ export function FixedArrayMap<U, Arr extends readonly any[]>(items: Arr, fn: (it
 }
 
 
+// JSON
+
+export function JSONParseObject(str: string): Record<string, unknown> {
+    const parsed: unknown = JSON5.parse(str)
+    if (isRecord(parsed)) {
+        return parsed
+    }
+    throw new Error("JSONParseObject: not an object")
+}
+
 
 export function isTruthyString(str: string | null | undefined): boolean {
-    return !isUndefinedOrNull(str) && (str === "1" || str.toLowerCase() === "true")
+    return str !== null && str !== undefined && (str === "1" || str.toLowerCase() === "true")
 }
 
 export function isFalsyString(str: string | null | undefined): boolean {
-    return !isUndefinedOrNull(str) && (str === "0" || str.toLowerCase() === "false")
+    return str !== null && str !== undefined && (str === "0" || str.toLowerCase() === "false")
 }
 
 export function getURLParameter<T>(sParam: string, defaultValue: T): string | T
@@ -298,8 +298,8 @@ export function getURLParameter(sParam: string, defaultValue?: undefined): strin
 export function getURLParameter(sParam: string, defaultValue: any) {
     const sPageURL = window.location.search.substring(1)
     const sURLVariables = sPageURL.split('&')
-    for (let i = 0; i < sURLVariables.length; i++) {
-        const sParameterName = sURLVariables[i].split('=')
+    for (const sURLVariable of sURLVariables) {
+        const sParameterName = sURLVariable.split('=')
         if (sParameterName[0] === sParam) {
             return sParameterName[1]
         }
@@ -312,6 +312,26 @@ export function isEmbeddedInIframe(): boolean {
         return window.self !== window.top
     } catch (e) {
         return true
+    }
+}
+
+export function onVisible(element: HTMLElement, callback: () => void) {
+    new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.intersectionRatio > 0) {
+                callback()
+                observer.disconnect()
+                return
+            }
+        })
+    }).observe(element)
+}
+
+export function setEnabled(elem: HTMLButtonElement, enabled: boolean) {
+    if (enabled) {
+        elem.removeAttribute("disabled")
+    } else {
+        elem.setAttribute("disabled", "disabled")
     }
 }
 
@@ -337,6 +357,29 @@ export function setVisible(elem: HTMLElement, visible: boolean) {
     }
 }
 
+export function toggleVisible(elem: HTMLElement) {
+    setVisible(elem, elem.style.display === "none")
+}
+
+export type UIDisplay = "show" | "hide" | "inactive"
+
+export function setDisplay(elem: HTMLElement, display: UIDisplay) {
+    setVisible(elem, display !== "hide")
+    if (display === "inactive") {
+        elem.style.visibility = "hidden"
+    } else {
+        elem.style.removeProperty("visibility")
+    }
+}
+
+export function setActive(elem: HTMLElement, active: boolean) {
+    if (active) {
+        elem.classList.add("active")
+    } else {
+        elem.classList.remove("active")
+    }
+}
+
 export function showModal(dlog: HTMLDialogElement): boolean {
     if (typeof (dlog as any).showModal === "function") {
         dlog.style.display = "initial";
@@ -357,7 +400,7 @@ export function showModal(dlog: HTMLDialogElement): boolean {
 // It can also be a RepeatableChange to allow to redos acting as
 // repetitions of the last change.
 
-export type RepeatFunction = () => RepeatFunction | undefined
+export type RepeatFunction = () => boolean | RepeatFunction
 
 const InteractionResultCases = {
     NoChange: { _tag: "NoChange" as const, isChange: false as const },
@@ -368,6 +411,21 @@ const InteractionResultCases = {
 export const InteractionResult = defineADTStatics(InteractionResultCases, {
     fromBoolean: (changed: boolean) =>
         changed ? InteractionResult.SimpleChange : InteractionResult.NoChange,
+
+    merge: (r0: InteractionResult, r1: InteractionResult): InteractionResult => {
+        // keeps the most informative result
+        if (r0._tag === "NoChange") {
+            return r1
+        }
+        if (r0._tag === "RepeatableChange") {
+            return r0
+        }
+        // r0 is SimpleChange
+        if (r1._tag === "RepeatableChange") {
+            return r1
+        }
+        return r0
+    },
 })
 
 export type InteractionResult = ADTWith<typeof InteractionResultCases>
@@ -456,6 +514,26 @@ export const typeOrNull = <T extends t.Mixed>(tpe: T) => {
     return t.union([tpe, t.null], tpe.name + " | null")
 }
 
+export function templateLiteral<L extends string>(regex: RegExp | string, name?: string) {
+    const regex_ = typeof regex === 'string' ? new RegExp(regex) : regex
+    const predicate = (s: string): s is L => regex_.test(s)
+    return new t.RefinementType(
+        name ?? `TemplateLiteral<${regex_.source}>`,
+        (u): u is L => t.string.is(u) && predicate(u),
+        (i, c) => {
+            const e = t.string.validate(i, c)
+            if (isLeft(e)) {
+                return e
+            }
+            const a = e.right
+            return predicate(a) ? t.success(a) : t.failure(a, c)
+        },
+        t.string.encode,
+        t.string,
+        predicate,
+    )
+}
+
 export function validateJson<T, I>(obj: I, repr: t.Decoder<I, T>, what: string): T | undefined {
     const validated = repr.decode(obj)
     if (isLeft(validated)) {
@@ -490,6 +568,9 @@ export type LogicValue = boolean | HighImpedance | Unknown
 export const LogicValue = {
     invert(v: LogicValue): LogicValue {
         return isUnknown(v) || isHighImpedance(v) ? v : !v
+    },
+    filterHighZ(v: LogicValue): boolean | Unknown {
+        return isHighImpedance(v) ? Unknown : v
     },
 }
 
@@ -550,8 +631,8 @@ export function allBooleans(values: LogicValue[]): values is boolean[] {
 }
 
 export function isAllZeros(s: string) {
-    for (let i = 0; i < s.length; i++) {
-        if (s[i] !== "0") {
+    for (const c of s) {
+        if (c !== "0") {
             return false
         }
     }
@@ -620,13 +701,17 @@ export function copyToClipboard(textToCopy: string): boolean {
     return ok
 }
 
-export function downloadBlob(dataUrl: string, filename: string) {
-    const link = document.createElement('a')
-    link.download = filename
-    link.href = dataUrl
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+export function pasteFromClipboard(): string | undefined {
+    const textArea = document.createElement('textarea')
+    textArea.readOnly = false
+    textArea.contentEditable = "true"
+    document.body.appendChild(textArea)
+
+    textArea.focus()
+    const ok = document.execCommand('paste')
+    const result = ok ? textArea.value : undefined
+    document.body.removeChild(textArea)
+    return result
 }
 
 export function targetIsFieldOrOtherInput(e: Event) {
@@ -634,6 +719,28 @@ export function targetIsFieldOrOtherInput(e: Event) {
     let elem, tagName
     return targets.length !== 0 && (elem = targets[0]) instanceof HTMLElement && ((tagName = elem.tagName) === "INPUT" || tagName === "SELECT")
 }
+
+export function getScrollParent(element: HTMLElement): HTMLElement | Document {
+    let style = getComputedStyle(element)
+    const excludeStaticParent = style.position === "absolute"
+    const overflowRegex = /(auto|scroll)/
+
+    if (style.position === "fixed") {
+        return document
+    }
+    let parent
+    for (parent = element; (parent = parent.parentElement);) {
+        style = getComputedStyle(parent)
+        if (excludeStaticParent && style.position === "static") {
+            continue
+        }
+        if (overflowRegex.test(style.overflow + style.overflowY + style.overflowX)) {
+            return parent
+        }
+    }
+    return document
+}
+
 
 export const fetchJSONP = ((unique: number) => (url: string) =>
     new Promise<string>(resolve => {
@@ -650,7 +757,7 @@ export const fetchJSONP = ((unique: number) => (url: string) =>
         (window as any)[name] = (json: any) => {
             script.remove()
             delete (window as any)[name]
-            resolve(JSON.stringify(json))
+            resolve(JSON5.stringify(json))
         }
 
         document.body.appendChild(script)

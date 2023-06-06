@@ -1,10 +1,10 @@
 import { Component, ComponentName, isNodeArray, ReadonlyGroupedNodeArray } from "./components/Component"
-import { DrawContext, DrawContextExt, HasPosition, Orientation } from "./components/Drawable"
-import { RectangleColor } from "./components/LabelRect"
+import { LedColor } from "./components/DisplayBar"
+import { DrawContext, DrawContextExt, GraphicsRendering, HasPosition, Orientation } from "./components/Drawable"
 import { Node, WireColor } from "./components/Node"
-import { LedColor } from "./components/OutputBar"
+import { RectangleColor } from "./components/Rectangle"
 import { LogicEditor } from "./LogicEditor"
-import { EdgeTrigger, isArray, isDefined, isHighImpedance, isNumber, isString, isUndefined, isUnknown, LogicValue, Mode, Unknown } from "./utils"
+import { EdgeTrigger, InBrowser, isArray, isHighImpedance, isNumber, isString, isUnknown, LogicValue, Mode, Unknown } from "./utils"
 
 
 //
@@ -48,9 +48,14 @@ export class DrawingRect {
     public readonly bottom: number
     public readonly right: number
 
-    public constructor(comp: Component) {
+    public constructor(comp: Component, honorRotation: boolean) {
         this.width = comp.unrotatedWidth
         this.height = comp.unrotatedHeight
+
+        const swapDims = honorRotation && Orientation.isVertical(comp.orient)
+        if (swapDims) {
+            [this.width, this.height] = [this.height, this.width]
+        }
 
         this.top = comp.posY - this.height / 2
         this.left = comp.posX - this.width / 2
@@ -58,15 +63,10 @@ export class DrawingRect {
         this.right = this.left + this.width
     }
 
-    private _outline: Path2D | undefined
-
-    public get outline(): Path2D {
-        if (isUndefined(this._outline)) {
-            const path = new Path2D()
-            path.rect(this.left, this.top, this.width, this.height)
-            this._outline = path
-        }
-        return this._outline
+    public outline(g: GraphicsRendering, margin: number = 0): Path2D {
+        const path = g.createPath()
+        path.rect(this.left - margin, this.top - margin, this.width + margin * 2, this.height + margin * 2)
+        return path
     }
 
 }
@@ -117,13 +117,13 @@ export let PATTERN_STRIPED_GRAY: CanvasPattern
 let _currentModeIsDark = false
 doSetColors(_currentModeIsDark)
 
-export function setColors(darkMode: boolean) {
+export function setDarkMode(darkMode: boolean) {
     if (darkMode !== _currentModeIsDark) {
         doSetColors(darkMode)
         for (const editor of LogicEditor.allConnectedEditors) {
             editor.wrapHandler(() => {
                 editor.setDark(darkMode)
-                editor.redrawMgr.addReason("dark/light mode switch", null)
+                editor.editTools.redrawMgr.addReason("dark/light mode switch", null)
             })()
         }
     }
@@ -241,6 +241,9 @@ function doSetColors(darkMode: boolean) {
 }
 
 function createStripedPattern(background: ColorString, stripeColor: string) {
+    if (!InBrowser) {
+        return null!
+    }
     const canvas = document.createElement("canvas")
     const step = 4
     canvas.width = 2 * step
@@ -262,7 +265,7 @@ function createStripedPattern(background: ColorString, stripeColor: string) {
     g.fill()
     const pattern = g.createPattern(canvas, "repeat")
     if (pattern === null) {
-        console.log("Failed to create pattern")
+        console.warn("Failed to create pattern")
     }
     return pattern!
 }
@@ -326,6 +329,11 @@ export function useCompact(numNodes: number) {
     return numNodes >= 6
 }
 
+const trivialNameMatcher = /^(In|Out|in|out)\d*$/
+export function isTrivialNodeName(name: string | undefined): boolean {
+    return name === undefined || trivialNameMatcher.test(name)
+}
+
 
 //
 // DRAWING
@@ -333,28 +341,28 @@ export function useCompact(numNodes: number) {
 
 // Adding to current path
 
-export function triangle(g: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, x2: number, y2: number) {
+export function triangle(g: GraphicsRendering, x0: number, y0: number, x1: number, y1: number, x2: number, y2: number) {
     g.moveTo(x0, y0)
     g.lineTo(x1, y1)
     g.lineTo(x2, y2)
     g.closePath()
 }
 
-export function circle(g: CanvasRenderingContext2D, cx: number, cy: number, d: number) {
+export function circle(g: GraphicsRendering, cx: number, cy: number, d: number) {
     const r = d / 2
     g.ellipse(cx, cy, r, r, 0, 0, 2 * Math.PI)
 }
 
 // Stroking/filling
 
-export function strokeSingleLine(g: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) {
+export function strokeSingleLine(g: GraphicsRendering, x0: number, y0: number, x1: number, y1: number) {
     g.beginPath()
     g.moveTo(x0, y0)
     g.lineTo(x1, y1)
     g.stroke()
 }
 
-export function strokeBezier(g: CanvasRenderingContext2D, x0: number, y0: number, anchorX0: number, anchorY0: number, anchorX1: number, anchorY1: number, x1: number, y1: number) {
+export function strokeBezier(g: GraphicsRendering, x0: number, y0: number, anchorX0: number, anchorY0: number, anchorX1: number, anchorY1: number, x1: number, y1: number) {
     g.beginPath()
     g.moveTo(x0, y0)
     g.bezierCurveTo(anchorX0, anchorY0, anchorX1, anchorY1, x1, y1)
@@ -366,7 +374,7 @@ export function shouldShowNode(nodeOrArray: Node | readonly Node[]): boolean {
         return nodeOrArray.map(shouldShowNode).includes(true)
     }
     const node = nodeOrArray as Exclude<typeof nodeOrArray, readonly Node[]>
-    const editor = node.editor
+    const editor = node.parent.editor
     if (editor.mode <= Mode.TRYOUT && !editor.options.showDisconnectedPins && node.isDisconnected) {
         return false
     }
@@ -374,11 +382,11 @@ export function shouldShowNode(nodeOrArray: Node | readonly Node[]): boolean {
 }
 
 
-export function drawWireLineToComponent(g: CanvasRenderingContext2D, node: Node, x1: number, y1: number, withTriangle = false) {
+export function drawWireLineToComponent(g: GraphicsRendering, node: Node, x1: number, y1: number, withTriangle = false) {
     if (!shouldShowNode(node)) {
         return
     }
-    const neutral = node.editor.options.hideWireColors
+    const neutral = node.parent.editor.options.hideWireColors
     const x0 = node.posXInParentTransform
     const y0 = node.posYInParentTransform
     drawStraightWireLine(g, x0, y0, x1, y1, node.value, node.color, neutral)
@@ -388,16 +396,16 @@ export function drawWireLineToComponent(g: CanvasRenderingContext2D, node: Node,
         g.beginPath()
         if (x0 === x1) {
             // vertical line
-            const pointsDown = (node.isOutput && y1 <= y0) || (!node.isOutput && y0 <= y1)
+            const pointsDown = (node.isOutput() && y1 <= y0) || (!node.isOutput() && y0 <= y1)
             if (pointsDown) {
-                const shift = node.isOutput ? 1 : 0
+                const shift = node.isOutput() ? 1 : 0
                 triangle(g,
                     x1 - 3, y1 - 2 + shift,
                     x1 + 3, y1 - 2 + shift,
                     x1, y1 + 1 + shift,
                 )
             } else {
-                const shift = node.isOutput ? -3 : -4
+                const shift = node.isOutput() ? -3 : -4
                 triangle(g,
                     x1 - 3, y1 - 2 - shift,
                     x1 + 3, y1 - 2 - shift,
@@ -406,8 +414,8 @@ export function drawWireLineToComponent(g: CanvasRenderingContext2D, node: Node,
             }
         } else if (y0 === y1) {
             // horizontal line
-            const shift = node.isOutput ? 1 : 0
-            const pointsRight = (node.isOutput && x1 <= x0) || (!node.isOutput && x0 <= x1)
+            const shift = node.isOutput() ? 1 : 0
+            const pointsRight = (node.isOutput() && x1 <= x0) || (!node.isOutput() && x0 <= x1)
             if (pointsRight) {
                 triangle(g,
                     x1 - 2 + shift, y1 - 3,
@@ -429,14 +437,14 @@ export function drawWireLineToComponent(g: CanvasRenderingContext2D, node: Node,
     }
 }
 
-export function drawStraightWireLine(g: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, value: LogicValue, color: WireColor, neutral: boolean) {
+export function drawStraightWireLine(g: GraphicsRendering, x0: number, y0: number, x1: number, y1: number, value: LogicValue, color: WireColor, neutral: boolean) {
     g.beginPath()
     g.moveTo(x0, y0)
     g.lineTo(x1, y1)
     strokeAsWireLine(g, value, color, false, neutral)
 }
 
-export function strokeAsWireLine(g: CanvasRenderingContext2D, value: LogicValue, color: WireColor, isMouseOver: boolean, neutral: boolean, path?: Path2D) {
+export function strokeAsWireLine(g: GraphicsRendering, value: LogicValue, color: WireColor, isMouseOver: boolean, neutral: boolean, path?: Path2D) {
     const oldLineCap = g.lineCap
     g.lineCap = "butt"
 
@@ -472,7 +480,7 @@ export enum NodeStyle {
     WAYPOINT,
 }
 
-export function drawWaypoint(g: CanvasRenderingContext2D, ctx: DrawContext, x: number, y: number, style: NodeStyle, value: LogicValue, isMouseOver: boolean, neutral: boolean, showForced: boolean, showForcedWarning: boolean, parentOrientIsVertical: boolean) {
+export function drawWaypoint(g: GraphicsRendering, ctx: DrawContext, x: number, y: number, style: NodeStyle, value: LogicValue, isMouseOver: boolean, neutral: boolean, showForced: boolean, showForcedWarning: boolean, parentOrientIsVertical: boolean) {
 
     const [circleColor, thickness] =
         showForced
@@ -511,7 +519,7 @@ export function drawWaypoint(g: CanvasRenderingContext2D, ctx: DrawContext, x: n
     }
 }
 
-export function drawClockInput(g: CanvasRenderingContext2D, left: number, clockNode: Node, trigger: EdgeTrigger) {
+export function drawClockInput(g: GraphicsRendering, left: number, clockNode: Node, trigger: EdgeTrigger) {
     const clockY = clockNode.posYInParentTransform
     const clockLineOffset = 1
     g.strokeStyle = COLOR_COMPONENT_BORDER
@@ -545,19 +553,19 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
 export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: number, y: number, referenceNode: Node | ReadonlyGroupedNodeArray<Node> | undefined): void
 
 export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: number | Node | ReadonlyGroupedNodeArray<Node>, y: number | Node | ReadonlyGroupedNodeArray<Node>, referenceNode?: Node | ReadonlyGroupedNodeArray<Node>) {
-    if (isUndefined(text)) {
+    if (text === undefined) {
         return
     }
 
     let nodeHidden = false
-    if (isUndefined(referenceNode)) {
+    if (referenceNode === undefined) {
         if (!isNumber(x)) {
             referenceNode = x
         } else if (!isNumber(y)) {
             referenceNode = y
         }
     }
-    if (isDefined(referenceNode)) {
+    if (referenceNode !== undefined) {
         nodeHidden = !shouldShowNode(referenceNode)
     }
     if (nodeHidden) {
@@ -565,7 +573,7 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
     }
 
     const [halign, valign, dx, dy] = (() => {
-        if (isUndefined(anchor)) {
+        if (anchor === undefined) {
             return ["center", "middle", 0, 0] as const
         }
         const rotatedAnchor = Orientation.add(compOrient, anchor)
@@ -590,11 +598,11 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
     g.fillText(text, finalX + dx, finalY + dy)
 }
 
-export function drawValueTextCentered(g: CanvasRenderingContext2D, value: LogicValue, comp: HasPosition, opts?: { fillStyle?: string, small?: boolean }) {
+export function drawValueTextCentered(g: GraphicsRendering, value: LogicValue, comp: HasPosition, opts?: { fillStyle?: string, small?: boolean }) {
     drawValueText(g, value, comp.posX, comp.posY, opts)
 }
 
-export function drawValueText(g: CanvasRenderingContext2D, value: LogicValue, x: number, y: number, opts?: { fillStyle?: string, small?: boolean }) {
+export function drawValueText(g: GraphicsRendering, value: LogicValue, x: number, y: number, opts?: { fillStyle?: string, small?: boolean }) {
     g.textAlign = "center"
     g.textBaseline = "middle"
 
@@ -660,8 +668,8 @@ function textSettingsForName(onRight: boolean, orient: Orientation) {
     }
 }
 
-export function drawComponentName(g: CanvasRenderingContext2D, ctx: DrawContextExt, name: ComponentName, value: string | number, comp: Component, onRight: boolean) {
-    if (isUndefined(name)) {
+export function drawComponentName(g: GraphicsRendering, ctx: DrawContextExt, name: ComponentName, value: string | number, comp: Component, onRight: boolean) {
+    if (name === undefined) {
         return
     }
 
@@ -681,7 +689,7 @@ export function drawComponentName(g: CanvasRenderingContext2D, ctx: DrawContextE
         }
     }
 
-    if (isUndefined(displayName)) {
+    if (displayName === undefined) {
         return
     }
 
@@ -699,7 +707,7 @@ export function drawComponentName(g: CanvasRenderingContext2D, ctx: DrawContextE
 // DATA CONVERSIONS FOR DISPLAY PURPOSES
 //
 
-export function displayValuesFromArray(values: readonly LogicValue[], mostSignificantFirst: boolean): [string, number | Unknown] {
+export function displayValuesFromArray(values: readonly LogicValue[], mostSignificantFirst: boolean): [binaryStringRep: string, value: number | Unknown] {
     // lowest significant bit is the first bit
     let binaryStringRep = ""
     let hasUnset = false

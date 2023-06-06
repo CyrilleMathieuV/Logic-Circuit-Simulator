@@ -1,5 +1,5 @@
 import { Add } from "ts-arithmetic"
-import { group, NodeDesc, NodeGroupDesc, NodeRec } from "./components/Component"
+import { group, InOutRecs, NodeDesc, NodeGroupDesc, NodeRec } from "./components/Component"
 
 //
 // Bits and pieces, currently unused attempts that may be useful later
@@ -9,8 +9,13 @@ import { group, NodeDesc, NodeGroupDesc, NodeRec } from "./components/Component"
 
 type Length<T extends readonly any[]> = T["length"]
 
+type NodeCount<T>
+    = T extends NodeDesc ? 1
+    : T extends NodeGroupDesc<any> ? Length<T>
+    : 0
+
 type MappedNodeCountOf<TRec extends NodeRec<any>> = {
-    [K in keyof TRec]: TRec[K] extends NodeDesc ? 1 : TRec[K] extends NodeGroupDesc<any> ? Length<TRec[K]> : 0
+    [K in keyof TRec]: NodeCount<TRec[K]>
 }
 
 // oh boy don't do this - https://stackoverflow.com/questions/55127004/how-to-transform-union-type-to-tuple-type
@@ -63,7 +68,6 @@ const ALUNodes = {
         Z: [2, 10, "s"],
         Cout: [-2, 10, "s"],
     },
-}
+} satisfies InOutRecs
 
 type __ShouldBeLiteralTypeWithTS5 = CountNodes<typeof ALUNodes["ins"]>
-

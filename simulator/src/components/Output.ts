@@ -1,18 +1,18 @@
 import * as t from "io-ts"
-import { circle, colorForBoolean, COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, dist, drawComponentName, drawValueText, drawValueTextCentered, drawWireLineToComponent, GRID_STEP, INPUT_OUTPUT_DIAMETER, triangle, useCompact } from "../drawutils"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, GRID_STEP, INPUT_OUTPUT_DIAMETER, circle, colorForBoolean, dist, drawComponentName, drawValueText, drawValueTextCentered, drawWireLineToComponent, isTrivialNodeName, triangle, useCompact } from "../drawutils"
 import { mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { ArrayFillWith, isDefined, isUndefined, LogicValue, Mode, toLogicValueRepr, typeOrUndefined, Unknown } from "../utils"
-import { Component, ComponentName, ComponentNameRepr, defineParametrizedComponent, groupVertical, ParametrizedComponentBase, Repr, ResolvedParams } from "./Component"
-import { ContextMenuData, DrawContext, MenuItems, Orientation } from "./Drawable"
+import { ArrayFillWith, LogicValue, Mode, Unknown, toLogicValueRepr, typeOrUndefined } from "../utils"
+import { Component, ComponentName, ComponentNameRepr, ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupVertical } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 import { InputDef } from "./Input"
 import { Node, NodeIn, NodeOut } from "./Node"
 
 
 export const OutputDef =
-    defineParametrizedComponent("out", undefined, true, false, {
+    defineParametrizedComponent("out", true, false, {
         variantName: ({ bits }) => `out-${bits}`,
+        idPrefix: "out",
         button: { imgWidth: 32 },
         repr: {
             bits: typeOrUndefined(t.number),
@@ -50,8 +50,8 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
     public readonly numBits: number
     private _name: ComponentName
 
-    public constructor(editor: LogicEditor, params: OutputParams, saved?: OutputRepr) {
-        super(editor, OutputDef.with(params), saved)
+    public constructor(parent: DrawableParent, params: OutputParams, saved?: OutputRepr) {
+        super(parent, OutputDef.with(params), saved)
 
         this.numBits = params.numBits
 
@@ -60,17 +60,21 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
 
     public toJSON() {
         return {
-            bits: this.numBits === OutputDef.aults.bits ? undefined : this.numBits,
             ...this.toJSONBase(),
+            bits: this.numBits === OutputDef.aults.bits ? undefined : this.numBits,
             name: this._name,
         }
     }
 
     public override isOver(x: number, y: number) {
         if (this.numBits === 1) {
-            return this.editor.mode >= Mode.CONNECT && dist(x, y, this.posX, this.posY) < INPUT_OUTPUT_DIAMETER / 2
+            return this.parent.mode >= Mode.CONNECT && dist(x, y, this.posX, this.posY) < INPUT_OUTPUT_DIAMETER / 2
         }
         return super.isOver(x, y)
+    }
+
+    public get name() {
+        return this._name
     }
 
     public override makeTooltip() {
@@ -82,7 +86,7 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
         return this.inputValues(this.inputs.In)
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         if (this.numBits === 1) {
             this.doDrawSingle(g, ctx, this.inputs.In[0])
         } else {
@@ -90,7 +94,7 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
         }
     }
 
-    private doDrawSingle(g: CanvasRenderingContext2D, ctx: DrawContext, input: NodeIn) {
+    private doDrawSingle(g: GraphicsRendering, ctx: DrawContext, input: NodeIn) {
         drawWireLineToComponent(g, input, this.posX, this.posY)
 
         g.strokeStyle = ctx.borderColor
@@ -104,7 +108,7 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
         g.fill()
         g.stroke()
 
-        const valueToShow = this.editor.options.hideOutputColors ? Unknown : input.value
+        const valueToShow = this.parent.editor.options.hideOutputColors ? Unknown : input.value
         g.fillStyle = colorForBoolean(valueToShow)
         g.lineWidth = 4
         g.beginPath()
@@ -113,17 +117,17 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
         g.stroke()
 
         ctx.inNonTransformedFrame(ctx => {
-            if (isDefined(this._name)) {
+            if (this._name !== undefined) {
                 drawComponentName(g, ctx, this._name, toLogicValueRepr(valueToShow), this, true)
             }
             drawValueTextCentered(g, valueToShow, this)
         })
     }
 
-    private doDrawMulti(g: CanvasRenderingContext2D, ctx: DrawContext, inputs: NodeIn[]) {
+    private doDrawMulti(g: GraphicsRendering, ctx: DrawContext, inputs: NodeIn[]) {
         const bounds = this.bounds()
         const { left, top, width } = bounds
-        const outline = bounds.outline
+        const outline = bounds.outline(g)
 
         // background
         g.fillStyle = COLOR_BACKGROUND
@@ -134,10 +138,10 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
             drawWireLineToComponent(g, input, left - 2, input.posYInParentTransform, true)
         }
 
-        const displayValues = this.editor.options.hideOutputColors ? ArrayFillWith(Unknown, this.numBits) : this.value
+        const displayValues = this.parent.editor.options.hideOutputColors ? ArrayFillWith(Unknown, this.numBits) : this.value
 
         // cells
-        const drawMouseOver = ctx.isMouseOver && this.editor.mode !== Mode.STATIC
+        const drawMouseOver = ctx.isMouseOver && this.parent.mode !== Mode.STATIC
         g.strokeStyle = drawMouseOver ? ctx.borderColor : COLOR_COMPONENT_BORDER
         g.lineWidth = 1
         const cellHeight = useCompact(this.numBits) ? GRID_STEP : 2 * GRID_STEP
@@ -156,7 +160,7 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
 
         // labels
         ctx.inNonTransformedFrame(ctx => {
-            if (isDefined(this._name)) {
+            if (this._name !== undefined) {
                 const valueString = displayValues.map(toLogicValueRepr).reverse().join("")
                 drawComponentName(g, ctx, this._name, valueString, this, true)
             }
@@ -176,9 +180,9 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
         const [inNode, comp, outNode] = newLinks[0]
         if (outNode instanceof NodeOut) {
             let group
-            if (isDefined(group = outNode.group) && group.nodes.length === 1) {
+            if ((group = outNode.group) !== undefined && group.nodes.length === 1 && !isTrivialNodeName(group.name)) {
                 this.doSetName(group.name)
-            } else if (isUndefined(this._name)) {
+            } else if (this._name === undefined && !isTrivialNodeName(outNode.shortName)) {
                 this.doSetName(outNode.shortName)
             }
         }
@@ -192,20 +196,20 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
                 return
             case "w":
                 this.doSetOrient("w")
-                this.setPosition(this.posX - GRID_STEP * 6, this.posY)
+                this.setPosition(this.posX - GRID_STEP * 6, this.posY, false)
                 return
             case "s":
                 this.doSetOrient("s")
-                this.setPosition(this.posX - GRID_STEP * 3, this.posY + GRID_STEP * 3)
+                this.setPosition(this.posX - GRID_STEP * 3, this.posY + GRID_STEP * 3, false)
                 return
             case "n":
                 this.doSetOrient("n")
-                this.setPosition(this.posX - GRID_STEP * 3, this.posY - GRID_STEP * 3)
+                this.setPosition(this.posX - GRID_STEP * 3, this.posY - GRID_STEP * 3, false)
                 return
         }
     }
 
-    private doSetName(name: ComponentName) {
+    public doSetName(name: ComponentName) {
         this._name = name
         this.setNeedsRedraw("name changed")
     }
@@ -214,13 +218,13 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
 
         return [
             ["mid", this.makeSetNameContextMenuItem(this._name, this.doSetName.bind(this))],
-            ["mid", ContextMenuData.sep()],
+            ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numBits, "bits"),
         ]
     }
 
     public override keyDown(e: KeyboardEvent): void {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !e.altKey) {
             this.runSetNameDialog(this._name, this.doSetName.bind(this))
         } else {
             super.keyDown(e)

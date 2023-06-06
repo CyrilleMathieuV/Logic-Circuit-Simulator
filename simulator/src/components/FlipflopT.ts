@@ -1,13 +1,14 @@
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { isHighImpedance, isUnknown, LogicValue, Unknown } from "../utils"
-import { defineComponent, Repr } from "./Component"
+import { LogicValue, Unknown, isHighImpedance, isUnknown } from "../utils"
+import { Repr, defineComponent } from "./Component"
+import { DrawableParent } from "./Drawable"
 import { Flipflop, FlipflopBaseDef } from "./FlipflopOrLatch"
 
 
 export const FlipflopTDef =
-    defineComponent("ic", "flipflop-t", {
+    defineComponent("ff-t", {
+        idPrefix: "ff",
         ...FlipflopBaseDef,
         makeNodes: () => {
             const base = FlipflopBaseDef.makeNodes(2)
@@ -26,15 +27,12 @@ type FlipflopTRepr = Repr<typeof FlipflopTDef>
 
 export class FlipflopT extends Flipflop<FlipflopTRepr> {
 
-    public constructor(editor: LogicEditor, saved?: FlipflopTRepr) {
-        super(editor, FlipflopTDef, saved)
+    public constructor(parent: DrawableParent, saved?: FlipflopTRepr) {
+        super(parent, FlipflopTDef, saved)
     }
 
     public toJSON() {
-        return {
-            type: "flipflop-t" as const,
-            ...this.toJSONBase(),
-        }
+        return this.toJSONBase()
     }
 
     public override makeTooltip() {

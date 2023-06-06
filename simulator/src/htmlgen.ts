@@ -3,7 +3,7 @@
 // Helper export function s to build HTML more smartly in JavaScript
 //
 
-import { isHighImpedance, isUndefined, isUnknown, LogicValue, Unknown } from "./utils"
+import { isHighImpedance, isUnknown, LogicValue, Unknown } from "./utils"
 
 export interface ModifierObject {
     applyTo(parent: Element): void
@@ -156,7 +156,7 @@ export const asValue = (bool: LogicValue) => b(isUnknown(bool) || isHighImpedanc
 
 export function tooltipContent(title: Modifier | undefined, body: Modifier, maxWidth = 200): ModifierObject {
     return div(style(`max-width: ${maxWidth}px`),
-        isUndefined(title) ? emptyMod : div(style("padding-bottom: 3px; border-bottom: 1px solid grey;"), title),
+        title === undefined ? emptyMod : div(style("padding-bottom: 3px; border-bottom: 1px solid grey;"), title),
         div(body)
     )
 }

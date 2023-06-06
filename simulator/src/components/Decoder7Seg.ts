@@ -1,19 +1,19 @@
 import { displayValuesFromArray } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFillWith, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent, group, Repr } from "./Component"
-import { MenuItems } from "./Drawable"
+import { FixedArray, FixedArrayFillWith, LogicValue, Unknown, isUnknown } from "../utils"
+import { ComponentBase, Repr, defineComponent, group } from "./Component"
+import { DrawableParent, MenuItems } from "./Drawable"
 
 export const Decoder7SegDef =
-    defineComponent("ic", "decoder-7seg", {
+    defineComponent("dec-7seg", {
+        idPrefix: "dec",
         button: { imgWidth: 50 },
         valueDefaults: {},
         size: { gridWidth: 4, gridHeight: 8 },
         makeNodes: () => ({
             ins: {
-                I: group("w", [
+                In: group("w", [
                     [-3, -3, "A"],
                     [-3, -1, "B"],
                     [-3, +1, "C"],
@@ -39,15 +39,12 @@ type Decoder7SegRepr = Repr<typeof Decoder7SegDef>
 
 export class Decoder7Seg extends ComponentBase<Decoder7SegRepr> {
 
-    public constructor(editor: LogicEditor, saved?: Decoder7SegRepr) {
-        super(editor, Decoder7SegDef, saved)
+    public constructor(parent: DrawableParent, saved?: Decoder7SegRepr) {
+        super(parent, Decoder7SegDef, saved)
     }
 
     public toJSON() {
-        return {
-            type: "decoder-7seg" as const,
-            ...this.toJSONBase(),
-        }
+        return this.toJSONBase()
     }
 
     public override makeTooltip() {
@@ -57,7 +54,7 @@ export class Decoder7Seg extends ComponentBase<Decoder7SegRepr> {
     }
 
     protected doRecalcValue(): FixedArray<LogicValue, 7> {
-        const input = this.inputValues(this.inputs.I)
+        const input = this.inputValues(this.inputs.In)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output

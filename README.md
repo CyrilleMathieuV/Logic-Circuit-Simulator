@@ -30,6 +30,8 @@ See <https://jp.pellet.name/hep/logiga/>
  * Screen is only refreshed when needed and not 60 times per second no matter what
  * Clocks can be paused
  * Components have been added: bit display, segment display, nibble display, half adder, muxes, register, RAM, counter, various decoders, etc.
+ * Size of components (in terms of number of bits) can be changed
+ * RAM/ROM contents can be loaded from files
  * Mouseover tooltips have been added
  * Components can be edited to be faulty, for educational exercises
  * Editor can be in several modes with different capabilities
@@ -38,9 +40,11 @@ See <https://jp.pellet.name/hep/logiga/>
  * Demo circuits are predefined and can be loaded from the JavaScript console
  * Circuits can be loaded from a JSON export by drag-n-drop
  * An animated propagation delay can be set
+ * Custom components can be created, loaded, saved from library files
  * UI can be in English or French (easy to add more translations)
+ * Much more
 
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[MIT License](https://choosealicense.com/licenses/mit/)

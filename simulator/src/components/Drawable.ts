@@ -1,14 +1,30 @@
 import * as t from "io-ts"
-import { DrawZIndex } from "../ComponentList"
-import { ColorString, COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_MOUSE_OVER_DANGER, GRID_STEP, inRect } from "../drawutils"
+import { ComponentList, DrawZIndex } from "../ComponentList"
+import { DrawParams, LogicEditor } from "../LogicEditor"
+import { type MoveManager } from "../MoveManager"
+import { type NodeManager } from "../NodeManager"
+import { RecalcManager, RedrawManager } from "../RedrawRecalcManager"
+import { type SVGRenderingContext } from "../SVGRenderingContext"
+import { UndoManager } from "../UndoManager"
+import { COLOR_COMPONENT_BORDER, COLOR_MOUSE_OVER, COLOR_MOUSE_OVER_DANGER, ColorString, GRID_STEP, inRect } from "../drawutils"
 import { Modifier, ModifierObject, span, style } from "../htmlgen"
 import { IconName } from "../images"
-import { DrawParams, LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { Expand, InteractionResult, isDefined, isUndefined, Mode, RichStringEnum, typeOrUndefined } from "../utils"
+import { Expand, FixedArray, InteractionResult, Mode, RichStringEnum, typeOrUndefined } from "../utils"
+import { ComponentBase } from "./Component"
+import { type WireManager } from "./Wire"
+
+export type GraphicsRendering =
+    | CanvasRenderingContext2D & {
+        fill(): void,
+        beginGroup(className?: string): void
+        endGroup(): void,
+        createPath(path?: Path2D | string): Path2D
+    }
+    | SVGRenderingContext
 
 export interface DrawContext {
-    g: CanvasRenderingContext2D
+    g: GraphicsRendering
     drawParams: DrawParams
     isMouseOver: boolean
     borderColor: ColorString
@@ -19,29 +35,45 @@ export interface DrawContextExt extends DrawContext {
     rotatePoint(x: number, y: number): readonly [x: number, y: number]
 }
 
-export type ContextMenuItem =
+export type MenuItem =
     | { _tag: "sep" }
-    | { _tag: "text", caption: Modifier }
-    | { _tag: "item", icon: IconName | undefined, caption: Modifier, danger: boolean | undefined, action: (itemEvent: MouseEvent | TouchEvent, menuEvent: MouseEvent | TouchEvent) => unknown }
-    | { _tag: "submenu", icon: IconName | undefined, caption: Modifier, items: ContextMenuData }
+    | {
+        _tag: "text",
+        caption: Modifier
+    }
+    | {
+        _tag: "submenu",
+        icon: IconName | undefined,
+        caption: Modifier,
+        items: MenuData
+    }
+    | {
+        _tag: "item",
+        icon: IconName | undefined,
+        caption: Modifier,
+        shortcut: string | undefined,
+        danger: boolean | undefined,
+        action: (itemEvent: MouseEvent | TouchEvent, menuEvent: MouseEvent | TouchEvent) => InteractionResult | undefined | void
+    }
 
-export type ContextMenuData = ContextMenuItem[]
-export const ContextMenuData = {
-    sep(): ContextMenuItem {
+export type MenuData = MenuItem[]
+export const MenuData = {
+    sep(): MenuItem {
         return { _tag: "sep" }
     },
-    text(caption: Modifier): ContextMenuItem {
+    text(caption: Modifier): MenuItem {
         return { _tag: "text", caption }
     },
-    item(icon: IconName | undefined, caption: Modifier, action: (itemEvent: MouseEvent | TouchEvent, menuEvent: MouseEvent | TouchEvent) => unknown, danger?: boolean): ContextMenuItem {
-        return { _tag: "item", icon, caption, action, danger }
+    item(icon: IconName | undefined, caption: Modifier, action: (itemEvent: MouseEvent | TouchEvent, menuEvent: MouseEvent | TouchEvent) => InteractionResult | undefined | void, shortcut?: string, danger?: boolean): MenuItem {
+        return { _tag: "item", icon, caption, action, shortcut, danger }
     },
-    submenu(icon: IconName | undefined, caption: Modifier, items: ContextMenuData): ContextMenuItem {
+    submenu(icon: IconName | undefined, caption: Modifier, items: MenuData): MenuItem {
         return { _tag: "submenu", icon, caption, items }
     },
 }
 
-export type ContextMenuItemPlacement = "start" | "mid" | "end" // where to insert items created by components
+export type MenuItemPlacement = "start" | "mid" | "end" // where to insert items created by components
+export type MenuItems = Array<[MenuItemPlacement, MenuItem]>
 
 class _DrawContextImpl implements DrawContext, DrawContextExt {
 
@@ -50,8 +82,8 @@ class _DrawContextImpl implements DrawContext, DrawContextExt {
     private readonly componentTransform: DOMMatrix
 
     public constructor(
-        private comp: Drawable,
-        public readonly g: CanvasRenderingContext2D,
+        comp: Drawable,
+        public readonly g: GraphicsRendering,
         public readonly drawParams: DrawParams,
         public readonly isMouseOver: boolean,
         public readonly borderColor: ColorString,
@@ -85,25 +117,64 @@ function mult(m: DOMMatrix, x: number, y: number): [x: number, y: number] {
     ]
 }
 
+export interface DrawableParent {
+
+    isMainEditor(): this is LogicEditor
+    readonly editor: LogicEditor
+    // nice to forward...
+    readonly mode: Mode 
+
+    // implemented as one per (editor + instantiated custom component)
+    readonly components: ComponentList
+    readonly nodeMgr: NodeManager
+    readonly wireMgr: WireManager
+    readonly recalcMgr: RecalcManager
+
+    // defined only when editing the main circuit or a custom comp
+    readonly ifEditing:  EditTools | undefined
+
+    stopEditingThis(): void
+    startEditingThis(tools: EditTools): void
+}
+
+export type EditTools = {
+    readonly redrawMgr: RedrawManager
+    readonly moveMgr: MoveManager
+    readonly undoMgr: UndoManager
+    setDirty(reason: string): void
+    setToolCursor(cursor: string | null): void
+}
+
 export abstract class Drawable {
 
-    public readonly editor: LogicEditor
-    public ref: string | undefined = undefined
+    public readonly parent: DrawableParent
+    private _ref: string | undefined = undefined
 
-    protected constructor(editor: LogicEditor) {
-        this.editor = editor
+    protected constructor(parent: DrawableParent) {
+        this.parent = parent
         this.setNeedsRedraw("newly created")
     }
 
+    public get ref() {
+        return this._ref
+    }
+
+    public doSetValidatedId(id: string | undefined) {
+        // For components, the id must have been validated by a component list;
+        // for other drawbles, ids are largely unregulated, they can be 
+        // undefined or even duplicated since we don't refer to them for nodes
+        this._ref = id
+    }
+
     protected setNeedsRedraw(reason: string) {
-        this.editor.redrawMgr.addReason(reason, this)
+        this.parent.ifEditing?.redrawMgr.addReason(reason, this)
     }
 
     public get drawZIndex(): DrawZIndex {
         return 1
     }
 
-    public draw(g: CanvasRenderingContext2D, drawParams: DrawParams): void {
+    public draw(g: GraphicsRendering, drawParams: DrawParams): void {
         const inSelectionRect = drawParams.currentSelection?.isSelected(this) ?? false
         const isMouseOver = this === drawParams.currentMouseOverComp || inSelectionRect
         const borderColor = !isMouseOver
@@ -113,15 +184,18 @@ export abstract class Drawable {
                 : COLOR_MOUSE_OVER
 
         const ctx = new _DrawContextImpl(this, g, drawParams, isMouseOver, borderColor)
-        this.doDraw(g, ctx)
-        ctx.exit()
+        try {
+            this.doDraw(g, ctx)
+        } finally {
+            ctx.exit()
+        }
     }
 
-    public applyDrawTransform(__g: CanvasRenderingContext2D) {
+    public applyDrawTransform(__g: GraphicsRendering) {
         // by default, do nothing
     }
 
-    protected abstract doDraw(g: CanvasRenderingContext2D, ctx: DrawContext): void
+    protected abstract doDraw(g: GraphicsRendering, ctx: DrawContext): void
 
     public abstract isOver(x: number, y: number): boolean
 
@@ -131,7 +205,7 @@ export abstract class Drawable {
         return false
     }
 
-    public get cursorWhenMouseover(): string | undefined {
+    public cursorWhenMouseover(__e?: MouseEvent | TouchEvent): string | undefined {
         return undefined
     }
 
@@ -147,24 +221,60 @@ export abstract class Drawable {
         return undefined
     }
 
-    public makeContextMenu(): ContextMenuData | undefined {
+    public makeContextMenu(): MenuData | undefined {
         return undefined
     }
 
-    protected makeSetRefContextMenuItem(): ContextMenuItem {
-        const currentRef = this.ref
+    protected makeSetIdContextMenuItem(): MenuItem {
+        const currentId = this._ref
         const s = S.Components.Generic.contextMenu
-        const caption: Modifier = isUndefined(currentRef) ? s.SetIdentifier : span(s.ChangeIdentifier[0], span(style("font-family: monospace; font-weight: bolder; font-size: 90%"), currentRef), s.ChangeIdentifier[1])
-        return ContextMenuData.item("ref", caption, () => {
-            const newRef = window.prompt(s.SetIdentifierPrompt, currentRef)
-            if (newRef !== null) {
-                // OK button pressed
-                this.ref = newRef.length === 0 ? undefined : newRef
-                if (currentRef !== this.ref) {
-                    this.setNeedsRedraw("ref changed")
+        const caption: Modifier = currentId === undefined ? s.SetIdentifier : span(s.ChangeIdentifier[0], span(style("font-family: monospace; font-weight: bolder; font-size: 90%"), currentId), s.ChangeIdentifier[1])
+        return MenuData.item("ref", caption, () => {
+            this.runSetIdDialog()
+        }, "⌥↩︎")
+    }
+
+    private runSetIdDialog() {
+        const s = S.Components.Generic.contextMenu
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const currentId = this._ref
+            const newId = window.prompt(s.SetIdentifierPrompt, currentId)
+            if (newId === null) {
+                // cancel button pressed
+                break
+            }
+            if (newId === currentId) {
+                // no change
+                break
+            }
+
+            if (!(this instanceof ComponentBase)) {
+                // ids are unregulated
+                this.doSetValidatedId(newId.length === 0 ? undefined : newId)
+
+            } else {
+                // we're a component, check with the component list
+                if (newId.length === 0) {
+                    window.alert(s.IdentifierCannotBeEmpty)
+                    continue
+                }
+                const componentList = this.parent.components
+                const otherComp = componentList.get(newId)
+                if (otherComp === undefined) {
+                    // OK button pressed
+                    componentList.changeIdOf(this, newId)
+                } else {
+                    if (window.confirm(s.IdentifierAlreadyInUseShouldSwap)) {
+                        componentList.swapIdsOf(otherComp, this)
+                    } else {
+                        continue
+                    }
                 }
             }
-        })
+            this.setNeedsRedraw("ref changed")
+            break
+        }
     }
 
     // Return { wantsDragEvents: true } (default) to signal the component
@@ -186,20 +296,22 @@ export abstract class Drawable {
 
     // Return true to indicate it was handled and had an effect
     // (and presumably doesn't need to be handled any more)
-    public mouseClicked(__: MouseEvent | TouchEvent): boolean {
+    public mouseClicked(__: MouseEvent | TouchEvent): InteractionResult {
         // empty default implementation
-        return false
+        return InteractionResult.NoChange
     }
 
     // Return true to indicate it was handled and had an effect
     // (and presumably doesn't need to be handled any more)
-    public mouseDoubleClicked(__: MouseEvent | TouchEvent): boolean {
+    public mouseDoubleClicked(__: MouseEvent | TouchEvent): InteractionResult {
         // empty default implementation
-        return false
+        return InteractionResult.NoChange
     }
 
-    public keyDown(__: KeyboardEvent): void {
-        // empty default implementation
+    public keyDown(e: KeyboardEvent): void {
+        if (e.key === "Enter" && e.altKey) {
+            this.runSetIdDialog()
+        }
     }
 
 }
@@ -285,23 +397,24 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
     private _lockPos: boolean
     private _orient: Orientation
 
-    protected constructor(editor: LogicEditor, saved?: PositionSupportRepr) {
-        super(editor)
+    protected constructor(parent: DrawableParent, saved?: PositionSupportRepr) {
+        super(parent)
 
         // using null and not undefined to prevent subclasses from
         // unintentionally skipping the parameter
 
-        if (isDefined(saved)) {
+        if (saved !== undefined) {
             // restoring from saved object
-            this.ref = saved.ref
+            this.doSetValidatedId(saved.ref)
             this._posX = saved.pos[0]
             this._posY = saved.pos[1]
             this._lockPos = saved.lockPos ?? false
             this._orient = saved.orient ?? Orientation.default
         } else {
             // creating new object
-            this._posX = Math.max(0, this.editor.mouseX)
-            this._posY = this.editor.mouseY
+            const editor = this.parent.editor
+            this._posX = Math.max(0, editor.mouseX)
+            this._posY = editor.mouseY
             this._lockPos = false
             this._orient = Orientation.default
         }
@@ -366,45 +479,57 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
 
     public abstract get unrotatedHeight(): number
 
-    public override applyDrawTransform(g: CanvasRenderingContext2D) {
-        const rotation = (() => {
+    public override applyDrawTransform(g: GraphicsRendering) {
+        const abcd: FixedArray<number, 4> | undefined = (() => {
             switch (this._orient) {
                 case "e": return undefined
-                case "s": return Math.PI / 2
-                case "w": return Math.PI
-                case "n": return -Math.PI / 2
+                case "s": return [0, 1, -1, 0]
+                case "w": return [-1, 0, 0, -1]
+                case "n": return [0, -1, 1, 0]
             }
         })()
 
-        if (isDefined(rotation)) {
+        if (abcd !== undefined) {
             g.translate(this.posX, this.posY)
-            g.rotate(rotation)
+            g.transform(...abcd, 0, 0)
             g.translate(-this.posX, -this.posY)
         }
     }
 
     public isOver(x: number, y: number) {
-        return this.editor.mode >= Mode.CONNECT && inRect(this._posX, this._posY, this.width, this.height, x, y)
+        return this.parent.mode >= Mode.CONNECT && inRect(this._posX, this._posY, this.width, this.height, x, y)
     }
 
     protected trySetPosition(posX: number, posY: number, snapToGrid: boolean): undefined | [number, number] {
+        const newPos = this.tryMakePosition(posX, posY, snapToGrid)
+        if (newPos !== undefined) {
+            this.doSetPosition(newPos[0], newPos[1])
+        }
+        return newPos
+    }
+
+    protected tryMakePosition(posX: number, posY: number, snapToGrid: boolean): undefined | [number, number] {
         const roundTo = snapToGrid ? (GRID_STEP / 2) : 1
         posX = Math.round(posX / roundTo) * roundTo
         posY = Math.round(posY / roundTo) * roundTo
         if (posX !== this._posX || posY !== this.posY) {
-            this._posX = posX
-            this._posY = posY
-            this.setNeedsRedraw("position changed")
             return [posX, posY]
         }
         return undefined
     }
 
+    protected doSetPosition(posX: number, posY: number) {
+        this._posX = posX
+        this._posY = posY
+        this.setNeedsRedraw("position changed")
+    }
+
     protected makeOrientationAndPosMenuItems(): MenuItems {
         const s = S.Components.Generic.contextMenu
 
+        const shortcuts = { e: "→", s: "↓", w: "←", n: "↑" }
         const rotateItem: MenuItems = !this.canRotate() ? [] : [
-            ["start", ContextMenuData.submenu("direction", s.Orientation, [
+            ["start", MenuData.submenu("direction", s.Orientation, [
                 ...Orientations.values.map(orient => {
                     const isCurrent = this._orient === orient
                     const icon = isCurrent ? "check" : "none"
@@ -412,21 +537,45 @@ export abstract class DrawableWithPosition extends Drawable implements HasPositi
                     const action = isCurrent ? () => undefined : () => {
                         this.doSetOrient(orient)
                     }
-                    return ContextMenuData.item(icon, caption, action)
+                    return MenuData.item(icon, caption, action, shortcuts[orient])
                 }),
-                ContextMenuData.sep(),
-                ContextMenuData.text(s.ChangeOrientationDesc),
+                MenuData.sep(),
+                MenuData.text(s.ChangeOrientationDesc),
             ])],
         ]
 
         const lockPosItem: MenuItems = !this.canLockPos() ? [] : [
-            ["start", ContextMenuData.item(this.lockPos ? "check" : "none", s.LockPosition, () => {
+            ["start", MenuData.item(this.lockPos ? "check" : "none", s.LockPosition, () => {
                 this.doSetLockPos(!this.lockPos)
-            })],
+            }, "L")],
         ]
 
         return [...rotateItem, ...lockPosItem]
+    }
 
+    public override keyDown(e: KeyboardEvent): void {
+        if (this.canRotate()) {
+            if (e.key === "ArrowRight") {
+                this.doSetOrient("e")
+                return
+            } else if (e.key === "ArrowDown") {
+                this.doSetOrient("s")
+                return
+            } else if (e.key === "ArrowLeft") {
+                this.doSetOrient("w")
+                return
+            } else if (e.key === "ArrowUp") {
+                this.doSetOrient("n")
+                return
+            }
+        }
+        if (this.canLockPos()) {
+            if (e.key === "l") {
+                this.doSetLockPos(!this.lockPos)
+                return
+            }
+        }
+        super.keyDown(e)
     }
 
 }
@@ -437,6 +586,7 @@ interface DragContext {
     mouseOffsetToPosY: number
     lastAnchorX: number
     lastAnchorY: number
+    createdClone: DrawableWithDraggablePosition | undefined
 }
 
 
@@ -444,62 +594,72 @@ export abstract class DrawableWithDraggablePosition extends DrawableWithPosition
 
     private _isMovingWithContext: undefined | DragContext = undefined
 
-    protected constructor(editor: LogicEditor, saved?: PositionSupportRepr) {
-        super(editor, saved)
+    protected constructor(parent: DrawableParent, saved?: PositionSupportRepr) {
+        super(parent, saved)
     }
 
     public get isMoving() {
-        return isDefined(this._isMovingWithContext)
+        return this._isMovingWithContext !== undefined
     }
 
-    protected tryStartMoving(e: MouseEvent | TouchEvent) {
+    private tryStartMoving(e: MouseEvent | TouchEvent) {
         if (this.lockPos) {
             return
         }
-        if (isUndefined(this._isMovingWithContext)) {
-            const [offsetX, offsetY] = this.editor.offsetXY(e)
+        if (this._isMovingWithContext === undefined) {
+            const [offsetX, offsetY] = this.parent.editor.offsetXY(e)
             this._isMovingWithContext = {
                 mouseOffsetToPosX: offsetX - this.posX,
                 mouseOffsetToPosY: offsetY - this.posY,
                 lastAnchorX: this.posX,
                 lastAnchorY: this.posY,
+                createdClone: undefined,
             }
         }
     }
 
-    protected updateWhileMoving(e: MouseEvent | TouchEvent) {
-        if (this.lockPos) {
-            return
-        }
-        this.updatePositionIfNeeded(e)
-        this.editor.moveMgr.setDrawableMoving(this)
-    }
-
-    protected tryStopMoving(): boolean {
+    private tryStopMoving(e: MouseEvent | TouchEvent): boolean {
         let wasMoving = false
-        if (isDefined(this._isMovingWithContext)) {
+        if (this._isMovingWithContext !== undefined) {
             this._isMovingWithContext = undefined
             wasMoving = true
         }
-        this.editor.moveMgr.setDrawableStoppedMoving(this)
+        this.parent.ifEditing?.moveMgr.setDrawableStoppedMoving(this, e)
         return wasMoving
     }
 
-    private updatePositionIfNeeded(e: MouseEvent | TouchEvent): undefined | [number, number] {
-        const [x, y] = this.editor.offsetXY(e)
-        const snapToGrid = !e.metaKey
-        const newPos = this.updateSelfPositionIfNeeded(x, y, snapToGrid, e)
-        if (isDefined(newPos)) { // position changed
+
+    public setPosition(x: number, y: number, snapToGrid: boolean) {
+        const newPos = this.tryMakePosition(x, y, snapToGrid)
+        if (newPos !== undefined) { // position would change indeed
+            this.doSetPosition(...newPos)
             this.positionChanged()
         }
-        return newPos
     }
 
-    public setPosition(x: number, y: number) {
-        const newPos = this.trySetPosition(x, y, false)
-        if (isDefined(newPos)) { // position changed
-            this.positionChanged()
+    public override mouseDown(e: MouseEvent | TouchEvent) {
+        if (this.parent.mode >= Mode.CONNECT) {
+            this.tryStartMoving(e)
         }
+        return { wantsDragEvents: true }
+    }
+
+    public override mouseDragged(e: MouseEvent | TouchEvent) {
+        if (this.parent.mode >= Mode.CONNECT && !this.lockPos) {
+            const [x, y] = this.parent.editor.offsetXY(e)
+            const snapToGrid = !e.metaKey
+            const newPos = this.updateSelfPositionIfNeeded(x, y, snapToGrid, e)
+            if (newPos !== undefined) { // position changed
+                this.positionChanged()
+                this.parent.ifEditing?.moveMgr.setDrawableMoving(this, e)
+            }
+        }
+    }
+
+    public override mouseUp(e: MouseEvent | TouchEvent) {
+        this._isMovingWithContext?.createdClone?.mouseUp(e)
+        const result = this.tryStopMoving(e)
+        return InteractionResult.fromBoolean(result)
     }
 
     protected positionChanged() {
@@ -507,22 +667,42 @@ export abstract class DrawableWithDraggablePosition extends DrawableWithPosition
     }
 
     protected updateSelfPositionIfNeeded(x: number, y: number, snapToGrid: boolean, e: MouseEvent | TouchEvent): undefined | [number, number] {
-        if (isDefined(this._isMovingWithContext)) {
-            const { mouseOffsetToPosX, mouseOffsetToPosY, lastAnchorX, lastAnchorY } = this._isMovingWithContext
-            let targetX = x - mouseOffsetToPosX
-            let targetY = y - mouseOffsetToPosY
-            if (e.shiftKey) {
-                // move along axis only
-                const dx = Math.abs(lastAnchorX - targetX)
-                const dy = Math.abs(lastAnchorY - targetY)
-                if (dx <= dy) {
-                    targetX = lastAnchorX
-                } else {
-                    targetY = lastAnchorY
-                }
-            }
-            return this.trySetPosition(targetX, targetY, snapToGrid)
+        if (this._isMovingWithContext === undefined) {
+            return undefined
         }
+        const { mouseOffsetToPosX, mouseOffsetToPosY, lastAnchorX, lastAnchorY, createdClone } = this._isMovingWithContext
+
+        if (createdClone !== undefined) {
+            createdClone.mouseDragged(e)
+            return undefined
+        }
+
+        let targetX = x - mouseOffsetToPosX
+        let targetY = y - mouseOffsetToPosY
+        if (e.shiftKey) {
+            // move along axis only
+            const dx = Math.abs(lastAnchorX - targetX)
+            const dy = Math.abs(lastAnchorY - targetY)
+            if (dx <= dy) {
+                targetX = lastAnchorX
+            } else {
+                targetY = lastAnchorY
+            }
+        }
+        const newPos = this.tryMakePosition(targetX, targetY, snapToGrid)
+        if (newPos !== undefined) {
+            let clone
+            if (e.altKey && this.parent.mode >= Mode.DESIGN && (clone = this.makeClone(true)) !== undefined) {
+                this._isMovingWithContext.createdClone = clone
+                this.parent.editor.eventMgr.setCurrentMouseOverComp(clone)
+            } else {
+                this.doSetPosition(...newPos)
+            }
+        }
+        return newPos
+    }
+
+    protected makeClone(__setSpawning: boolean): DrawableWithDraggablePosition | undefined {
         return undefined
     }
 

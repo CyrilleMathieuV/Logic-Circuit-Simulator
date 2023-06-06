@@ -1,19 +1,19 @@
 import { COLOR_COMPONENT_INNER_LABELS, displayValuesFromArray, drawLabel } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
-import { FixedArray, FixedArrayFillWith, isUndefined, isUnknown, LogicValue, Unknown } from "../utils"
-import { ComponentBase, defineComponent, group, Repr } from "./Component"
-import { ContextMenuItem, ContextMenuItemPlacement, DrawContext } from "./Drawable"
+import { FixedArray, FixedArrayFillWith, LogicValue, Unknown, isUnknown } from "../utils"
+import { ComponentBase, Repr, defineComponent, group } from "./Component"
+import { DrawContext, DrawableParent, GraphicsRendering, MenuItems } from "./Drawable"
 
 export const Decoder16SegDef =
-    defineComponent("ic", "decoder-16seg", {
+    defineComponent("dec-16seg", {
+        idPrefix: "dec",
         button: { imgWidth: 50 },
         valueDefaults: {},
         size: { gridWidth: 4, gridHeight: 10 },
         makeNodes: () => ({
             ins: {
-                I: group("w", [
+                In: group("w", [
                     [-3, -3],
                     [-3, -2],
                     [-3, -1],
@@ -53,15 +53,12 @@ type Decoder16SegRepr = Repr<typeof Decoder16SegDef>
 
 export class Decoder16Seg extends ComponentBase<Decoder16SegRepr> {
 
-    public constructor(editor: LogicEditor, saved?: Decoder16SegRepr) {
-        super(editor, Decoder16SegDef, saved)
+    public constructor(parent: DrawableParent, saved?: Decoder16SegRepr) {
+        super(parent, Decoder16SegDef, saved)
     }
 
     public toJSON() {
-        return {
-            type: "decoder-16seg" as const,
-            ...this.toJSONBase(),
-        }
+        return this.toJSONBase()
     }
 
     public override makeTooltip() {
@@ -71,7 +68,7 @@ export class Decoder16Seg extends ComponentBase<Decoder16SegRepr> {
     }
 
     protected doRecalcValue(): FixedArray<LogicValue, 17> {
-        const input = this.inputValues(this.inputs.I)
+        const input = this.inputValues(this.inputs.In)
         const [__, value] = displayValuesFromArray(input, false)
 
         let output
@@ -95,17 +92,17 @@ export class Decoder16Seg extends ComponentBase<Decoder16SegRepr> {
         this.outputValues(this.outputs.Out, newValue)
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         this.doDrawDefault(g, ctx, {
             skipLabels: true,
             drawInside: bounds => {
-                this.drawGroupBox(g, this.inputs.I.group, bounds)
+                this.drawGroupBox(g, this.inputs.In.group, bounds)
             },
             drawLabels: (ctx, { left, right }) => {
                 g.fillStyle = COLOR_COMPONENT_INNER_LABELS
                 g.font = "bold 11px sans-serif"
 
-                drawLabel(ctx, this.orient, "C", "w", left, this.inputs.I)
+                drawLabel(ctx, this.orient, "C", "w", left, this.inputs.In)
 
                 g.font = "7px sans-serif"
                 this.outputs._all.forEach(output => {
@@ -115,14 +112,8 @@ export class Decoder16Seg extends ComponentBase<Decoder16SegRepr> {
         })
     }
 
-    protected override makeComponentSpecificContextMenuItems(): undefined | [ContextMenuItemPlacement, ContextMenuItem][] {
-        const forceOutputItem = this.makeForceOutputsContextMenuItem()
-        if (isUndefined(forceOutputItem)) {
-            return []
-        }
-        return [
-            ["mid", forceOutputItem],
-        ]
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        return this.makeForceOutputsContextMenuItem()
     }
 
 }

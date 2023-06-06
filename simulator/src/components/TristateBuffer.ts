@@ -1,13 +1,13 @@
 import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
-import { LogicEditor } from "../LogicEditor"
 import { S } from "../strings"
 import { HighImpedance, isHighImpedance, isUnknown, LogicValue, Unknown } from "../utils"
 import { ComponentBase, defineComponent, Repr } from "./Component"
-import { DrawContext } from "./Drawable"
+import { DrawableParent, DrawContext, GraphicsRendering } from "./Drawable"
 
-export const TriStateBufferDef =
-    defineComponent("gate", "TRI", {
+export const TristateBufferDef =
+    defineComponent("tristate", {
+        idPrefix: "tristate",
         button: { imgWidth: 50 },
         valueDefaults: {},
         size: { gridWidth: 7, gridHeight: 4 },
@@ -23,24 +23,21 @@ export const TriStateBufferDef =
         initialValue: () => HighImpedance as LogicValue,
     })
 
-type TriStateBufferRepr = Repr<typeof TriStateBufferDef>
+type TristateBufferRepr = Repr<typeof TristateBufferDef>
 
-export class TriStateBuffer extends ComponentBase<TriStateBufferRepr> {
+export class TristateBuffer extends ComponentBase<TristateBufferRepr> {
 
-    public constructor(editor: LogicEditor, saved?: TriStateBufferRepr) {
-        super(editor, TriStateBufferDef, saved)
+    public constructor(parent: DrawableParent, saved?: TristateBufferRepr) {
+        super(parent, TristateBufferDef, saved)
     }
 
     public toJSON() {
-        return {
-            type: "TRI" as const,
-            ...this.toJSONBase(),
-        }
+        return this.toJSONBase()
     }
 
     public override makeTooltip() {
         return tooltipContent(undefined, mods(
-            div(S.Components.TriStateBuffer.tooltip) // TODO
+            div(S.Components.TristateBuffer.tooltip) // TODO
         ))
     }
 
@@ -63,7 +60,7 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr> {
         this.outputs.Out.value = newValue
     }
 
-    protected override doDraw(g: CanvasRenderingContext2D, ctx: DrawContext) {
+    protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
 
         const width = this.unrotatedWidth
         const height = this.unrotatedHeight
@@ -108,4 +105,4 @@ export class TriStateBuffer extends ComponentBase<TriStateBufferRepr> {
     }
 
 }
-TriStateBufferDef.impl = TriStateBuffer
+TristateBufferDef.impl = TristateBuffer

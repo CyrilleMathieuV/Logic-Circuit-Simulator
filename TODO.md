@@ -3,10 +3,8 @@
 
 ## High priority
 
- * Incrementable register
- * Get key events also when multiple editors are on the same page
- * Copy-paste
- * Hide mouseover when mouse leaves web component boundaries
+ * Fix moving: ctr-click then drag -> shouldn't starts moving; long click -> should start moving
+ * Take undo snapshot after key events too
  * Adder orientation
  * Prevent click event if right-click and when dragging
  * More consistently set things dirty
@@ -14,14 +12,8 @@
 
 ## Medium priority
 
- * Load/save RAM/ROM contents via file and editor
  * High-Z bus logic
- * ROM
- * Mnemonic in context menu
- * Undo/redo as buttons
- * Custom component creation
- * (Address) decoder: 2, 3, 4 bit versions
- * Add mouseovers to new components
+ * Add tootips to components, e.g., describe what happens on the next state transition, etc.
  * Save/restore using browser's storage
     * standalone
       * no long term storage
@@ -35,20 +27,33 @@
 
 ## Low priority
 
- * Alternative representation for push or toggle buttons
- * Allow repeating deletions with Cmd+Y
- * Edge detector?
- * Highlight only nodes when dragging
- * Don't store Z in memory cells, but unknown instead
  * Add rich HTML annotations
+ * Computation delay for components with inputs and outputs
  * Disable/hide input of component (e.g., to make exercise to prevent alu from knowing how to do a subtraction)
  * Lock component to some "parent" to move them more intuitively?
- * Add external component by drag-and-drop from file
  * Implement Quine–McCluskey algorithm for function normalization
 
 
 ### DONE
 
+ * Allow editing custom component
+ * Copy-paste
+ * Add external component library by drag-and-drop from file
+ * Custom component creation
+ * Get key events also when multiple editors are on the same page
+ * Show keyboard shortcuts in context menus
+ * Hide tootips when mouse leaves web component boundaries
+ * Rework value propagation to make it instant if necessary and independent of drawing
+ * Finish implementation of SVG export
+ * Undo/redo as buttons
+ * Don't store Z in memory cells, but unknown instead
+ * Allow repeating deletions with Cmd+Y
+ * Highlight only nodes when dragging
+ * (Address) decoder: 2, 3, 4 bit versions
+ * Incrementable register
+ * Swap ROM for RAM and inversely
+ * Load/save RAM/ROM contents via file and editor
+ * ROM
  * Lock position
  * Show selected RAM contents
  * Draw n-x-1 mux/demux compactly
