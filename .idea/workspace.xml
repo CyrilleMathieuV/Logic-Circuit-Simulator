@@ -4,24 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="JFP major updates on components">
-      <change afterPath="$PROJECT_DIR$/simulator/img/CPU.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN begins to implement CPU">
+      <change beforePath="$PROJECT_DIR$/.eslintrc.json" beforeDir="false" afterPath="$PROJECT_DIR$/tools/.eslintrc.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/ComponentFactory.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/ComponentFactory.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/ComponentMenu.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/ComponentMenu.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/DataMigration.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/DataMigration.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/ALU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/ALU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Clock.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Clock.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Demux.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Demux.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Mux.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Mux.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/ROM.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/ROM.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/gallery.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/gallery.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/images.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/images.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/strings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/strings.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -84,12 +69,11 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "ShowUsagesActions.previewPropertyKey": "true",
     "WebServerToolWindowFactoryState": "false",
-    "js.linters.configure.manually.selectedeslint": "true",
     "last_opened_file_path": "/Users/cyrille/WebstormProjects/Logic-Circuit-Simulator/simulator/img",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.standard": "true",
     "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.eslint": "",
     "node.js.selected.package.standard": "",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
@@ -105,6 +89,7 @@
       <recent name="$PROJECT_DIR$/simulator/src/components" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/tools" />
       <recent name="$PROJECT_DIR$/simulator/img/icons" />
       <recent name="$PROJECT_DIR$/simulator/img" />
       <recent name="$PROJECT_DIR$/simulator/src/components" />
@@ -285,7 +270,15 @@
       <option name="project" value="LOCAL" />
       <updated>1689317702877</updated>
     </task>
-    <option name="localTasksCounter" value="21" />
+    <task id="LOCAL-00021" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1689329690979</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1689329690979</updated>
+    </task>
+    <option name="localTasksCounter" value="22" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -308,6 +301,7 @@
     <MESSAGE value="New RAM and other things" />
     <MESSAGE value="Update workspace.xml" />
     <MESSAGE value="JFP major updates on components" />
-    <option name="LAST_COMMIT_MESSAGE" value="JFP major updates on components" />
+    <MESSAGE value="CMN begins to implement CPU" />
+    <option name="LAST_COMMIT_MESSAGE" value="CMN begins to implement CPU" />
   </component>
 </project>
