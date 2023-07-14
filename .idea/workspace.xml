@@ -5,8 +5,31 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="JFP major updates on components">
+      <change afterPath="$PROJECT_DIR$/simulator/img/ALU.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/AdderArray.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/PassthroughN.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/RAM.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/Register.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/ShiftRegister.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/inputs.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/memlines.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/outputs.icon.svg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/ALU4.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/ALU8.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/AdderArray4.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/Passthrough4.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/Passthrough8.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/RAM16x4.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/RAM16x8.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/RAM32x12.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/RAM64x8.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/Register4.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/Register8.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/ShiftRegister4.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/ShiftRegister8.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -69,10 +92,11 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "ShowUsagesActions.previewPropertyKey": "true",
     "WebServerToolWindowFactoryState": "false",
+    "js.linters.configure.manually.selectedeslint": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.standard": "true",
     "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "",
+    "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.standard": "",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
@@ -82,8 +106,9 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/simulator/src/components" />
+      <recent name="$PROJECT_DIR$/simulator/img/icons" />
       <recent name="$PROJECT_DIR$/simulator/img" />
+      <recent name="$PROJECT_DIR$/simulator/src/components" />
     </key>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
