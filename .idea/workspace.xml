@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="New RAM and other things">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-    </list>
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="JFP major updates on components" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -23,6 +19,9 @@
   </component>
   <component name="Git.Merge.Settings">
     <option name="BRANCH" value="upstream/master" />
+  </component>
+  <component name="Git.Rebase.Settings">
+    <option name="NEW_BASE" value="upstream/master" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -102,7 +101,13 @@
       <workItem from="1677864017981" duration="600000" />
       <workItem from="1678452840152" duration="9033000" />
       <workItem from="1678522329240" duration="457000" />
-      <workItem from="1678736685889" duration="427000" />
+      <workItem from="1678737321105" duration="13000" />
+      <workItem from="1678836162700" duration="1214000" />
+      <workItem from="1679091952253" duration="61000" />
+      <workItem from="1680276207449" duration="552000" />
+      <workItem from="1680277168730" duration="38000" />
+      <workItem from="1686056139760" duration="431000" />
+      <workItem from="1686056602451" duration="146000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -209,7 +214,28 @@
       <option name="project" value="LOCAL" />
       <updated>1678461859280</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="Update workspace.xml">
+      <created>1678737326838</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1678737326838</updated>
+    </task>
+    <task id="LOCAL-00017" summary="JFP major updates on components">
+      <created>1678837338089</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1678837338089</updated>
+    </task>
+    <task id="LOCAL-00018" summary="JFP major updates on components">
+      <created>1680276504167</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1680276504167</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -229,6 +255,9 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Added RAM 32x12" />
     <MESSAGE value="CMD Z by JPP" />
-    <option name="LAST_COMMIT_MESSAGE" value="CMD Z by JPP" />
+    <MESSAGE value="New RAM and other things" />
+    <MESSAGE value="Update workspace.xml" />
+    <MESSAGE value="JFP major updates on components" />
+    <option name="LAST_COMMIT_MESSAGE" value="JFP major updates on components" />
   </component>
 </project>
