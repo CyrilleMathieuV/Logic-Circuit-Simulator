@@ -10,6 +10,7 @@ import { ComparatorDef } from "./components/Comparator"
 import { Component, ComponentBase, ComponentRepr } from "./components/Component"
 import { ControlledInverterDef } from "./components/ControlledInverter"
 import { CounterDef } from "./components/Counter"
+import { CPUDef } from "./components/CPU"
 import { CustomComponent, CustomComponentDef, CustomComponentDefRepr, CustomComponentPrefix } from "./components/CustomComponent"
 import { DecoderDef } from "./components/Decoder"
 import { Decoder16SegDef } from "./components/Decoder16Seg"
@@ -91,6 +92,7 @@ const AllComponentDefs: ComponentMaker<any>[] = [
     ComparatorDef,
     AdderArrayDef,
     ALUDef,
+    CPUDef,
     MuxDef,
     DemuxDef,
     LatchSRDef,

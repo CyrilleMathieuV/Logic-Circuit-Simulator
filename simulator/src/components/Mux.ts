@@ -2,11 +2,19 @@ import * as t from "io-ts"
 import { COLOR_BACKGROUND, displayValuesFromArray, drawWireLineToComponent, strokeAsWireLine, useCompact } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { ArrayFillWith, LogicValue, Unknown, isUnknown, typeOrUndefined } from "../utils"
+import {ArrayFillWith, LogicValue, Unknown, isUnknown, typeOrUndefined, RichStringEnum} from "../utils"
 import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param } from "./Component"
 import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 import { WireStyles } from "./Wire"
 
+export type MuxTypeProps = {
+    includeInContextMenu: boolean
+    includeInPoseAs: boolean
+    fullShortDesc: () => [string, string | undefined, string]
+    out: (ins: LogicValue[]) => LogicValue
+}
+
+export type MuxTypes<TALUType extends string> = RichStringEnum<TALUType, MuxTypeProps>
 
 export const MuxDef =
     defineParametrizedComponent("mux", true, true, {

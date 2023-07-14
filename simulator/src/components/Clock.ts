@@ -174,7 +174,7 @@ export class Clock extends InputBase<ClockRepr> {
             [2000, "2 s (0.5 Hz)"],
             [4000, "4 s (0.25 Hz)"],
             [8000, "8 s (0.125 Hz)"],
-            [16000, "8 s (0.0625 Hz)"],
+            [16000, "16 s (0.0625 Hz)"],
         ]
 
         const makeItemSetPeriod = (data: [number, string]) => {

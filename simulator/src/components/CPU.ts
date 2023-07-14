@@ -2,34 +2,18 @@ import * as t from "io-ts"
 import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_GROUP_SPAN, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import {
-    ArrayFillUsing,
-    ArrayFillWith,
-    isBoolean,
-    isHighImpedance,
-    isUnknown,
-    LogicValue,
-    RichStringEnum,
-    typeOrUndefined,
-    Unknown,
-} from "../utils"
+import { ArrayFillUsing, ArrayFillWith, isBoolean, isHighImpedance, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
 import { defineParametrizedComponent, groupHorizontal, groupVertical, param, paramBool, ParametrizedComponentBase, Repr, ResolvedParams, Value } from "./Component"
 import { DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
-import {Gate1Types, Gate2toNType, Gate2toNTypes} from "./GateTypes"
+import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
+//import { Mux } from "./Mux"
+//import { Demux } from "./Demux"
+//import { ALUTypes } from "./ALU"
 
-export type ALUTypeProps = {
-    includeInContextMenu: boolean
-    includeInPoseAs: boolean
-    fullShortDesc: () => [string, string | undefined, string]
-    out: (ins: LogicValue[]) => LogicValue
-}
-
-export type ALUTypes<TALUType extends string> = RichStringEnum<TALUType, ALUTypeProps>
-
-export const ALUDef =
-    defineParametrizedComponent("alu", true, true, {
-        variantName: ({ bits }) => `alu-${bits}`,
-        idPrefix: "alu",
+export const CPUDef =
+    defineParametrizedComponent("CPU", true, true, {
+        variantName: ({ bits }) => `CPU-${bits}`,
+        idPrefix: "CPU",
         button: { imgWidth: 50 },
         repr: {
             bits: typeOrUndefined(t.number),
@@ -68,13 +52,13 @@ export const ALUDef =
                     B: groupVertical("w", -outputX, inputCenterY, numBits),
                     Op: topGroup,
                     Mode: opMode,
-                    Cin: [cin[0], cin[1], "n", `Cin (${S.Components.ALU.InputCinDesc})`],
+                    Cin: [cin[0], cin[1], "n", `Cin (${S.Components.CPU.InputCinDesc})`],
                 },
                 outs: {
                     S: groupVertical("e", outputX, 0, numBits),
                     V: [0, bottom, "s", "V (oVerflow)"],
                     Z: [2, bottom, "s", "Z (Zero)"],
-                    Cout: [-2, bottom, "s", `Cout (${S.Components.ALU.OutputCoutDesc})`],
+                    Cout: [-2, bottom, "s", `Cout (${S.Components.CPU.OutputCoutDesc})`],
                 },
             }
         },
@@ -84,24 +68,24 @@ export const ALUDef =
         },
     })
 
-export type ALURepr = Repr<typeof ALUDef>
-export type ALUParams = ResolvedParams<typeof ALUDef>
+export type CPURepr = Repr<typeof CPUDef>
+export type CPUParams = ResolvedParams<typeof CPUDef>
 
-type ALUValue = Value<typeof ALUDef>
+type CPUValue = Value<typeof CPUDef>
 
-export type ALUOp = typeof ALUOps[number]
-export const ALUOp = {
-    shortName(op: ALUOp): string {
-        return S.Components.ALU[op][0]
+export type CPUOp = typeof CPUOps[number]
+export const CPUOp = {
+    shortName(op: CPUOp): string {
+        return S.Components.CPU[op][0]
     },
-    fullName(op: ALUOp): string {
-        return S.Components.ALU[op][1]
+    fullName(op: CPUOp): string {
+        return S.Components.CPU[op][1]
     },
 }
 
 
 
-export const ALUOps = [
+export const CPUOps = [
     "A+B", "A-B", "A+1", "A-1",
     //0000  0001   0010   0011
     "-A", "B-A", "A*2", "A/2",
@@ -112,54 +96,54 @@ export const ALUOps = [
     //1100 1101   1110   1111
 ] as const
 
-const ALUOpsReduced: readonly ALUOp[] = ["A+B", "A-B", "A|B", "A&B"]
+const CPUOpsReduced: readonly CPUOp[] = ["A+B", "A-B", "A|B", "A&B"]
 //                                         00     01    10     11
-// Used to lookup the ALUOp from the reduced opcode, which is compatible with the extended
+// Used to lookup the CPUOp from the reduced opcode, which is compatible with the extended
 // opcode, provided the extra control bits are inserted between the leftmost and the
 // rightmost bits of the reduced opcode. Reason for this is to keep the leftmost bit
 // acting as a "mode" bit switching between arithmetic (0) and logic (1) operations.
 
-export class ALU extends ParametrizedComponentBase<ALURepr> {
+export class CPU extends ParametrizedComponentBase<CPURepr> {
 
     public readonly numBits: number
     public readonly usesExtendedOpcode: boolean
     private _showOp: boolean
 
-    public constructor(parent: DrawableParent, params: ALUParams, saved?: ALURepr) {
-        super(parent, ALUDef.with(params), saved)
+    public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
+        super(parent, CPUDef.with(params), saved)
 
         this.numBits = params.numBits
         this.usesExtendedOpcode = params.usesExtendedOpcode
 
-        this._showOp = saved?.showOp ?? ALUDef.aults.showOp
+        this._showOp = saved?.showOp ?? CPUDef.aults.showOp
     }
 
     public toJSON() {
         return {
-            bits: this.numBits === ALUDef.aults.bits ? undefined : this.numBits,
-            ext: this.usesExtendedOpcode === ALUDef.aults.ext ? undefined : this.usesExtendedOpcode,
+            bits: this.numBits === CPUDef.aults.bits ? undefined : this.numBits,
+            ext: this.usesExtendedOpcode === CPUDef.aults.ext ? undefined : this.usesExtendedOpcode,
             ...this.toJSONBase(),
-            showOp: (this._showOp !== ALUDef.aults.showOp) ? this._showOp : undefined,
+            showOp: (this._showOp !== CPUDef.aults.showOp) ? this._showOp : undefined,
         }
     }
 
     public override makeTooltip() {
         const op = this.op
-        const s = S.Components.ALU.tooltip
-        const opDesc = isUnknown(op) ? s.SomeUnknownOperation : s.ThisOperation + " " + ALUOp.fullName(op)
+        const s = S.Components.CPU.tooltip
+        const opDesc = isUnknown(op) ? s.SomeUnknownOperation : s.ThisOperation + " " + CPUOp.fullName(op)
         return tooltipContent(s.title, mods(
             div(`${s.CurrentlyCarriesOut} ${opDesc}.`)
         ))
     }
 
-    public get op(): ALUOp | Unknown {
+    public get op(): CPUOp | Unknown {
         const opValues = this.inputValues(this.inputs.Op)
         opValues.push(this.inputs.Mode.value)
         const opIndex = displayValuesFromArray(opValues, false)[1]
-        return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? ALUOps : ALUOpsReduced)[opIndex]
+        return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOps : CPUOpsReduced)[opIndex]
     }
 
-    protected doRecalcValue(): ALUValue {
+    protected doRecalcValue(): CPUValue {
         const op = this.op
 
         if (isUnknown(op)) {
@@ -170,10 +154,10 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
         const b = this.inputValues(this.inputs.B)
         const cin = this.inputs.Cin.value
 
-        return doALUOp(op, a, b, cin)
+        return doCPUOp(op, a, b, cin)
     }
 
-    protected override propagateValue(newValue: ALUValue) {
+    protected override propagateValue(newValue: CPUValue) {
         this.outputValues(this.outputs.S, newValue.s)
         this.outputs.V.value = newValue.v
         this.outputs.Z.value = allZeros(newValue.s)
@@ -270,7 +254,7 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
             drawLabel(ctx, this.orient, "S", "e", right, this.outputs.S)
 
             if (this._showOp) {
-                const opName = isUnknown(this.op) ? "??" : ALUOp.shortName(this.op)
+                const opName = isUnknown(this.op) ? "??" : CPUOp.shortName(this.op)
                 const size = opName.length === 1 ? 25 : opName.length === 2 ? 17 : 13
                 g.font = `bold ${size}px sans-serif`
                 g.fillStyle = COLOR_COMPONENT_BORDER
@@ -287,7 +271,7 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
     }
 
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
-        const s = S.Components.ALU.contextMenu
+        const s = S.Components.CPU.contextMenu
         const icon = this._showOp ? "check" : "none"
         const toggleShowOpItem = MenuData.item(icon, s.toggleShowOp, () => {
             this.doSetShowOp(!this._showOp)
@@ -304,7 +288,7 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
     }
 
 }
-ALUDef.impl = ALU
+CPUDef.impl = CPU
 
 function allZeros(vals: LogicValue[]): LogicValue {
     for (const v of vals) {
@@ -319,31 +303,31 @@ function allZeros(vals: LogicValue[]): LogicValue {
 }
 
 
-export function doALUOp(op: ALUOp, a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue):
-    ALUValue {
+export function doCPUOp(op: CPUOp, a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue):
+    CPUValue {
     const numBits = a.length
     switch (op) {
         // arithmetic
-        case "A+B": return doALUAdd(a, b, cin)
-        case "A*2": return doALUAdd(a, a, cin)
-        case "A+1": return doALUAdd(a, [true, ...ArrayFillWith(false, numBits - 1)], cin)
-        case "A/2": return doALUSub([...a.slice(1), a[numBits - 1]], ArrayFillWith(false, numBits), cin)
-        case "A-1": return doALUSub(a, [true, ...ArrayFillWith(false, numBits - 1)], cin)
-        case "A-B": return doALUSub(a, b, cin)
-        case "B-A": return doALUSub(b, a, cin)
-        case "-A": return doALUSub(ArrayFillWith(false, numBits), a, cin)
+        case "A+B": return doCPUAdd(a, b, cin)
+        case "A*2": return doCPUAdd(a, a, cin)
+        case "A+1": return doCPUAdd(a, [true, ...ArrayFillWith(false, numBits - 1)], cin)
+        case "A/2": return doCPUSub([...a.slice(1), a[numBits - 1]], ArrayFillWith(false, numBits), cin)
+        case "A-1": return doCPUSub(a, [true, ...ArrayFillWith(false, numBits - 1)], cin)
+        case "A-B": return doCPUSub(a, b, cin)
+        case "B-A": return doCPUSub(b, a, cin)
+        case "-A": return doCPUSub(ArrayFillWith(false, numBits), a, cin)
 
         // logic
         default: {
             let cout: LogicValue = false
             const s: LogicValue[] = (() => {
                 switch (op) {
-                    case "A|B": return doALUBinOp("or", a, b)
-                    case "A&B": return doALUBinOp("and", a, b)
-                    case "A^B": return doALUBinOp("xor", a, b)
-                    case "A|~B": return doALUBinOp("or", a, doALUNot(b))
-                    case "A&~B": return doALUBinOp("and", a, doALUNot(b))
-                    case "~A": return doALUNot(a)
+                    case "A|B": return doCPUBinOp("or", a, b)
+                    case "A&B": return doCPUBinOp("and", a, b)
+                    case "A^B": return doCPUBinOp("xor", a, b)
+                    case "A|~B": return doCPUBinOp("or", a, doCPUNot(b))
+                    case "A&~B": return doCPUBinOp("and", a, doCPUNot(b))
+                    case "~A": return doCPUNot(a)
                     case "A>>": return [...a.slice(1), cin]
                     case "A<<":
                         cout = a[a.length - 1]
@@ -356,7 +340,7 @@ export function doALUOp(op: ALUOp, a: readonly LogicValue[], b: readonly LogicVa
     }
 }
 
-export function doALUAdd(a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue): ALUValue {
+export function doCPUAdd(a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue): CPUValue {
     const numBits = a.length
     const sum3bits = (a: LogicValue, b: LogicValue, c: LogicValue): [LogicValue, LogicValue] => {
         const asNumber = (v: LogicValue) => v === true ? 1 : 0
@@ -388,7 +372,7 @@ export function doALUAdd(a: readonly LogicValue[], b: readonly LogicValue[], cin
     return { s, cout, v }
 }
 
-export function doALUSub(a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue): ALUValue {
+export function doCPUSub(a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue): CPUValue {
     const numBits = a.length
     const s: LogicValue[] = ArrayFillWith(Unknown, numBits)
     const toInt = (vs: readonly LogicValue[]): number | undefined => {
@@ -409,7 +393,7 @@ export function doALUSub(a: readonly LogicValue[], b: readonly LogicValue[], cin
     let cout: LogicValue = Unknown
     let v: LogicValue = Unknown
     if (aInt !== undefined && bInt !== undefined && isBoolean(cin)) {
-        // otherwise, stick with default Unset values everywhere
+        // otherwise, stick with default Unset Values everywhere
         let yInt = aInt - bInt - (cin ? 1 : 0)
         // console.log(`${aInt} - ${bInt} = ${yInt}`)
         // we can get anything from (max - (-min)) = 7 - (-8) = 15
@@ -440,12 +424,12 @@ export function doALUSub(a: readonly LogicValue[], b: readonly LogicValue[], cin
     return { s, cout, v }
 }
 
-function doALUNot(a: readonly LogicValue[]): LogicValue[] {
+function doCPUNot(a: readonly LogicValue[]): LogicValue[] {
     const not = Gate1Types.props.not.out
     return ArrayFillUsing(i => not([a[i]]), a.length)
 }
 
-function doALUBinOp(op: Gate2toNType, a: readonly LogicValue[], b: readonly LogicValue[]) {
+function doCPUBinOp(op: Gate2toNType, a: readonly LogicValue[], b: readonly LogicValue[]) {
     const func = Gate2toNTypes.props[op].out
     return ArrayFillUsing(i => func([a[i], b[i]]), a.length)
 }

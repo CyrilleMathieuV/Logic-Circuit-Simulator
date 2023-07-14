@@ -24,8 +24,8 @@ export const ROMRAMDef =
             displayRadix: undefined as number | undefined,
         },
         params: {
-            bits: param(4, [4, 8, 16, 32]),
-            lines: param(16, [8, 16, 32, 64, 128, 256, 512, 1024, 2048]),
+            bits: param(4, [4, 8, 12, 16, 32]),
+            lines: param(16, [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]),
         },
         validateParams: ({ bits, lines }) => {
             const numAddressBits = Math.ceil(Math.log2(lines))

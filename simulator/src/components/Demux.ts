@@ -3,11 +3,19 @@ import { COLOR_BACKGROUND, displayValuesFromArray, drawWireLineToComponent, stro
 import { div, mods, tooltipContent } from "../htmlgen"
 import { IconName } from "../images"
 import { S } from "../strings"
-import { ArrayFillWith, HighImpedance, LogicValue, Unknown, isUnknown, typeOrUndefined } from "../utils"
+import {ArrayFillWith, HighImpedance, LogicValue, Unknown, isUnknown, typeOrUndefined, RichStringEnum} from "../utils"
 import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param } from "./Component"
 import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 import { WireStyles } from "./Wire"
 
+export type DemuxTypeProps = {
+    includeInContextMenu: boolean
+    includeInPoseAs: boolean
+    fullShortDesc: () => [string, string | undefined, string]
+    out: (ins: LogicValue[]) => LogicValue
+}
+
+export type DemuxTypes<TALUType extends string> = RichStringEnum<TALUType, DemuxTypeProps>
 
 export const DemuxDef =
     defineParametrizedComponent("demux", true, true, {

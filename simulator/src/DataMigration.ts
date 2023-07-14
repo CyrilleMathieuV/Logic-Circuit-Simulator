@@ -81,6 +81,7 @@ const migrateTo: Record<number, (container: Record<string, unknown>) => void> = 
             "ic.comparator": "comp",
             "ic.adder-array": "adder-array",
             "ic.alu": "alu",
+            "ic.cpu": "cpu",
             "ic.mux": "mux",
             "ic.demux": "demux",
             "ic.latch-sr": "latch-sr",
@@ -311,6 +312,21 @@ const migrateTo: Record<number, (container: Record<string, unknown>) => void> = 
                 }
             }
         }
+
+        // cpu has one more output
+        if (isArray(components)) {
+            for (const comp of components) {
+                if (comp.type === "cpu") {
+                    if (isArray(comp.out)) {
+                        comp.out.push(nextNewId++) // add a new oVerflow output
+                        // replace carry output with overflow output as it was wrongly used before
+                        const t = comp.out[4]
+                        comp.out[4] = comp.out[6]
+                        comp.out[6] = t
+                    }
+                }
+            }
+        }
     },
 
 
@@ -321,6 +337,17 @@ const migrateTo: Record<number, (container: Record<string, unknown>) => void> = 
         if (isArray(components)) {
             for (const comp of components) {
                 if (comp.type === "alu") {
+                    if (isArray(comp.in)) {
+                        comp.in.push(nextNewId++)
+                    }
+                }
+            }
+        }
+
+        // cpu has one more input
+        if (isArray(components)) {
+            for (const comp of components) {
+                if (comp.type === "cpu") {
                     if (isArray(comp.in)) {
                         comp.in.push(nextNewId++)
                     }

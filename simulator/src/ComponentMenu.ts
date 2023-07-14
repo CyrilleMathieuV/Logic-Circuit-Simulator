@@ -9,6 +9,7 @@ import { ComparatorDef } from "./components/Comparator"
 import { ParamDef, ParametrizedComponentDef, ParamsFromDefs } from "./components/Component"
 import { ControlledInverterDef } from "./components/ControlledInverter"
 import { CounterDef } from "./components/Counter"
+import { CPUDef } from "./components/CPU"
 import { CustomComponentDef, CustomComponentImageHeight, CustomComponentImageWidth } from "./components/CustomComponent"
 import { DecoderDef } from "./components/Decoder"
 import { Decoder16SegDef } from "./components/Decoder16Seg"
@@ -157,6 +158,7 @@ const componentsMenu: Array<Section> = [{
 
         AdderArrayDef.button({ bits: 4 }, "AdderArray"),
         ALUDef.button({ bits: 4, ext: false }, "ALU"),
+        CPUDef.button({ bits: 4, ext: false }, "CPU"),
 
         MuxDef.button({ from: 4, to: 2 }, "Mux"),
         DemuxDef.button({ from: 2, to: 4 }, "Demux"),
