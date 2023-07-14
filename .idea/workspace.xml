@@ -4,33 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="JFP major updates on components">
-      <change afterPath="$PROJECT_DIR$/simulator/img/ALU.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/img/AdderArray.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/img/PassthroughN.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/img/RAM.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/img/Register.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/img/ShiftRegister.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/img/icons/inputs.icon.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/img/icons/memlines.icon.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/img/icons/outputs.icon.svg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/ALU4.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/ALU8.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/AdderArray4.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/Passthrough4.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/Passthrough8.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/RAM16x4.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/RAM16x8.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/RAM32x12.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/RAM64x8.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/Register4.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/Register8.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/ShiftRegister4.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/ShiftRegister8.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-    </list>
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="JFP major updates on components" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -78,7 +52,7 @@
     <option name="stateVersion" value="1" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="ProjectErrors" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectId" id="2LgFAO0j8ridokprwZ8bWJYYyFi" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
@@ -100,6 +74,7 @@
     "node.js.selected.package.standard": "",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "run.code.analysis.last.selected.profile": "pProject Default",
     "ts.external.directory.path": "/Users/cyrille/WebstormProjects/Logic-Circuit-Simulator/node_modules/typescript/lib",
     "vue.rearranger.settings.migration": "true"
   }
@@ -270,7 +245,15 @@
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="JFP major updates on components">
+      <option name="closed" value="true" />
+      <created>1689317012826</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1689317012826</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
