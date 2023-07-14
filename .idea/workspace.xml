@@ -75,6 +75,7 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "run.code.analysis.last.selected.profile": "pProject Default",
+    "settings.editor.selected.configurable": "preferences.externalDependencies",
     "ts.external.directory.path": "/Users/cyrille/WebstormProjects/Logic-Circuit-Simulator/node_modules/typescript/lib",
     "vue.rearranger.settings.migration": "true"
   }
