@@ -45,13 +45,13 @@ export const CPUDef =
         size: ({ numDataBits }) => ({
             //gridWidth: 7,
             //gridHeight: 19 + Math.max(0, numDataBits - 8) * 2,
-            gridWidth: 15,
-            gridHeight: 15,
+            gridWidth: 18,
+            gridHeight: 18,
         }),
         makeNodes: ({ numInstructionBits, numAddressInstructionBits, numDataBits, numAddressDataBits, usesExtendedOpcode, gridWidth, gridHeight }) => {
-            const bottom = (gridHeight + 1) / 2
+            const bottom = gridHeight / 2
             const top = -bottom
-            const right = (gridWidth + 1) / 2
+            const right = gridWidth / 2
             const left = -right
             const midY = bottom / 2
             const midX = right / 2
@@ -63,8 +63,8 @@ export const CPUDef =
             // const opMode = topGroup.pop()!
             return {
                 ins: {
+                    Isa: groupVertical("w", left, 0, numInstructionBits),
                     Din: groupHorizontal("s", midX, bottom, numDataBits),
-                    Isa: groupVertical("w", left, -midY, numInstructionBits),
                     Reset: [bottom, 0, "s", "Reset CPU", { prefersSpike: true }],
                     ManStep: [bottom, 1, "s","Man STEP", { prefersSpike: true }],
                     Speed: [bottom, 2, "s", "Select Clock"],
@@ -239,14 +239,17 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
     protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         const bounds = this.bounds()
         const { left, top, right, bottom } = bounds
-        const lowerTop = top + 2 * GRID_STEP
+        const lowerTop = top - 2 * GRID_STEP
+        const lowerBottom = top - 2 * GRID_STEP
+        const lowerLeft = left - 2 * GRID_STEP
+        const lowerRight = right - 2 * GRID_STEP
 
         // inputs
         for (const input of this.inputs.Isa) {
-            drawWireLineToComponent(g, input, left, input.posYInParentTransform)
+            drawWireLineToComponent(g, input, lowerLeft, input.posYInParentTransform)
         }
         for (const input of this.inputs.Din) {
-            drawWireLineToComponent(g, input, left, input.posYInParentTransform)
+            drawWireLineToComponent(g, input, bottom, input.posYInParentTransform)
         }
         drawWireLineToComponent(g, this.inputs.Reset, this.inputs.Reset.posXInParentTransform, lowerTop)
         drawWireLineToComponent(g, this.inputs.ManStep, this.inputs.ManStep.posXInParentTransform, lowerTop)
@@ -280,11 +283,11 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         g.strokeStyle = ctx.borderColor
 
         g.beginPath()
-        g.moveTo(left, top)
-        g.lineTo(right, top)
-        g.lineTo(right, bottom)
-        g.lineTo(left, bottom)
-        g.lineTo(left, top)
+        g.moveTo(lowerLeft, lowerTop)
+        g.lineTo(lowerRight, lowerTop)
+        g.lineTo(lowerRight, lowerBottom)
+        g.lineTo(lowerLeft, lowerBottom)
+        g.lineTo(lowerLeft, lowerTop)
         g.closePath()
         g.fill()
         g.stroke()
