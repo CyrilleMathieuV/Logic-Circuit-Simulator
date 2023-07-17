@@ -4,19 +4,24 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import { ArrayFillUsing, ArrayFillWith, isBoolean, isHighImpedance, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
 import { defineParametrizedComponent, groupHorizontal, groupVertical, param, paramBool, ParametrizedComponentBase, Repr, ResolvedParams, Value } from "./Component"
-import { DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
+import { Drawable, DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
-//import { Mux } from "./Mux"
-//import { Demux } from "./Demux"
-//import { ALUTypes } from "./ALU"
+import { MuxTypes } from "./Mux"
+import { DemuxTypes } from "./Demux"
+import { ALU, ALUDef, ALUTypes, doALUAdd} from "./ALU"
+import { FlipflopDTypes, FlipflopD, FlipflopDDef } from "./FlipflopD"
+import { Register } from "./Register";
 
 export const CPUDef =
     defineParametrizedComponent("CPU", true, true, {
-        variantName: ({ bits }) => `CPU-${bits}`,
+        variantName: ({ dataBits }) => `CPU-${dataBits}`,
         idPrefix: "CPU",
         button: { imgWidth: 50 },
         repr: {
-            bits: typeOrUndefined(t.number),
+            instructionBits: typeOrUndefined(t.number),
+            addressInstructionBits: typeOrUndefined(t.number),
+            dataBits: typeOrUndefined(t.number),
+            addressDataBits: typeOrUndefined(t.number),
             ext: typeOrUndefined(t.boolean),
             showOp: typeOrUndefined(t.boolean),
         },
@@ -24,47 +29,68 @@ export const CPUDef =
             showOp: true,
         },
         params: {
-            bits: param(4, [2, 4, 8, 16]),
+            instructionBits: param(8, [8]),
+            addressInstructionBits: param(4, [2, 4, 6, 8]),
+            dataBits: param(4, [4]),
+            addressDataBits: param(4, [4]),
             ext: paramBool(), // has the extended opcode
         },
-        validateParams: ({ bits, ext }) => ({
-            numBits: bits,
+        validateParams: ({ instructionBits, addressInstructionBits, dataBits, addressDataBits,  ext }) => ({
+            numInstructionBits: instructionBits,
+            numAddressInstructionBits: addressInstructionBits,
+            numDataBits: dataBits,
+            numAddressDataBits: addressDataBits,
             usesExtendedOpcode: ext,
         }),
-        size: ({ numBits }) => ({
-            gridWidth: 7,
-            gridHeight: 19 + Math.max(0, numBits - 8) * 2,
+        size: ({ numDataBits }) => ({
+            //gridWidth: 7,
+            //gridHeight: 19 + Math.max(0, numDataBits - 8) * 2,
+            gridWidth: 15,
+            gridHeight: 15,
         }),
-        makeNodes: ({ numBits, usesExtendedOpcode, gridWidth, gridHeight }) => {
-            const inputCenterY = 5 + Math.max(0, (numBits - 8) / 2)
-            const outputX = gridWidth / 2 + 1
+        makeNodes: ({ numInstructionBits, numAddressInstructionBits, numDataBits, numAddressDataBits, usesExtendedOpcode, gridWidth, gridHeight }) => {
             const bottom = (gridHeight + 1) / 2
             const top = -bottom
-            const topGroupBits = usesExtendedOpcode ? 5 : 3
+            const right = (gridWidth + 1) / 2
+            const left = -right
+            const midY = bottom / 2
+            const midX = right / 2
+            // const topGroupDataBits = usesExtendedOpcode ? 5 : 3
             // top group is built together
-            const topGroup = groupHorizontal("n", 0, top, topGroupBits)
-            const cin = topGroup.pop()!
+            // const topGroup = groupHorizontal("n", 0, top, topGroupDataBits)
+            // const cin = topGroup.pop()!
             // extracted to be mapped correctly when switching between reduced/extended opcodes
-            const opMode = topGroup.pop()!
+            // const opMode = topGroup.pop()!
             return {
                 ins: {
-                    A: groupVertical("w", -outputX, -inputCenterY, numBits),
-                    B: groupVertical("w", -outputX, inputCenterY, numBits),
-                    Op: topGroup,
-                    Mode: opMode,
-                    Cin: [cin[0], cin[1], "n", `Cin (${S.Components.CPU.InputCinDesc})`],
+                    Din: groupHorizontal("s", midX, bottom, numDataBits),
+                    Isa: groupVertical("w", left, -midY, numInstructionBits),
+                    Reset: [bottom, 0, "s", "Reset CPU", { prefersSpike: true }],
+                    ManStep: [bottom, 1, "s","Man STEP", { prefersSpike: true }],
+                    Speed: [bottom, 2, "s", "Select Clock"],
+                    ClockS: [bottom, 3, "s", "Slow Clock", { isClock: true }],
+                    ClockF: [bottom, 4, "s", "Fast Clock", { isClock: true }],
+                    RunStop: [bottom, 5, "s", "Run/Stop", { prefersSpike: true }],
+                    //Mode: opMode,
                 },
                 outs: {
-                    S: groupVertical("e", outputX, 0, numBits),
-                    V: [0, bottom, "s", "V (oVerflow)"],
-                    Z: [2, bottom, "s", "Z (Zero)"],
-                    Cout: [-2, bottom, "s", `Cout (${S.Components.CPU.OutputCoutDesc})`],
+                    Isaadr: groupHorizontal("n", -midX, top, numDataBits),
+                    Dadr: groupHorizontal("n", midX, top, numDataBits),
+                    Dout: groupVertical("e", right, -midY, numDataBits),
+                    ResetSync: [bottom, 0, "e", "Reset sync"],
+                    Sync: [bottom, 1, "e", "Sync"],
+                    RAMsync: [bottom, 2, "e", "RAM sync"],
+                    RAMwe: [bottom, 3, "e", "RAM WE"],
+                    Z: [right, 4, "e", "Z (Zero)"],
+                    V: [right, 5, "e", "V (oVerflow)"],
+                    Cout: [right, 6, "e", `Cout (${S.Components.CPU.OutputCoutDesc})`],
+                    RunningState: [right, 7, "e", "Run state"],
                 },
             }
         },
-        initialValue: (saved, { numBits }) => {
+        initialValue: (saved, { numDataBits }) => {
             const false_ = false as LogicValue
-            return { s: ArrayFillWith(false_, numBits), v: false_, cout: false_ }
+            return { isaadr: ArrayFillWith(false_, numDataBits), dout: ArrayFillWith(false_, numDataBits), dadr: ArrayFillWith(false_, numDataBits), z: false_, v: false_, cout: false_, resetsync: false_, sync: false_, runningstate: false_, ramsync: false_, ramwe: false_ }
         },
     })
 
@@ -73,7 +99,7 @@ export type CPUParams = ResolvedParams<typeof CPUDef>
 
 type CPUValue = Value<typeof CPUDef>
 
-export type CPUOp = typeof CPUOps[number]
+export type CPUOp = typeof CPUOpCodes[number]
 export const CPUOp = {
     shortName(op: CPUOp): string {
         return S.Components.CPU[op][0]
@@ -83,44 +109,66 @@ export const CPUOp = {
     },
 }
 
-
-
-export const CPUOps = [
-    "A+B", "A-B", "A+1", "A-1",
+export const CPUOpCodes = [
+    "NOP", "DEC", "LDM", "LDK",
     //0000  0001   0010   0011
-    "-A", "B-A", "A*2", "A/2",
+    "GDW", "GUP", "JIZ", "JIC",
     //0100 0101   0110   0111
-    "A|B", "A&B", "A|~B", "A&~B",
+    "ADM", "SBM", "HLT", "STM",
     //1000  1001   1010    1011
-    "~A", "A^B", "A<<", "A>>",
+    "ORM", "ANM", "NOT", "XRM",
     //1100 1101   1110   1111
 ] as const
 
-const CPUOpsReduced: readonly CPUOp[] = ["A+B", "A-B", "A|B", "A&B"]
-//                                         00     01    10     11
-// Used to lookup the CPUOp from the reduced opcode, which is compatible with the extended
-// opcode, provided the extra control bits are inserted between the leftmost and the
-// rightmost bits of the reduced opcode. Reason for this is to keep the leftmost bit
-// acting as a "mode" bit switching between arithmetic (0) and logic (1) operations.
+// TO DO
+// Used to future CISC CPUOpCodes.
+// export const CPUOpCodesExtended:
+//  "NOP", "EX0", "LDM", "LDK",
+    //0000  0001   0010   0011
+//    "GDW", "GUP", "JIZ", "JIC",
+    //0100 0101   0110   0111
+//    "ADM", "SBM", "HLT", "STM",
+    //1000  1001   1010    1011
+//    "ORM", "ANM", "EX1", "XRM",
+//1100 1101   1110   1111
 
 export class CPU extends ParametrizedComponentBase<CPURepr> {
 
-    public readonly numBits: number
+    public readonly numInstructionBits: number
+    public readonly numAddressInstructionBits: number
+    
+    public readonly numDataBits: number
+    public readonly numAddressDataBits: number
+
     public readonly usesExtendedOpcode: boolean
+
     private _showOp: boolean
+    private _instructionRegister : Register
+    private _ALU : ALU
+
 
     public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
         super(parent, CPUDef.with(params), saved)
 
-        this.numBits = params.numBits
+        this.numInstructionBits = params.numInstructionBits
+        this.numAddressInstructionBits = params.numAddressInstructionBits
+        
+        this.numDataBits = params.numDataBits
+        this.numAddressDataBits = params.numAddressDataBits
+
         this.usesExtendedOpcode = params.usesExtendedOpcode
 
         this._showOp = saved?.showOp ?? CPUDef.aults.showOp
+        this._instructionRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+        this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
     }
 
     public toJSON() {
         return {
-            bits: this.numBits === CPUDef.aults.bits ? undefined : this.numBits,
+            instructionBits: this.numInstructionBits === CPUDef.aults.instructionBits ? undefined : this.numInstructionBits,
+            addressInstructionBits: this.numAddressInstructionBits === CPUDef.aults.addressInstructionBits ? undefined : this.numAddressInstructionBits,
+            dataBits: this.numDataBits === CPUDef.aults.dataBits ? undefined : this.numDataBits,
+            addressDataBits: this.numAddressDataBits === CPUDef.aults.addressDataBits ? undefined : this.numAddressDataBits,
             ext: this.usesExtendedOpcode === CPUDef.aults.ext ? undefined : this.usesExtendedOpcode,
             ...this.toJSONBase(),
             showOp: (this._showOp !== CPUDef.aults.showOp) ? this._showOp : undefined,
@@ -130,38 +178,62 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
     public override makeTooltip() {
         const op = this.op
         const s = S.Components.CPU.tooltip
-        const opDesc = isUnknown(op) ? s.SomeUnknownOperation : s.ThisOperation + " " + CPUOp.fullName(op)
+        const opDesc = isUnknown(op) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOp.fullName(op)
         return tooltipContent(s.title, mods(
             div(`${s.CurrentlyCarriesOut} ${opDesc}.`)
         ))
     }
 
     public get op(): CPUOp | Unknown {
-        const opValues = this.inputValues(this.inputs.Op)
-        opValues.push(this.inputs.Mode.value)
+        const opValues = this.inputValues(this.inputs.Isa.slice(0, 3))
+        //opValues.push(this.inputs.Mode.value)
         const opIndex = displayValuesFromArray(opValues, false)[1]
-        return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOps : CPUOpsReduced)[opIndex]
+        // TO DO
+        //return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodesExtended)[opIndex]
+        return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodes)[opIndex]
     }
 
     protected doRecalcValue(): CPUValue {
         const op = this.op
 
         if (isUnknown(op)) {
-            return { s: ArrayFillWith(Unknown, this.numBits), v: Unknown, cout: Unknown }
+            return {
+                    dadr: ArrayFillWith(Unknown, this.numDataBits),
+                    dout: ArrayFillWith(Unknown, this.numDataBits),
+                    isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
+                    ramsync: false,
+                    ramwe: false,
+                    resetsync: false,
+                    runningstate: false,
+                    sync: false,
+                    z: false,
+                    v: false,
+                    cout: false
+                }
         }
 
-        const a = this.inputValues(this.inputs.A)
-        const b = this.inputValues(this.inputs.B)
-        const cin = this.inputs.Cin.value
+        const isa = this.inputValues(this.inputs.Isa)
+        //const din = this.inputValues(this.inputs.Din)
+        //const dadr = this.inputValues(this.inputs.Dadr)
+        //const cin = this.inputs.Cin.value
 
-        return doCPUOp(op, a, b, cin)
+        //return doCPUOp(op, din, isa)
+        return doCPUOp(op, isa)
     }
 
     protected override propagateValue(newValue: CPUValue) {
-        this.outputValues(this.outputs.S, newValue.s)
+        //this.outputValues(this.outputs.S, newValue.s)
+        this.outputValues(this.outputs.Isaadr , newValue.isaadr)
+        this.outputValues(this.outputs.Dadr , newValue.dadr)
+        this.outputValues(this.outputs.Dout , newValue.dout)
+        this.outputs.ResetSync.value = newValue.resetsync
+        this.outputs.Sync.value = newValue.sync
+        this.outputs.Z.value = newValue.z
         this.outputs.V.value = newValue.v
-        this.outputs.Z.value = allZeros(newValue.s)
         this.outputs.Cout.value = newValue.cout
+        this.outputs.RAMsync.value = newValue.ramsync
+        this.outputs.RAMwe.value = newValue.ramwe
+        this.outputs.RunningState.value = newValue.runningstate
     }
 
     protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
@@ -170,25 +242,37 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         const lowerTop = top + 2 * GRID_STEP
 
         // inputs
-        for (const input of this.inputs.A) {
+        for (const input of this.inputs.Isa) {
             drawWireLineToComponent(g, input, left, input.posYInParentTransform)
         }
-        for (const input of this.inputs.B) {
+        for (const input of this.inputs.Din) {
             drawWireLineToComponent(g, input, left, input.posYInParentTransform)
         }
-        for (const input of this.inputs.Op) {
-            drawWireLineToComponent(g, input, input.posXInParentTransform, lowerTop)
-        }
-        drawWireLineToComponent(g, this.inputs.Mode, this.inputs.Mode.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.inputs.Cin, this.inputs.Cin.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.inputs.Reset, this.inputs.Reset.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.inputs.ManStep, this.inputs.ManStep.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.inputs.Speed, this.inputs.Speed.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.inputs.ClockS, this.inputs.ClockS.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.inputs.ClockF, this.inputs.ClockF.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.inputs.RunStop, this.inputs.RunStop.posXInParentTransform, lowerTop)
 
         // outputs
-        for (const output of this.outputs.S) {
+        for (const output of this.outputs.Isaadr) {
             drawWireLineToComponent(g, output, right, output.posYInParentTransform)
         }
-        drawWireLineToComponent(g, this.outputs.Z, this.outputs.Z.posXInParentTransform, bottom - 17)
-        drawWireLineToComponent(g, this.outputs.V, this.outputs.V.posXInParentTransform, bottom - 9)
-        drawWireLineToComponent(g, this.outputs.Cout, this.outputs.Cout.posXInParentTransform, bottom - 3)
+        for (const output of this.outputs.Dout) {
+            drawWireLineToComponent(g, output, right, output.posYInParentTransform)
+        }
+        for (const output of this.outputs.Dadr) {
+            drawWireLineToComponent(g, output, right, output.posYInParentTransform)
+        }
+        drawWireLineToComponent(g, this.outputs.ResetSync, this.outputs.ResetSync.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.outputs.Sync, this.outputs.Sync.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.outputs.RAMsync, this.outputs.RAMsync.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.outputs.RAMwe, this.outputs.RAMwe.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.outputs.Z, this.outputs.Z.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.outputs.V, this.outputs.V.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.outputs.Cout, this.outputs.Cout.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.outputs.RunningState, this.outputs.RunningState.posXInParentTransform, lowerTop)
 
         // outline
         g.fillStyle = COLOR_BACKGROUND
@@ -197,61 +281,53 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
         g.beginPath()
         g.moveTo(left, top)
-        g.lineTo(right, lowerTop)
-        g.lineTo(right, bottom - 2 * GRID_STEP)
+        g.lineTo(right, top)
+        g.lineTo(right, bottom)
         g.lineTo(left, bottom)
-        g.lineTo(left, this.posY + 1 * GRID_STEP)
-        g.lineTo(left + 2 * GRID_STEP, this.posY)
-        g.lineTo(left, this.posY - 1 * GRID_STEP)
+        g.lineTo(left, top)
         g.closePath()
         g.fill()
         g.stroke()
 
         // groups
-        this.drawGroupBox(g, this.inputs.A.group, bounds)
-        this.drawGroupBox(g, this.inputs.B.group, bounds)
-        this.drawGroupBox(g, this.outputs.S.group, bounds)
-        // special Op group
-        g.beginPath()
-        const opGroupHeight = 8
-        const opGroupLeft = this.inputs.Mode.posXInParentTransform - 2
-        const opGroupRight = this.inputs.Op[0].posXInParentTransform + 2
-        const opGroupLeftTop = top + (this.usesExtendedOpcode ? 8 : 11)
-        const opGroupRightTop = top + 18
-
-        g.moveTo(opGroupLeft, opGroupLeftTop)
-        g.lineTo(opGroupRight, opGroupRightTop)
-        g.lineTo(opGroupRight, opGroupRightTop + opGroupHeight)
-        g.lineTo(opGroupLeft, opGroupLeftTop + opGroupHeight)
-        g.closePath()
-        g.fillStyle = COLOR_GROUP_SPAN
-        g.fill()
+        this.drawGroupBox(g, this.inputs.Isa.group, bounds)
+        this.drawGroupBox(g, this.inputs.Din.group, bounds)
+        this.drawGroupBox(g, this.outputs.Isaadr.group, bounds)
+        this.drawGroupBox(g, this.outputs.Dout.group, bounds)
+        this.drawGroupBox(g, this.outputs.Dadr.group, bounds)
 
         // labels
         ctx.inNonTransformedFrame(ctx => {
             g.fillStyle = COLOR_COMPONENT_INNER_LABELS
             g.font = "11px sans-serif"
 
-            // bottom outputs
+            // bottom inputs
             const isVertical = Orientation.isVertical(this.orient)
             const carryHOffsetF = isVertical ? 0 : 1
-            drawLabel(ctx, this.orient, "Z", "s", this.outputs.Z, bottom - 16)
-            drawLabel(ctx, this.orient, "V", "s", this.outputs.V.posXInParentTransform + carryHOffsetF * 2, bottom - 10, this.outputs.V)
-            drawLabel(ctx, this.orient, "Cout", "s", this.outputs.Cout.posXInParentTransform + carryHOffsetF * 4, bottom - 7, this.outputs.Cout)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom - 16)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.ManStep, bottom - 16)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Speed, bottom - 16)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.ClockS, bottom - 16)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.ClockF, bottom - 16)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.RunStop, bottom - 16)
 
-            // top inputs
-            drawLabel(ctx, this.orient, "Cin", "n", this.inputs.Cin.posXInParentTransform, top + 4, this.inputs.Cin)
-
-            g.font = "bold 11px sans-serif"
-            drawLabel(ctx, this.orient, "Op", "n", (opGroupLeft + opGroupRight) / 2, top + 12, this.inputs.Op)
+            // top outputs
+            drawLabel(ctx, this.orient, "IsaAdr", "n", top, this.outputs.Isaadr)
+            drawLabel(ctx, this.orient, "DAdr", "n", top, this.outputs.Dadr)
 
             // left inputs
-            g.font = "bold 12px sans-serif"
-            drawLabel(ctx, this.orient, "A", "w", left, this.inputs.A)
-            drawLabel(ctx, this.orient, "B", "w", left, this.inputs.B)
+            drawLabel(ctx, this.orient, "Isa", "w", left, this.inputs.Isa)
 
             // right outputs
-            drawLabel(ctx, this.orient, "S", "e", right, this.outputs.S)
+            drawLabel(ctx, this.orient, "Dout", "e", right, this.outputs.Dout)
+            drawLabel(ctx, this.orient, "Reset", "e", this.outputs.ResetSync, bottom - 16)
+            drawLabel(ctx, this.orient, "RAM Sync", "e", this.outputs.RAMsync, bottom - 16)
+            drawLabel(ctx, this.orient, "RAM WE", "e", this.outputs.RAMwe, bottom - 16)
+            drawLabel(ctx, this.orient, "Sync", "e", this.outputs.Sync, bottom - 16)
+            drawLabel(ctx, this.orient, "Z", "e", this.outputs.Z, bottom - 16)
+            drawLabel(ctx, this.orient, "V", "e", this.outputs.V, bottom - 10)
+            drawLabel(ctx, this.orient, "Cout", "e", this.outputs.Cout, bottom - 7)
+            drawLabel(ctx, this.orient, "Run state", "e", this.outputs.RunningState, bottom - 7)
 
             if (this._showOp) {
                 const opName = isUnknown(this.op) ? "??" : CPUOp.shortName(this.op)
@@ -280,7 +356,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         return [
             ["mid", toggleShowOpItem],
             ["mid", MenuData.sep()],
-            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numBits, "bits"),
+            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numInstructionBits, "instructionBits"),
             this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpcode, this.usesExtendedOpcode, "ext"),
             ["mid", MenuData.sep()],
             ...this.makeForceOutputsContextMenuItem(),
@@ -288,6 +364,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
     }
 
 }
+
 CPUDef.impl = CPU
 
 function allZeros(vals: LogicValue[]): LogicValue {
@@ -302,22 +379,91 @@ function allZeros(vals: LogicValue[]): LogicValue {
     return true
 }
 
-
-export function doCPUOp(op: CPUOp, a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue):
+export function doCPUOp(op: CPUOp, isa: readonly LogicValue[]):
     CPUValue {
-    const numBits = a.length
+    const numDataBits = 4
+    const numAddressInstructionBits = 8
+    const numOpBits = 4
+    //const numDataBits = din.length
     switch (op) {
-        // arithmetic
+        case "NOP":
+            break;
+        case "DEC":
+            break;
+        case "LDM":
+            break;
+        case "LDK":
+            break;
+        case "GDW":
+            break;
+        case "GUP":
+            break;
+        case "JIZ":
+            break;
+        case "JIC":
+            break;
+        case "ADM":
+            break;
+        case "SBM":
+            break;
+        case "HLT":
+            break;
+        case "STM":
+            break;
+        case "ORM":
+            break;
+        case "ANM":
+            break;
+        case "NOT":
+            break;
+        case "XRM":
+            break;
+        default:
+            return {
+                dadr: ArrayFillWith(false, numDataBits),
+                dout: ArrayFillWith(false, numDataBits),
+                isaadr: ArrayFillWith(false, numAddressInstructionBits),
+                ramsync: false,
+                ramwe: false,
+                resetsync: false,
+                runningstate: false,
+                sync: false,
+                z: false,
+                v: false,
+                cout: false
+            }
+    }
+    return {
+        dadr: ArrayFillWith(false, numDataBits),
+        dout: ArrayFillWith(false, numDataBits),
+        isaadr: ArrayFillWith(false, numAddressInstructionBits),
+        ramsync: false,
+        ramwe: false,
+        resetsync: false,
+        runningstate: false,
+        sync: false,
+        z: false,
+        v: false,
+        cout: false}
+}
+        /**
+        // J type instructions
+        case "GDW": return void
+        case "GUP": return void
+        case "JIZ": return void
+        case "JIC": return void
         case "A+B": return doCPUAdd(a, b, cin)
         case "A*2": return doCPUAdd(a, a, cin)
-        case "A+1": return doCPUAdd(a, [true, ...ArrayFillWith(false, numBits - 1)], cin)
-        case "A/2": return doCPUSub([...a.slice(1), a[numBits - 1]], ArrayFillWith(false, numBits), cin)
-        case "A-1": return doCPUSub(a, [true, ...ArrayFillWith(false, numBits - 1)], cin)
+        case "A+1": return doCPUAdd(a, [true, ...ArrayFillWith(false, numDataBits - 1)], cin)
+        case "A/2": return doCPUSub([...a.slice(1), a[numDataBits - 1]], ArrayFillWith(false, numDataBits), cin)
+        case "A-1": return doCPUSub(a, [true, ...ArrayFillWith(false, numDataBits - 1)], cin)
         case "A-B": return doCPUSub(a, b, cin)
         case "B-A": return doCPUSub(b, a, cin)
-        case "-A": return doCPUSub(ArrayFillWith(false, numBits), a, cin)
+        case "-A": return doCPUSub(ArrayFillWith(false, numDataBits), a, cin)
 
-        // logic
+        // D type instructions
+        case "NOP": return void
+        case "HLT": return void
         default: {
             let cout: LogicValue = false
             const s: LogicValue[] = (() => {
@@ -336,13 +482,26 @@ export function doCPUOp(op: CPUOp, a: readonly LogicValue[], b: readonly LogicVa
             })()
             return { s, v: false, cout }
         }
+        // I type instructions
+        case "LDK": return void
+        case "DEC": return void
+        case "NOT": return void
 
-    }
-}
+        // R type instructions
+        case "LDM": return void
+        case "ADM": return doALUAdd(a, b, cin)
+        case "SBM": return void
+        case "ORM": return void
+        case "ANM": return void
+        case "XRM": return void
+        case "STM": return void
+         **/
 
+/**
+ *
 export function doCPUAdd(a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue): CPUValue {
-    const numBits = a.length
-    const sum3bits = (a: LogicValue, b: LogicValue, c: LogicValue): [LogicValue, LogicValue] => {
+    const numDataBits = a.length
+    const sum3dataBits = (a: LogicValue, b: LogicValue, c: LogicValue): [LogicValue, LogicValue] => {
         const asNumber = (v: LogicValue) => v === true ? 1 : 0
         const numUnset = (isUnknown(a) || isHighImpedance(a) ? 1 : 0) + (isUnknown(b) || isHighImpedance(a) ? 1 : 0) + (isUnknown(c) || isHighImpedance(a) ? 1 : 0)
         const sum = asNumber(a) + asNumber(b) + asNumber(c)
@@ -359,22 +518,22 @@ export function doCPUAdd(a: readonly LogicValue[], b: readonly LogicValue[], cin
         return [Unknown, Unknown]
     }
 
-    const s: LogicValue[] = ArrayFillWith(Unknown, numBits)
-    const cins: LogicValue[] = ArrayFillWith(Unknown, numBits + 1)
+    const s: LogicValue[] = ArrayFillWith(Unknown, numDataBits)
+    const cins: LogicValue[] = ArrayFillWith(Unknown, numDataBits + 1)
     cins[0] = cin
-    for (let i = 0; i < numBits; i++) {
-        const [ss, cout] = sum3bits(cins[i], a[i], b[i])
+    for (let i = 0; i < numDataBits; i++) {
+        const [ss, cout] = sum3dataBits(cins[i], a[i], b[i])
         s[i] = ss
         cins[i + 1] = cout
     }
-    const cout = cins[numBits]
-    const v = !isBoolean(cout) || !isBoolean(cins[numBits - 2]) ? Unknown : cout !== cins[numBits - 1]
+    const cout = cins[numDataBits]
+    const v = !isBoolean(cout) || !isBoolean(cins[numDataBits - 2]) ? Unknown : cout !== cins[numDataBits - 1]
     return { s, cout, v }
 }
 
 export function doCPUSub(a: readonly LogicValue[], b: readonly LogicValue[], cin: LogicValue): CPUValue {
-    const numBits = a.length
-    const s: LogicValue[] = ArrayFillWith(Unknown, numBits)
+    const numDataBits = a.length
+    const s: LogicValue[] = ArrayFillWith(Unknown, numDataBits)
     const toInt = (vs: readonly LogicValue[]): number | undefined => {
         let s = 0
         let col = 1
@@ -399,12 +558,12 @@ export function doCPUSub(a: readonly LogicValue[], b: readonly LogicValue[], cin
         // we can get anything from (max - (-min)) = 7 - (-8) = 15
         // to (min - max) = -8 - 7 = -15
         if (yInt < 0) {
-            yInt += Math.pow(2, numBits)
+            yInt += Math.pow(2, numDataBits)
         }
         // now we have everything between 0 and 15
-        const yBinStr = (yInt >>> 0).toString(2).padStart(numBits, '0')
-        const lastIdx = numBits - 1
-        for (let i = 0; i < numBits; i++) {
+        const yBinStr = (yInt >>> 0).toString(2).padStart(numDataBits, '0')
+        const lastIdx = numDataBits - 1
+        for (let i = 0; i < numDataBits; i++) {
             s[i] = yBinStr[lastIdx - i] === '1'
         }
 
@@ -433,3 +592,5 @@ function doCPUBinOp(op: Gate2toNType, a: readonly LogicValue[], b: readonly Logi
     const func = Gate2toNTypes.props[op].out
     return ArrayFillUsing(i => func([a[i], b[i]]), a.length)
 }
+
+ **/

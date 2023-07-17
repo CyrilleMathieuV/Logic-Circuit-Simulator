@@ -1,10 +1,18 @@
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { LogicValue } from "../utils"
+import {LogicValue, RichStringEnum} from "../utils"
 import { Repr, defineComponent } from "./Component"
 import { DrawableParent } from "./Drawable"
 import { Flipflop, FlipflopBaseDef } from "./FlipflopOrLatch"
 
+export type FlipflopDTypeProps = {
+    includeInContextMenu: boolean
+    includeInPoseAs: boolean
+    fullShortDesc: () => [string, string | undefined, string]
+    out: (ins: LogicValue[]) => LogicValue
+}
+
+export type FlipflopDTypes<TFlipflopDType extends string> = RichStringEnum<TFlipflopDType, FlipflopDTypeProps>
 
 export const FlipflopDDef =
     defineComponent("ff-d", {

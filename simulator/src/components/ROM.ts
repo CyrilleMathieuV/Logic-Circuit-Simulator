@@ -25,7 +25,7 @@ export const ROMRAMDef =
         },
         params: {
             bits: param(4, [4, 8, 12, 16, 32]),
-            lines: param(16, [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]),
+            lines: param(16, [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]),
         },
         validateParams: ({ bits, lines }) => {
             const numAddressBits = Math.ceil(Math.log2(lines))
