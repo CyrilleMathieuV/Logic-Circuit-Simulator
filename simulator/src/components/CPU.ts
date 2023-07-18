@@ -2,7 +2,17 @@ import * as t from "io-ts"
 import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_GROUP_SPAN, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { ArrayFillUsing, ArrayFillWith, isBoolean, isHighImpedance, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
+import {
+    ArrayFillUsing,
+    ArrayFillWith,
+    EdgeTrigger,
+    isBoolean,
+    isHighImpedance,
+    isUnknown,
+    LogicValue,
+    typeOrUndefined,
+    Unknown,
+} from "../utils"
 import { defineParametrizedComponent, groupHorizontal, groupVertical, param, paramBool, ParametrizedComponentBase, Repr, ResolvedParams, Value } from "./Component"
 import { Drawable, DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
@@ -11,6 +21,7 @@ import { DemuxTypes } from "./Demux"
 import { ALU, ALUDef, ALUTypes, doALUAdd} from "./ALU"
 import { FlipflopDTypes, FlipflopD, FlipflopDDef } from "./FlipflopD"
 import { Register } from "./Register";
+import {RAMDef} from "./RAM";
 
 export const CPUDef =
     defineParametrizedComponent("CPU", true, true, {
@@ -24,9 +35,11 @@ export const CPUDef =
             addressDataBits: typeOrUndefined(t.number),
             ext: typeOrUndefined(t.boolean),
             showOp: typeOrUndefined(t.boolean),
+            trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         },
         valueDefaults: {
             showOp: true,
+            trigger: EdgeTrigger.rising,
         },
         params: {
             instructionBits: param(8, [8]),
@@ -45,14 +58,16 @@ export const CPUDef =
         size: ({ numDataBits }) => ({
             //gridWidth: 7,
             //gridHeight: 19 + Math.max(0, numDataBits - 8) * 2,
-            gridWidth: 18,
-            gridHeight: 18,
+            gridWidth: 32,
+            gridHeight: 32,
         }),
         makeNodes: ({ numInstructionBits, numAddressInstructionBits, numDataBits, numAddressDataBits, usesExtendedOpcode, gridWidth, gridHeight }) => {
             const bottom = gridHeight / 2
             const top = -bottom
             const right = gridWidth / 2
             const left = -right
+            const inputX = right + 1.5
+            const inputY = bottom + 1.5
             const midY = bottom / 2
             const midX = right / 2
             // const topGroupDataBits = usesExtendedOpcode ? 5 : 3
@@ -63,34 +78,34 @@ export const CPUDef =
             // const opMode = topGroup.pop()!
             return {
                 ins: {
-                    Isa: groupVertical("w", left, 0, numInstructionBits),
-                    Din: groupHorizontal("s", midX, bottom, numDataBits),
-                    Reset: [bottom, 0, "s", "Reset CPU", { prefersSpike: true }],
-                    ManStep: [bottom, 1, "s","Man STEP", { prefersSpike: true }],
-                    Speed: [bottom, 2, "s", "Select Clock"],
-                    ClockS: [bottom, 3, "s", "Slow Clock", { isClock: true }],
-                    ClockF: [bottom, 4, "s", "Fast Clock", { isClock: true }],
-                    RunStop: [bottom, 5, "s", "Run/Stop", { prefersSpike: true }],
+                    Isa: groupVertical("w", -inputX, 0, numInstructionBits),
+                    Din: groupHorizontal("s", midX, inputY, numDataBits),
+                    Reset: [-15, inputY, "s", "Reset CPU", { prefersSpike: true }],
+                    ManStep: [-13, inputY, "s","Man STEP", { prefersSpike: true }],
+                    Speed: [-11, inputY, "s", "Select Clock"],
+                    ClockS: [-9, inputY, "s", "Slow Clock", { isClock: true }],
+                    ClockF: [-7, inputY, "s", "Fast Clock", { isClock: true }],
+                    RunStop: [-5, inputY, "s", "Run/Stop", { prefersSpike: true }],
                     //Mode: opMode,
                 },
                 outs: {
-                    Isaadr: groupHorizontal("n", -midX, top, numDataBits),
-                    Dadr: groupHorizontal("n", midX, top, numDataBits),
-                    Dout: groupVertical("e", right, -midY, numDataBits),
-                    ResetSync: [bottom, 0, "e", "Reset sync"],
-                    Sync: [bottom, 1, "e", "Sync"],
-                    RAMsync: [bottom, 2, "e", "RAM sync"],
-                    RAMwe: [bottom, 3, "e", "RAM WE"],
-                    Z: [right, 4, "e", "Z (Zero)"],
-                    V: [right, 5, "e", "V (oVerflow)"],
-                    Cout: [right, 6, "e", `Cout (${S.Components.CPU.OutputCoutDesc})`],
-                    RunningState: [right, 7, "e", "Run state"],
+                    Isaadr: groupHorizontal("n", -midX, -inputY, numDataBits),
+                    Dadr: groupHorizontal("n", midX, -inputY, numDataBits),
+                    Dout: groupVertical("e", inputX, -midY, numDataBits),
+                    RAMsync: [inputX, 1, "e", "RAM sync"],
+                    RAMwe: [inputX, 3, "e", "RAM WE"],
+                    ResetSync: [inputX, 5, "e", "Reset sync"],
+                    Sync: [inputX, 7, "e", "Sync"],
+                    Z: [inputX, 9, "e", "Z (Zero)"],
+                    V: [inputX, 11, "e", "V (oVerflow)"],
+                    Cout: [inputX, 13, "e", `Cout (${S.Components.CPU.OutputCoutDesc})`],
+                    RunningState: [inputX, 15, "e", "Run state"],
                 },
             }
         },
-        initialValue: (saved, { numDataBits }) => {
+        initialValue: (saved, { numAddressInstructionBits, numDataBits, numAddressDataBits }) => {
             const false_ = false as LogicValue
-            return { isaadr: ArrayFillWith(false_, numDataBits), dout: ArrayFillWith(false_, numDataBits), dadr: ArrayFillWith(false_, numDataBits), z: false_, v: false_, cout: false_, resetsync: false_, sync: false_, runningstate: false_, ramsync: false_, ramwe: false_ }
+            return { isaadr: ArrayFillWith(false_, numAddressInstructionBits), dout: ArrayFillWith(false_, numDataBits), dadr: ArrayFillWith(false_, numAddressDataBits), z: false_, v: false_, cout: false_, resetsync: false_, sync: false_, runningstate: false_, ramsync: false_, ramwe: false_ }
         },
     })
 
@@ -146,6 +161,8 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
     private _instructionRegister : Register
     private _ALU : ALU
 
+    private _trigger: EdgeTrigger = CPUDef.aults.trigger
+    private _lastClock: LogicValue = Unknown
 
     public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
         super(parent, CPUDef.with(params), saved)
@@ -161,6 +178,8 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this._showOp = saved?.showOp ?? CPUDef.aults.showOp
         this._instructionRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
         this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
+
+        this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
 
     public toJSON() {
@@ -172,6 +191,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             ext: this.usesExtendedOpcode === CPUDef.aults.ext ? undefined : this.usesExtendedOpcode,
             ...this.toJSONBase(),
             showOp: (this._showOp !== CPUDef.aults.showOp) ? this._showOp : undefined,
+            trigger: (this._trigger !== RAMDef.aults.trigger) ? this._trigger : undefined,
         }
     }
 
@@ -193,6 +213,15 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodes)[opIndex]
     }
 
+    public get trigger() {
+        return this._trigger
+    }
+
+    protected doSetTrigger(trigger: EdgeTrigger) {
+        this._trigger = trigger
+        this.setNeedsRedraw("trigger changed")
+    }
+
     protected doRecalcValue(): CPUValue {
         const op = this.op
 
@@ -204,11 +233,11 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
                     ramsync: false,
                     ramwe: false,
                     resetsync: false,
-                    runningstate: false,
                     sync: false,
                     z: false,
                     v: false,
-                    cout: false
+                    cout: false,
+                    runningstate: false,
                 }
         }
 
@@ -226,13 +255,13 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this.outputValues(this.outputs.Isaadr , newValue.isaadr)
         this.outputValues(this.outputs.Dadr , newValue.dadr)
         this.outputValues(this.outputs.Dout , newValue.dout)
+        this.outputs.RAMsync.value = newValue.ramsync
+        this.outputs.RAMwe.value = newValue.ramwe
         this.outputs.ResetSync.value = newValue.resetsync
         this.outputs.Sync.value = newValue.sync
         this.outputs.Z.value = newValue.z
         this.outputs.V.value = newValue.v
         this.outputs.Cout.value = newValue.cout
-        this.outputs.RAMsync.value = newValue.ramsync
-        this.outputs.RAMwe.value = newValue.ramwe
         this.outputs.RunningState.value = newValue.runningstate
     }
 
@@ -246,36 +275,36 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
         // inputs
         for (const input of this.inputs.Isa) {
-            drawWireLineToComponent(g, input, lowerLeft, input.posYInParentTransform)
+            drawWireLineToComponent(g, input, left, input.posYInParentTransform)
         }
         for (const input of this.inputs.Din) {
-            drawWireLineToComponent(g, input, bottom, input.posYInParentTransform)
+            drawWireLineToComponent(g, input, input.posXInParentTransform, bottom)
         }
-        drawWireLineToComponent(g, this.inputs.Reset, this.inputs.Reset.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.inputs.ManStep, this.inputs.ManStep.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.inputs.Speed, this.inputs.Speed.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.inputs.ClockS, this.inputs.ClockS.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.inputs.ClockF, this.inputs.ClockF.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.inputs.RunStop, this.inputs.RunStop.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.inputs.Reset, this.inputs.Reset.posXInParentTransform, bottom)
+        drawWireLineToComponent(g, this.inputs.ManStep, this.inputs.ManStep.posXInParentTransform, bottom)
+        drawWireLineToComponent(g, this.inputs.Speed, this.inputs.Speed.posXInParentTransform, bottom)
+        drawWireLineToComponent(g, this.inputs.ClockS, this.inputs.ClockS.posXInParentTransform, bottom)
+        drawWireLineToComponent(g, this.inputs.ClockF, this.inputs.ClockF.posXInParentTransform, bottom)
+        drawWireLineToComponent(g, this.inputs.RunStop, this.inputs.RunStop.posXInParentTransform, bottom)
 
         // outputs
         for (const output of this.outputs.Isaadr) {
-            drawWireLineToComponent(g, output, right, output.posYInParentTransform)
+            drawWireLineToComponent(g, output, output.posXInParentTransform, top)
         }
         for (const output of this.outputs.Dout) {
             drawWireLineToComponent(g, output, right, output.posYInParentTransform)
         }
         for (const output of this.outputs.Dadr) {
-            drawWireLineToComponent(g, output, right, output.posYInParentTransform)
+            drawWireLineToComponent(g, output, output.posXInParentTransform, top)
         }
-        drawWireLineToComponent(g, this.outputs.ResetSync, this.outputs.ResetSync.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.outputs.Sync, this.outputs.Sync.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.outputs.RAMsync, this.outputs.RAMsync.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.outputs.RAMwe, this.outputs.RAMwe.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.outputs.Z, this.outputs.Z.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.outputs.V, this.outputs.V.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.outputs.Cout, this.outputs.Cout.posXInParentTransform, lowerTop)
-        drawWireLineToComponent(g, this.outputs.RunningState, this.outputs.RunningState.posXInParentTransform, lowerTop)
+        drawWireLineToComponent(g, this.outputs.ResetSync, right, this.outputs.ResetSync.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.Sync, right, this.outputs.Sync.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.RAMsync, right, this.outputs.RAMsync.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.RAMwe, right, this.outputs.RAMwe.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.Z, right, this.outputs.Z.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.V, right, this.outputs.V.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.Cout, right, this.outputs.Cout.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.RunningState, right, this.outputs.RunningState.posYInParentTransform)
 
         // outline
         g.fillStyle = COLOR_BACKGROUND
@@ -283,11 +312,11 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         g.strokeStyle = ctx.borderColor
 
         g.beginPath()
-        g.moveTo(lowerLeft, lowerTop)
-        g.lineTo(lowerRight, lowerTop)
-        g.lineTo(lowerRight, lowerBottom)
-        g.lineTo(lowerLeft, lowerBottom)
-        g.lineTo(lowerLeft, lowerTop)
+        g.moveTo(left, top)
+        g.lineTo(right, top)
+        g.lineTo(right, bottom)
+        g.lineTo(left, bottom)
+        g.lineTo(left, top)
         g.closePath()
         g.fill()
         g.stroke()
@@ -307,30 +336,31 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             // bottom inputs
             const isVertical = Orientation.isVertical(this.orient)
             const carryHOffsetF = isVertical ? 0 : 1
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom - 16)
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.ManStep, bottom - 16)
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Speed, bottom - 16)
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.ClockS, bottom - 16)
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.ClockF, bottom - 16)
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.RunStop, bottom - 16)
+            drawLabel(ctx, this.orient, "Din", "s", this.inputs.Din, bottom)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom)
+            drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Speed, bottom)
+            drawLabel(ctx, this.orient, "Clock S", "s", this.inputs.ClockS, bottom)
+            drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom)
+            drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom)
 
             // top outputs
-            drawLabel(ctx, this.orient, "IsaAdr", "n", top, this.outputs.Isaadr)
-            drawLabel(ctx, this.orient, "DAdr", "n", top, this.outputs.Dadr)
+            drawLabel(ctx, this.orient, "IsaAdr", "n", this.outputs.Isaadr, top)
+            drawLabel(ctx, this.orient, "DAdr", "n", this.outputs.Dadr, top)
 
             // left inputs
             drawLabel(ctx, this.orient, "Isa", "w", left, this.inputs.Isa)
 
             // right outputs
             drawLabel(ctx, this.orient, "Dout", "e", right, this.outputs.Dout)
-            drawLabel(ctx, this.orient, "Reset", "e", this.outputs.ResetSync, bottom - 16)
-            drawLabel(ctx, this.orient, "RAM Sync", "e", this.outputs.RAMsync, bottom - 16)
-            drawLabel(ctx, this.orient, "RAM WE", "e", this.outputs.RAMwe, bottom - 16)
-            drawLabel(ctx, this.orient, "Sync", "e", this.outputs.Sync, bottom - 16)
-            drawLabel(ctx, this.orient, "Z", "e", this.outputs.Z, bottom - 16)
-            drawLabel(ctx, this.orient, "V", "e", this.outputs.V, bottom - 10)
-            drawLabel(ctx, this.orient, "Cout", "e", this.outputs.Cout, bottom - 7)
-            drawLabel(ctx, this.orient, "Run state", "e", this.outputs.RunningState, bottom - 7)
+            drawLabel(ctx, this.orient, "RAM Sync", "e", right, this.outputs.RAMsync)
+            drawLabel(ctx, this.orient, "Reset", "e", right, this.outputs.ResetSync)
+            drawLabel(ctx, this.orient, "RAM WE", "e", right, this.outputs.RAMwe)
+            drawLabel(ctx, this.orient, "Sync", "e", right, this.outputs.Sync)
+            drawLabel(ctx, this.orient, "Z", "e", right, this.outputs.Z)
+            drawLabel(ctx, this.orient, "V", "e", right, this.outputs.V)
+            drawLabel(ctx, this.orient, "Cout", "e", right, this.outputs.Cout)
+            drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState)
 
             if (this._showOp) {
                 const opName = isUnknown(this.op) ? "??" : CPUOp.shortName(this.op)
@@ -429,11 +459,11 @@ export function doCPUOp(op: CPUOp, isa: readonly LogicValue[]):
                 ramsync: false,
                 ramwe: false,
                 resetsync: false,
-                runningstate: false,
                 sync: false,
                 z: false,
                 v: false,
-                cout: false
+                cout: false,
+                runningstate: false,
             }
     }
     return {
@@ -443,11 +473,12 @@ export function doCPUOp(op: CPUOp, isa: readonly LogicValue[]):
         ramsync: false,
         ramwe: false,
         resetsync: false,
-        runningstate: false,
         sync: false,
         z: false,
         v: false,
-        cout: false}
+        cout: false,
+        runningstate: false,
+    }
 }
         /**
         // J type instructions
