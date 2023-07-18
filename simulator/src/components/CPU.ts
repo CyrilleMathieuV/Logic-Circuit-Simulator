@@ -16,7 +16,7 @@ export const CPUDef =
     defineParametrizedComponent("CPU", true, true, {
         variantName: ({ dataBits }) => `CPU-${dataBits}`,
         idPrefix: "CPU",
-        button: { imgWidth: 50 },
+        button: { imgWidth: 40 },
         repr: {
             instructionBits: typeOrUndefined(t.number),
             addressInstructionBits: typeOrUndefined(t.number),
@@ -184,6 +184,19 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         }
     }
 
+    protected get moduleName() {
+        return "CPU"
+    }
+
+    public get trigger() {
+        return this._trigger
+    }
+
+    protected doSetTrigger(trigger: EdgeTrigger) {
+        this._trigger = trigger
+        this.setNeedsRedraw("trigger changed")
+    }
+
     public override makeTooltip() {
         const op = this.op
         const s = S.Components.CPU.tooltip
@@ -202,17 +215,11 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodes)[opIndex]
     }
 
-    public get trigger() {
-        return this._trigger
-    }
-
-    protected doSetTrigger(trigger: EdgeTrigger) {
-        this._trigger = trigger
-        this.setNeedsRedraw("trigger changed")
-    }
-
     protected doRecalcValue(): CPUValue {
         const op = this.op
+
+        const prevClock = this._lastClock
+        const clock = this._lastClock = this.inputs.Speed.value ? this.inputs.ClockS.value : this.inputs.ClockF.value
 
         if (isUnknown(op)) {
             return {

@@ -256,7 +256,7 @@ const Strings_fr = {
                 ParamNumInputs: tuple("Nombre d’entrées", template("${val} entrée$s{val}")),
                 ParamNumBits: tuple("Nombre de bits", template("${val} bit$s{val}")),
                 ParamNumWords: tuple("Nombre de lignes", template("${val} ligne$s{val}")),
-                ParamNumAddressBits: tuple("Largeur d'adresse", template("${val} bit$s{val}")),
+                ParamNumAddressBits: tuple("Largeur d'adresses", template("${val} bit$s{val}")),
             },
 
             InputCarryInDesc: "Cin (retenue précédente)",
@@ -1023,7 +1023,7 @@ const Strings_en: Strings = {
                 ParamNumInputs: tuple("Number of Inputs", template("${val} Input$s{val}")),
                 ParamNumBits: tuple("Number of Bits", template("${val} Bit$s{val}")),
                 ParamNumWords: tuple("Number of Lines", template("${val} Line$s{val}")),
-                ParamNumAddressBits: tuple("Adrress width", template("${val} Bit$s{val}")),
+                ParamNumAddressBits: tuple("Adrresses width", template("${val} Bit$s{val}")),
             },
 
             InputCarryInDesc: "Cin (Previous Carry)",
