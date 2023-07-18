@@ -2,17 +2,7 @@ import * as t from "io-ts"
 import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_GROUP_SPAN, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import {
-    ArrayFillUsing,
-    ArrayFillWith,
-    EdgeTrigger,
-    isBoolean,
-    isHighImpedance,
-    isUnknown,
-    LogicValue,
-    typeOrUndefined,
-    Unknown,
-} from "../utils"
+import { ArrayFillUsing,  ArrayFillWith, EdgeTrigger, isBoolean, isHighImpedance, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
 import { defineParametrizedComponent, groupHorizontal, groupVertical, param, paramBool, ParametrizedComponentBase, Repr, ResolvedParams, Value } from "./Component"
 import { Drawable, DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
@@ -21,7 +11,6 @@ import { DemuxTypes } from "./Demux"
 import { ALU, ALUDef, ALUTypes, doALUAdd} from "./ALU"
 import { FlipflopDTypes, FlipflopD, FlipflopDDef } from "./FlipflopD"
 import { Register } from "./Register";
-import {RAMDef} from "./RAM";
 
 export const CPUDef =
     defineParametrizedComponent("CPU", true, true, {
@@ -43,7 +32,7 @@ export const CPUDef =
         },
         params: {
             instructionBits: param(8, [8]),
-            addressInstructionBits: param(4, [2, 4, 6, 8]),
+            addressInstructionBits: param(4, [1, 2, 3, 4, 5, 6, 7, 8]),
             dataBits: param(4, [4]),
             addressDataBits: param(4, [4]),
             ext: paramBool(), // has the extended opcode
@@ -89,8 +78,8 @@ export const CPUDef =
                     //Mode: opMode,
                 },
                 outs: {
-                    Isaadr: groupHorizontal("n", -midX, -inputY, numDataBits),
-                    Dadr: groupHorizontal("n", midX, -inputY, numDataBits),
+                    Isaadr: groupHorizontal("n", -midX, -inputY, numAddressInstructionBits),
+                    Dadr: groupHorizontal("n", midX, -inputY, numAddressDataBits),
                     Dout: groupVertical("e", inputX, -midY, numDataBits),
                     RAMsync: [inputX, 1, "e", "RAM sync"],
                     RAMwe: [inputX, 3, "e", "RAM WE"],
@@ -191,7 +180,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             ext: this.usesExtendedOpcode === CPUDef.aults.ext ? undefined : this.usesExtendedOpcode,
             ...this.toJSONBase(),
             showOp: (this._showOp !== CPUDef.aults.showOp) ? this._showOp : undefined,
-            trigger: (this._trigger !== RAMDef.aults.trigger) ? this._trigger : undefined,
+            trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
 
@@ -339,7 +328,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             drawLabel(ctx, this.orient, "Din", "s", this.inputs.Din, bottom)
             drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom)
             drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom)
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Speed, bottom)
+            drawLabel(ctx, this.orient, "Speed", "s", this.inputs.Speed, bottom)
             drawLabel(ctx, this.orient, "Clock S", "s", this.inputs.ClockS, bottom)
             drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom)
             drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom)
@@ -354,7 +343,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             // right outputs
             drawLabel(ctx, this.orient, "Dout", "e", right, this.outputs.Dout)
             drawLabel(ctx, this.orient, "RAM Sync", "e", right, this.outputs.RAMsync)
-            drawLabel(ctx, this.orient, "Reset", "e", right, this.outputs.ResetSync)
+            drawLabel(ctx, this.orient, "Reset Sync", "e", right, this.outputs.ResetSync)
             drawLabel(ctx, this.orient, "RAM WE", "e", right, this.outputs.RAMwe)
             drawLabel(ctx, this.orient, "Sync", "e", right, this.outputs.Sync)
             drawLabel(ctx, this.orient, "Z", "e", right, this.outputs.Z)
@@ -389,7 +378,8 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         return [
             ["mid", toggleShowOpItem],
             ["mid", MenuData.sep()],
-            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numInstructionBits, "instructionBits"),
+            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
+            //this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numInstructionBits, "instructionBits"),
             this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpcode, this.usesExtendedOpcode, "ext"),
             ["mid", MenuData.sep()],
             ...this.makeForceOutputsContextMenuItem(),
