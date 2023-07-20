@@ -15,7 +15,7 @@ import {
 } from "../utils"
 import { defineParametrizedComponent, groupHorizontal, groupVertical, param, paramBool, ParametrizedComponentBase, Repr, ResolvedParams, Value } from "./Component"
 import { DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
-import {Gate1Types, Gate2toNType, Gate2toNTypes} from "./GateTypes"
+import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
 
 export type ALUTypeProps = {
     includeInContextMenu: boolean

@@ -2,15 +2,32 @@ import * as t from "io-ts"
 import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_GROUP_SPAN, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import { ArrayFillUsing,  ArrayFillWith, EdgeTrigger, isBoolean, isHighImpedance, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
+import {
+    ArrayFillUsing,
+    ArrayFillWith,
+    EdgeTrigger,
+    isBoolean,
+    isHighImpedance,
+    isUnknown,
+    LogicValue,
+    toLogicValue,
+    typeOrUndefined,
+    Unknown,
+} from "../utils"
 import { defineParametrizedComponent, groupHorizontal, groupVertical, param, paramBool, ParametrizedComponentBase, Repr, ResolvedParams, Value } from "./Component"
 import { Drawable, DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
+import { Register } from "./Register";
+import { ALU, ALUDef, ALUTypes, doALUAdd} from "./ALU"
+/*
 import { MuxTypes } from "./Mux"
 import { DemuxTypes } from "./Demux"
-import { ALU, ALUDef, ALUTypes, doALUAdd} from "./ALU"
+
 import { FlipflopDTypes, FlipflopD, FlipflopDDef } from "./FlipflopD"
-import { Register } from "./Register";
+
+import {makeTriggerItems} from "./FlipflopOrLatch";
+import {map} from "fp-ts";
+*/
 
 export const CPUDef =
     defineParametrizedComponent("CPU", true, true, {
@@ -24,11 +41,11 @@ export const CPUDef =
             addressDataBits: typeOrUndefined(t.number),
             ext: typeOrUndefined(t.boolean),
             showOp: typeOrUndefined(t.boolean),
-            trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
+            //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         },
         valueDefaults: {
             showOp: true,
-            trigger: EdgeTrigger.rising,
+            //trigger: EdgeTrigger.rising,
         },
         params: {
             instructionBits: param(8, [8]),
@@ -74,6 +91,8 @@ export const CPUDef =
                     Speed: [-11, inputY, "s", "Select Clock"],
                     ClockS: [-9, inputY, "s", "Slow Clock", { isClock: true }],
                     ClockF: [-7, inputY, "s", "Fast Clock", { isClock: true }],
+                    //ClockS: [-9, inputY, "s", "Slow Clock"],
+                    //ClockF: [-7, inputY, "s", "Fast Clock"],
                     RunStop: [-5, inputY, "s", "Run/Stop", { prefersSpike: true }],
                     //Mode: opMode,
                 },
@@ -146,12 +165,15 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
     public readonly usesExtendedOpcode: boolean
 
-    private _showOp: boolean
+    private _programCounter : Register
     private _instructionRegister : Register
+    private _accumulatorRegister : Register
     private _ALU : ALU
 
-    private _trigger: EdgeTrigger = CPUDef.aults.trigger
-    private _lastClock: LogicValue = Unknown
+    private _showOp: boolean
+    //private _trigger: EdgeTrigger = CPUDef.aults.trigger
+    protected _isInInvalidState = false
+    protected _lastClock: LogicValue = Unknown
 
     public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
         super(parent, CPUDef.with(params), saved)
@@ -164,11 +186,16 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
         this.usesExtendedOpcode = params.usesExtendedOpcode
 
-        this._showOp = saved?.showOp ?? CPUDef.aults.showOp
-        this._instructionRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+        this._programCounter = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+        this._instructionRegister = new Register(parent,{numBits : this.numInstructionBits, hasIncDec: false}, undefined)
+        this._accumulatorRegister = new Register(parent,{numBits : this.numDataBits, hasIncDec: false}, undefined)
         this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
 
-        this._trigger = saved?.trigger ?? CPUDef.aults.trigger
+        // MUST change trigger of Registers
+        this._instructionRegister.setTrigger(EdgeTrigger.falling)
+
+        this._showOp = saved?.showOp ?? CPUDef.aults.showOp
+        //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
 
     public toJSON() {
@@ -180,14 +207,14 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             ext: this.usesExtendedOpcode === CPUDef.aults.ext ? undefined : this.usesExtendedOpcode,
             ...this.toJSONBase(),
             showOp: (this._showOp !== CPUDef.aults.showOp) ? this._showOp : undefined,
-            trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
+            //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
 
     protected get moduleName() {
         return "CPU"
     }
-
+/*
     public get trigger() {
         return this._trigger
     }
@@ -196,7 +223,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this._trigger = trigger
         this.setNeedsRedraw("trigger changed")
     }
-
+*/
     public override makeTooltip() {
         const op = this.op
         const s = S.Components.CPU.tooltip
@@ -207,25 +234,40 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
     }
 
     public get op(): CPUOp | Unknown {
-        const opValues = this.inputValues(this.inputs.Isa.slice(0, 3))
+        //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
+        const opValues = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0,4)
         //opValues.push(this.inputs.Mode.value)
-        const opIndex = displayValuesFromArray(opValues, false)[1]
+        const opIndex = displayValuesFromArray(opValues, true)[1]
         // TO DO
         //return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodesExtended)[opIndex]
         return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodes)[opIndex]
     }
 
     protected doRecalcValue(): CPUValue {
-        const op = this.op
+        this.setInputValues(this._instructionRegister.inputs.D, this.inputValues(this.inputs.Isa.reverse()))
 
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputs.Speed.value ? this.inputs.ClockS.value : this.inputs.ClockF.value
+        this._instructionRegister.inputs.Clock.value = clock
+
+        this._instructionRegister.makeStateAfterClock()
+
+        const op = this.op
+
+        const runstate = this.inputs.Speed.value
+
+        //const data = this._instructionRegister.outputs.Q.slice(this._instructionRegister.outputs.Q.length / 2, this._instructionRegister.outputs.Q.length - 1)
+        //const data = this._instructionRegister.outputs.Q.slice(4,7).map(node => node.value)
+        const data = this.getOutputValues(this._instructionRegister.outputs.Q).slice(4,8)
+        //const data = this.inputValues(this.inputs.Isa.slice(4,8))
+
+        const isa = this.inputValues(this.inputs.Isa)
 
         if (isUnknown(op)) {
             return {
+                    isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
                     dadr: ArrayFillWith(Unknown, this.numDataBits),
                     dout: ArrayFillWith(Unknown, this.numDataBits),
-                    isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
                     ramsync: false,
                     ramwe: false,
                     resetsync: false,
@@ -237,17 +279,12 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
                 }
         }
 
-        const isa = this.inputValues(this.inputs.Isa)
-        //const din = this.inputValues(this.inputs.Din)
-        //const dadr = this.inputValues(this.inputs.Dadr)
-        //const cin = this.inputs.Cin.value
 
         //return doCPUOp(op, din, isa)
-        return doCPUOp(op, isa)
+        return doCPUOp(op, isa, data, this.numAddressInstructionBits, runstate)
     }
 
     protected override propagateValue(newValue: CPUValue) {
-        //this.outputValues(this.outputs.S, newValue.s)
         this.outputValues(this.outputs.Isaadr , newValue.isaadr)
         this.outputValues(this.outputs.Dadr , newValue.dadr)
         this.outputValues(this.outputs.Dout , newValue.dout)
@@ -255,7 +292,8 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this.outputs.RAMwe.value = newValue.ramwe
         this.outputs.ResetSync.value = newValue.resetsync
         this.outputs.Sync.value = newValue.sync
-        this.outputs.Z.value = newValue.z
+        //this.outputs.Z.value = newValue.z
+        this.outputs.Z.value = allZeros(newValue.dout)
         this.outputs.V.value = newValue.v
         this.outputs.Cout.value = newValue.cout
         this.outputs.RunningState.value = newValue.runningstate
@@ -268,6 +306,10 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         const lowerBottom = top - 2 * GRID_STEP
         const lowerLeft = left - 2 * GRID_STEP
         const lowerRight = right - 2 * GRID_STEP
+        // for debug
+        //this._instructionRegister.posX = 100
+        //this._instructionRegister.posY = 100
+        this._instructionRegister.doDraw(g, ctx)
 
         // inputs
         for (const input of this.inputs.Isa) {
@@ -388,6 +430,8 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
             //this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numInstructionBits, "instructionBits"),
             this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpcode, this.usesExtendedOpcode, "ext"),
+            //["mid", MenuData.sep()],
+            //...makeTriggerItems(this._trigger, this.doSetTrigger.bind(this)),
             ["mid", MenuData.sep()],
             ...this.makeForceOutputsContextMenuItem(),
         ]
@@ -409,15 +453,27 @@ function allZeros(vals: LogicValue[]): LogicValue {
     return true
 }
 
-export function doCPUOp(op: CPUOp, isa: readonly LogicValue[]):
+export function doCPUOp(op: CPUOp, isa: readonly LogicValue[], data: LogicValue[], numAddressInstructionBits: number, runstate: LogicValue):
     CPUValue {
     const numDataBits = 4
-    const numAddressInstructionBits = 8
     const numOpBits = 4
     //const numDataBits = din.length
     switch (op) {
         case "NOP":
-            break;
+            return {
+                isaadr: ArrayFillWith(false, numAddressInstructionBits),
+                dadr: ArrayFillWith(true, numDataBits),
+                //dout: ArrayFillWith(true, numDataBits),
+                dout: data,
+                ramsync: false,
+                ramwe: false,
+                resetsync: false,
+                sync: false,
+                z: false,
+                v: false,
+                cout: false,
+                runningstate: runstate,
+            }
         case "DEC":
             break;
         case "LDM":
@@ -450,9 +506,9 @@ export function doCPUOp(op: CPUOp, isa: readonly LogicValue[]):
             break;
         default:
             return {
-                dadr: ArrayFillWith(false, numDataBits),
-                dout: ArrayFillWith(false, numDataBits),
                 isaadr: ArrayFillWith(false, numAddressInstructionBits),
+                dadr: ArrayFillWith(false, numDataBits),
+                dout: ArrayFillWith(true, numDataBits),
                 ramsync: false,
                 ramwe: false,
                 resetsync: false,
@@ -464,9 +520,9 @@ export function doCPUOp(op: CPUOp, isa: readonly LogicValue[]):
             }
     }
     return {
-        dadr: ArrayFillWith(false, numDataBits),
-        dout: ArrayFillWith(false, numDataBits),
         isaadr: ArrayFillWith(false, numAddressInstructionBits),
+        dadr: ArrayFillWith(false, numDataBits),
+        dout: ArrayFillWith(true, numDataBits),
         ramsync: false,
         ramwe: false,
         resetsync: false,

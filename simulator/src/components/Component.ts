@@ -733,6 +733,21 @@ export abstract class ComponentBase<
         return nodes.map(node => node.value)
     }
 
+    protected setInputValues(nodes: readonly NodeIn[], values: LogicValue[], reverse = false) {
+        const num = nodes.length
+        if (values.length !== num) {
+            throw new Error(`outputValues: expected ${num} values, got ${values.length}`)
+        }
+        for (let i = 0; i < num; i++) {
+            const j = reverse ? num - i - 1 : i
+            nodes[i].value = values[j]
+        }
+    }
+
+    protected getOutputValues(nodes: readonly NodeOut[]): LogicValue[] {
+        return nodes.map(node => node.value)
+    }
+
     protected outputValues(nodes: readonly NodeOut[], values: LogicValue[], reverse = false) {
         const num = nodes.length
         if (values.length !== num) {

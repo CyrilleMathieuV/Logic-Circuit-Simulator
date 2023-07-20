@@ -147,6 +147,10 @@ export abstract class RegisterBase<
         this.setNeedsRedraw("trigger changed")
     }
 
+    public setTrigger(trigger: EdgeTrigger) {
+        this._trigger = trigger
+    }
+
     protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         this.doDrawDefault(g, ctx, (ctx) => {
             if (this._showContent && !this.parent.editor.options.hideMemoryContent) {

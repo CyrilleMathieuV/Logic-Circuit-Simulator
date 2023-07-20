@@ -498,7 +498,7 @@ export const gallery = {
             [29, 51],
         ],
     },
-
+/*
     CPU: {
         "v": 5,
         "in": [
@@ -524,7 +524,7 @@ export const gallery = {
             { "type": "display", "bits": 4, "pos": [210, 350], "orient": "s", "id": [48, 49, 50, 51], "name": "B (signé)", "radix": -10 },
         ],
         "ic": [
-            { "type": "alu", "pos": [280, 220], "in": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "out": [10, 11, 12, 13, 14, 15] },
+            { "type": "cpu", "pos": [280, 220], "in": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "out": [10, 11, 12, 13, 14, 15] },
         ],
         "wires": [
             [16, 9],
@@ -565,7 +565,7 @@ export const gallery = {
             [29, 51],
         ],
     },
-
+*/
     MiniAlu: {
         "v": 5,
         "in": [

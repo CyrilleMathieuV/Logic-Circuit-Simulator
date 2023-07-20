@@ -81,7 +81,7 @@ const migrateTo: Record<number, (container: Record<string, unknown>) => void> = 
             "ic.comparator": "comp",
             "ic.adder-array": "adder-array",
             "ic.alu": "alu",
-            "ic.cpu": "cpu",
+            //"ic.cpu": "cpu",
             "ic.mux": "mux",
             "ic.demux": "demux",
             "ic.latch-sr": "latch-sr",
@@ -314,6 +314,7 @@ const migrateTo: Record<number, (container: Record<string, unknown>) => void> = 
         }
 
         // cpu has one more output
+        /*
         if (isArray(components)) {
             for (const comp of components) {
                 if (comp.type === "cpu") {
@@ -327,6 +328,7 @@ const migrateTo: Record<number, (container: Record<string, unknown>) => void> = 
                 }
             }
         }
+        */
     },
 
 
@@ -344,6 +346,7 @@ const migrateTo: Record<number, (container: Record<string, unknown>) => void> = 
             }
         }
 
+        /*
         // cpu has one more input
         if (isArray(components)) {
             for (const comp of components) {
@@ -354,6 +357,7 @@ const migrateTo: Record<number, (container: Record<string, unknown>) => void> = 
                 }
             }
         }
+        */
     },
 
 
