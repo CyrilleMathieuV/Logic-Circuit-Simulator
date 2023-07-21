@@ -176,7 +176,13 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
     private _instructionMux : Mux
 
+    private _programCounterALU : ALU
+
     private _programCounter : Register
+    private _previousProgramCounter : Register
+
+    private _programCounterMux : Mux
+    private _programCounterAdderMux : Mux
 
     private _showOpCode: boolean
     //private _trigger: EdgeTrigger = CPUDef.aults.trigger
@@ -208,9 +214,16 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this._flagsRegister.setTrigger(EdgeTrigger.falling)
 
         this._programCounter = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+        this._previousProgramCounter = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+
+        this._programCounterALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
+
+        this._programCounterMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
+        this._programCounterAdderMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
 
         // MUST change trigger of Registers
-        this._instructionRegister.setTrigger(EdgeTrigger.falling)
+        this._programCounter.setTrigger(EdgeTrigger.falling)
+        this._previousProgramCounter.setTrigger(EdgeTrigger.falling)
 
         this._showOpCode = saved?.showOpCode ?? CPUDef.aults.showOpCode
         //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
