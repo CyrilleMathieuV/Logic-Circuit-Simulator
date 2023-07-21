@@ -302,6 +302,11 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
             ...this.makeForceOutputsContextMenuItem(),
         ]
     }
+/*
+    public set doUsesExtendedOpcode(showOp: boolean) {
+        this.usesExtendedOpcode = showOp
+    }
+  */
 
 }
 ALUDef.impl = ALU

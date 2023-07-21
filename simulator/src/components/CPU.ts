@@ -19,6 +19,7 @@ import { Drawable, DrawableParent, DrawContext, GraphicsRendering, MenuData, Men
 import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
 import { Register } from "./Register";
 import { ALU, ALUDef, ALUTypes, doALUAdd} from "./ALU"
+import {Mux} from "./Mux";
 /*
 import { MuxTypes } from "./Mux"
 import { DemuxTypes } from "./Demux"
@@ -40,11 +41,11 @@ export const CPUDef =
             dataBits: typeOrUndefined(t.number),
             addressDataBits: typeOrUndefined(t.number),
             ext: typeOrUndefined(t.boolean),
-            showOp: typeOrUndefined(t.boolean),
+            showOpCode: typeOrUndefined(t.boolean),
             //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         },
         valueDefaults: {
-            showOp: true,
+            showOpCode: true,
             //trigger: EdgeTrigger.rising,
         },
         params: {
@@ -59,7 +60,7 @@ export const CPUDef =
             numAddressInstructionBits: addressInstructionBits,
             numDataBits: dataBits,
             numAddressDataBits: addressDataBits,
-            usesExtendedOpcode: ext,
+            usesExtendedOpCode: ext,
         }),
         size: ({ numDataBits }) => ({
             //gridWidth: 7,
@@ -67,7 +68,7 @@ export const CPUDef =
             gridWidth: 32,
             gridHeight: 32,
         }),
-        makeNodes: ({ numInstructionBits, numAddressInstructionBits, numDataBits, numAddressDataBits, usesExtendedOpcode, gridWidth, gridHeight }) => {
+        makeNodes: ({ numInstructionBits, numAddressInstructionBits, numDataBits, numAddressDataBits, usesExtendedOpCode, gridWidth, gridHeight }) => {
             const bottom = gridHeight / 2
             const top = -bottom
             const right = gridWidth / 2
@@ -94,7 +95,7 @@ export const CPUDef =
                     //ClockS: [-9, inputY, "s", "Slow Clock"],
                     //ClockF: [-7, inputY, "s", "Fast Clock"],
                     RunStop: [-5, inputY, "s", "Run/Stop", { prefersSpike: true }],
-                    //Mode: opMode,
+                    //Mode: opCodeMode,
                 },
                 outs: {
                     Isaadr: groupHorizontal("n", -midX, -inputY, numAddressInstructionBits),
@@ -122,15 +123,17 @@ export type CPUParams = ResolvedParams<typeof CPUDef>
 
 type CPUValue = Value<typeof CPUDef>
 
-export type CPUOp = typeof CPUOpCodes[number]
-export const CPUOp = {
-    shortName(op: CPUOp): string {
+export type CPUOpCode = typeof CPUOpCodes[number]
+export const CPUOpCode = {
+    shortName(op: CPUOpCode): string {
         return S.Components.CPU[op][0]
     },
-    fullName(op: CPUOp): string {
+    fullName(op: CPUOpCode): string {
         return S.Components.CPU[op][1]
     },
 }
+
+type CPUoperands = Value<typeof CPUDef>
 
 export const CPUOpCodes = [
     "NOP", "DEC", "LDM", "LDK",
@@ -163,14 +166,19 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
     public readonly numDataBits: number
     public readonly numAddressDataBits: number
 
-    public readonly usesExtendedOpcode: boolean
+    public readonly usesExtendedOpCode: boolean
 
-    private _programCounter : Register
-    private _instructionRegister : Register
-    private _accumulatorRegister : Register
     private _ALU : ALU
 
-    private _showOp: boolean
+    private _instructionRegister : Register
+    private _accumulatorRegister : Register
+    private _flagsRegister : Register
+
+    private _instructionMux : Mux
+
+    private _programCounter : Register
+
+    private _showOpCode: boolean
     //private _trigger: EdgeTrigger = CPUDef.aults.trigger
     protected _isInInvalidState = false
     protected _lastClock: LogicValue = Unknown
@@ -184,17 +192,27 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this.numDataBits = params.numDataBits
         this.numAddressDataBits = params.numAddressDataBits
 
-        this.usesExtendedOpcode = params.usesExtendedOpcode
+        this.usesExtendedOpCode = params.usesExtendedOpCode
 
-        this._programCounter = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+        this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
+
         this._instructionRegister = new Register(parent,{numBits : this.numInstructionBits, hasIncDec: false}, undefined)
         this._accumulatorRegister = new Register(parent,{numBits : this.numDataBits, hasIncDec: false}, undefined)
-        this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
+        this._flagsRegister = new Register(parent,{numBits : 4, hasIncDec: false}, undefined)
+
+        this._instructionMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
+
+        // MUST change trigger of Registers
+        this._instructionRegister.setTrigger(EdgeTrigger.falling)
+        this._accumulatorRegister.setTrigger(EdgeTrigger.falling)
+        this._flagsRegister.setTrigger(EdgeTrigger.falling)
+
+        this._programCounter = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
 
         // MUST change trigger of Registers
         this._instructionRegister.setTrigger(EdgeTrigger.falling)
 
-        this._showOp = saved?.showOp ?? CPUDef.aults.showOp
+        this._showOpCode = saved?.showOpCode ?? CPUDef.aults.showOpCode
         //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
 
@@ -204,9 +222,9 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             addressInstructionBits: this.numAddressInstructionBits === CPUDef.aults.addressInstructionBits ? undefined : this.numAddressInstructionBits,
             dataBits: this.numDataBits === CPUDef.aults.dataBits ? undefined : this.numDataBits,
             addressDataBits: this.numAddressDataBits === CPUDef.aults.addressDataBits ? undefined : this.numAddressDataBits,
-            ext: this.usesExtendedOpcode === CPUDef.aults.ext ? undefined : this.usesExtendedOpcode,
+            ext: this.usesExtendedOpCode === CPUDef.aults.ext ? undefined : this.usesExtendedOpCode,
             ...this.toJSONBase(),
-            showOp: (this._showOp !== CPUDef.aults.showOp) ? this._showOp : undefined,
+            showOpCode: (this._showOpCode !== CPUDef.aults.showOpCode) ? this._showOpCode : undefined,
             //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
@@ -225,45 +243,68 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
     }
 */
     public override makeTooltip() {
-        const op = this.op
+        const opCode= this.opCode
         const s = S.Components.CPU.tooltip
-        const opDesc = isUnknown(op) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOp.fullName(op)
+        const opCodeDesc = isUnknown(opCode) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOpCode.fullName(opCode)
         return tooltipContent(s.title, mods(
-            div(`${s.CurrentlyCarriesOut} ${opDesc}.`)
+            div(`${s.CurrentlyCarriesOut} ${opCodeDesc}.`)
         ))
     }
 
-    public get op(): CPUOp | Unknown {
+    public get opCode(): CPUOpCode | Unknown {
         //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
-        const opValues = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0,4)
+        const opCodeValues = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0,4)
         //opValues.push(this.inputs.Mode.value)
-        const opIndex = displayValuesFromArray(opValues, true)[1]
+        const opCodeIndex = displayValuesFromArray(opCodeValues, true)[1]
         // TO DO
         //return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodesExtended)[opIndex]
-        return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodes)[opIndex]
+        return isUnknown(opCodeIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodes)[opCodeIndex]
     }
-
+    /*
+    public get operands(): CPUoperands | Unknown{
+        const operandsValues = this.getOutputValues(this._instructionRegister.outputs.Q).slice(4,8)
+        return operandsValues
+    }
+*/
     protected doRecalcValue(): CPUValue {
-        this.setInputValues(this._instructionRegister.inputs.D, this.inputValues(this.inputs.Isa.reverse()))
+        const isa = this.inputValues(this.inputs.Isa)
+
+        // Needs to revert all inputs to be compatible with choosen ISA
+        this.setInputValues(this._instructionRegister.inputs.D, isa, true)
 
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputs.Speed.value ? this.inputs.ClockS.value : this.inputs.ClockF.value
         this._instructionRegister.inputs.Clock.value = clock
 
-        this._instructionRegister.makeStateAfterClock()
+        //this._instructionRegister.makeStateAfterClock()
 
-        const op = this.op
+        const opCodeValues = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0,4).reverse()
+        const opCode = this.opCode
 
-        const runstate = this.inputs.Speed.value
+        this._ALU.inputs.Mode.value = opCodeValues[2]
+        this._ALU.inputs.Op[2].value = opCodeValues[1]
+        this._ALU.inputs.Op[1].value = !opCodeValues[3]
+        this._ALU.inputs.Op[0].value = opCodeValues[0]
 
-        //const data = this._instructionRegister.outputs.Q.slice(this._instructionRegister.outputs.Q.length / 2, this._instructionRegister.outputs.Q.length - 1)
-        //const data = this._instructionRegister.outputs.Q.slice(4,7).map(node => node.value)
-        const data = this.getOutputValues(this._instructionRegister.outputs.Q).slice(4,8)
-        //const data = this.inputValues(this.inputs.Isa.slice(4,8))
+        const commonInstructionMuxSelect = !opCodeValues[3] && !opCodeValues[2]
+        this._instructionMux.inputs.S[1].value = commonInstructionMuxSelect && opCodeValues[1]
+        this._instructionMux.inputs.S[0].value = (commonInstructionMuxSelect && opCodeValues[0]) || (opCodeValues[3] && (!opCodeValues[1] || opCodeValues[2]))
 
-        const isa = this.inputValues(this.inputs.Isa)
+        const operands = this.getOutputValues(this._instructionRegister.outputs.Q).slice(4,8).reverse()
 
-        if (isUnknown(op)) {
+        this.setInputValues(this._ALU.inputs.A, this.getOutputValues(this._accumulatorRegister.outputs.Q))
+        this.setInputValues(this._ALU.inputs.B, this.inputValues(this.inputs.Din))
+
+        this.setInputValues(this._instructionMux.inputs.I[3], operands)
+        this.setInputValues(this._instructionMux.inputs.I[2], this.inputValues(this.inputs.Din))
+        this.setInputValues(this._instructionMux.inputs.I[1], this.getOutputValues(this._ALU.outputs.S))
+        this.setInputValues(this._instructionMux.inputs.I[0], this.getOutputValues(this._accumulatorRegister.outputs.Q))
+
+        this.setInputValues(this._accumulatorRegister.inputs.D, this.getOutputValues(this._instructionMux.outputs.Z))
+        this._flagsRegister.inputs.D[0].value = allZeros(this.getOutputValues(this._instructionMux.outputs.Z))
+        this._flagsRegister.inputs.D[1].value = this.outputs.Cout.value
+
+        if (isUnknown(opCode)) {
             return {
                     isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
                     dadr: ArrayFillWith(Unknown, this.numDataBits),
@@ -280,8 +321,21 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         }
 
 
-        //return doCPUOp(op, din, isa)
-        return doCPUOp(op, isa, data, this.numAddressInstructionBits, runstate)
+        //return doCPUOpCode(op, din, isa)
+        //return doCPUOpCode(opCode, isa, operands, this.numAddressInstructionBits, runstate)
+        return {
+            isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
+            dadr: operands,
+            dout: ArrayFillWith(Unknown, this.numDataBits),
+            ramsync: false,
+            ramwe: opCodeValues[3] && !opCodeValues[2] && opCodeValues[1] && opCodeValues[0],
+            resetsync: false,
+            sync: false,
+            z: this._flagsRegister.outputs.Q[0].value,
+            v: false,
+            cout: this._flagsRegister.outputs.Q[1].value,
+            runningstate: false,
+        }
     }
 
     protected override propagateValue(newValue: CPUValue) {
@@ -292,8 +346,8 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this.outputs.RAMwe.value = newValue.ramwe
         this.outputs.ResetSync.value = newValue.resetsync
         this.outputs.Sync.value = newValue.sync
-        //this.outputs.Z.value = newValue.z
-        this.outputs.Z.value = allZeros(newValue.dout)
+        this.outputs.Z.value = newValue.z
+        //this.outputs.Z.value = allZeros(newValue.dout)
         this.outputs.V.value = newValue.v
         this.outputs.Cout.value = newValue.cout
         this.outputs.RunningState.value = newValue.runningstate
@@ -306,10 +360,12 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         const lowerBottom = top - 2 * GRID_STEP
         const lowerLeft = left - 2 * GRID_STEP
         const lowerRight = right - 2 * GRID_STEP
+
         // for debug
         //this._instructionRegister.posX = 100
         //this._instructionRegister.posY = 100
-        this._instructionRegister.doDraw(g, ctx)
+        //this._instructionRegister.doDraw(g, ctx)
+        //this._ALU.doDraw(g, ctx)
 
         // inputs
         for (const input of this.inputs.Isa) {
@@ -400,28 +456,28 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             drawLabel(ctx, this.orient, "Cout", "e", right, this.outputs.Cout)
             drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState)
 
-            if (this._showOp) {
-                const opName = isUnknown(this.op) ? "??" : CPUOp.shortName(this.op)
-                const size = opName.length === 1 ? 25 : opName.length === 2 ? 17 : 13
+            if (this._showOpCode) {
+                const opCodeName = isUnknown(this.opCode) ? "??" : CPUOpCode.shortName(this.opCode)
+                const size = opCodeName.length === 1 ? 25 : opCodeName.length === 2 ? 17 : 13
                 g.font = `bold ${size}px sans-serif`
                 g.fillStyle = COLOR_COMPONENT_BORDER
                 g.textAlign = "center"
                 g.textBaseline = "middle"
-                g.fillText(opName, ...ctx.rotatePoint(this.posX + 5, this.posY))
+                g.fillText(opCodeName, ...ctx.rotatePoint(this.posX + 5, this.posY))
             }
         })
     }
 
-    private doSetShowOp(showOp: boolean) {
-        this._showOp = showOp
-        this.setNeedsRedraw("show op changed")
+    private doSetShowOpCode(showOpCode: boolean) {
+        this._showOpCode = showOpCode
+        this.setNeedsRedraw("show opCodechanged")
     }
 
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
         const s = S.Components.CPU.contextMenu
-        const icon = this._showOp ? "check" : "none"
-        const toggleShowOpItem = MenuData.item(icon, s.toggleShowOp, () => {
-            this.doSetShowOp(!this._showOp)
+        const icon = this._showOpCode ? "check" : "none"
+        const toggleShowOpItem = MenuData.item(icon, s.toggleShowOpCode, () => {
+            this.doSetShowOpCode(!this._showOpCode)
         })
 
         return [
@@ -429,7 +485,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
             //this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numInstructionBits, "instructionBits"),
-            this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpcode, this.usesExtendedOpcode, "ext"),
+            this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpcode, this.usesExtendedOpCode, "ext"),
             //["mid", MenuData.sep()],
             //...makeTriggerItems(this._trigger, this.doSetTrigger.bind(this)),
             ["mid", MenuData.sep()],
@@ -453,18 +509,18 @@ function allZeros(vals: LogicValue[]): LogicValue {
     return true
 }
 
-export function doCPUOp(op: CPUOp, isa: readonly LogicValue[], data: LogicValue[], numAddressInstructionBits: number, runstate: LogicValue):
+export function doCPUOpCode(opCode: CPUOpCode, isa: readonly LogicValue[], operands: LogicValue[], numAddressInstructionBits: number, runstate: LogicValue):
     CPUValue {
     const numDataBits = 4
     const numOpBits = 4
     //const numDataBits = din.length
-    switch (op) {
+    switch (opCode) {
         case "NOP":
             return {
                 isaadr: ArrayFillWith(false, numAddressInstructionBits),
                 dadr: ArrayFillWith(true, numDataBits),
                 //dout: ArrayFillWith(true, numDataBits),
-                dout: data,
+                dout: operands,
                 ramsync: false,
                 ramwe: false,
                 resetsync: false,

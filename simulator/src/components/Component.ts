@@ -736,7 +736,7 @@ export abstract class ComponentBase<
     protected setInputValues(nodes: readonly NodeIn[], values: LogicValue[], reverse = false) {
         const num = nodes.length
         if (values.length !== num) {
-            throw new Error(`outputValues: expected ${num} values, got ${values.length}`)
+            throw new Error(`inputValues: expected ${num} values, got ${values.length}`)
         }
         for (let i = 0; i < num; i++) {
             const j = reverse ? num - i - 1 : i

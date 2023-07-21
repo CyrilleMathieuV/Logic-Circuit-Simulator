@@ -376,7 +376,7 @@ const Strings_fr = {
                 ThisInstruction: "l'instruction",
             },
             contextMenu: {
-                toggleShowOp: "Afficher l’opération",
+                toggleShowOpCode: "Afficher l’opération",
                 ParamUseExtendedOpcode: "Utiliser opérations étendues",
             },
         },
@@ -1143,7 +1143,7 @@ const Strings_en: Strings = {
                 ThisInstruction: "instruction",
             },
             contextMenu: {
-                toggleShowOp: "Show Operation",
+                toggleShowOpCode: "Show Operation",
                 ParamUseExtendedOpcode: "Use Extended Opcode",
             },
         },
