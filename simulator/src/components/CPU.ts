@@ -176,13 +176,13 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
     private _instructionMux : Mux
 
-    private _programCounterALU : ALU
+    private _programCounterRegisterALU : ALU
 
-    private _programCounter : Register
-    private _previousProgramCounter : Register
+    private _programCounterRegister : Register
+    private _previousProgramCounterRegister : Register
 
-    private _programCounterMux : Mux
-    private _programCounterAdderMux : Mux
+    private _programCounterRegisterMux : Mux
+    private _programCounterRegisterAdderMux : Mux
 
     private _showOpCode: boolean
     //private _trigger: EdgeTrigger = CPUDef.aults.trigger
@@ -213,17 +213,17 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this._accumulatorRegister.setTrigger(EdgeTrigger.falling)
         this._flagsRegister.setTrigger(EdgeTrigger.falling)
 
-        this._programCounter = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
-        this._previousProgramCounter = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+        this._programCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+        this._previousProgramCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
 
-        this._programCounterALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
+        this._programCounterRegisterALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
 
-        this._programCounterMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
-        this._programCounterAdderMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
+        this._programCounterRegisterMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
+        this._programCounterRegisterAdderMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
 
         // MUST change trigger of Registers
-        this._programCounter.setTrigger(EdgeTrigger.falling)
-        this._previousProgramCounter.setTrigger(EdgeTrigger.falling)
+        this._programCounterRegister.setTrigger(EdgeTrigger.falling)
+        this._previousProgramCounterRegister.setTrigger(EdgeTrigger.falling)
 
         this._showOpCode = saved?.showOpCode ?? CPUDef.aults.showOpCode
         //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
@@ -285,10 +285,6 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         // Needs to revert all inputs to be compatible with choosen ISA
         this.setInputValues(this._instructionRegister.inputs.D, isa, true)
 
-        const prevClock = this._lastClock
-        const clock = this._lastClock = this.inputs.Speed.value ? this.inputs.ClockS.value : this.inputs.ClockF.value
-        this._instructionRegister.inputs.Clock.value = clock
-
         //this._instructionRegister.makeStateAfterClock()
 
         const opCodeValues = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0,4).reverse()
@@ -314,8 +310,39 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this.setInputValues(this._instructionMux.inputs.I[0], this.getOutputValues(this._accumulatorRegister.outputs.Q))
 
         this.setInputValues(this._accumulatorRegister.inputs.D, this.getOutputValues(this._instructionMux.outputs.Z))
-        this._flagsRegister.inputs.D[0].value = allZeros(this.getOutputValues(this._instructionMux.outputs.Z))
-        this._flagsRegister.inputs.D[1].value = this.outputs.Cout.value
+
+        const z = allZeros(this.getOutputValues(this._instructionMux.outputs.Z))
+        const c = this.outputs.Cout.value
+
+        const jumpControl = opCodeValues[2] && !opCodeValues[3]
+        const noJump = !(((((opCodeValues[0] && z) || (!opCodeValues[0] && c)) && opCodeValues[1]) || !opCodeValues[1]) && jumpControl)
+        const backwardJump = (opCodeValues[0] && !opCodeValues[1]) && jumpControl
+
+        this._flagsRegister.inputs.D[1].value = z
+        this._flagsRegister.inputs.D[1].value = c
+
+        this._programCounterRegisterAdderMux.inputs.S[0].value = !noJump
+
+        this._programCounterRegisterALU.inputs.Mode.value = false
+        this._programCounterRegisterALU.inputs.Op[2].value = false
+        this._programCounterRegisterALU.inputs.Op[1].value = noJump
+        this._programCounterRegisterALU.inputs.Op[0].value = backwardJump
+
+        this.setInputValues(this._programCounterRegisterAdderMux.inputs.I[1], this.getOutputValues(this._programCounterRegister.outputs.Q))
+        this.setInputValues(this._programCounterRegisterAdderMux.inputs.I[0], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
+
+        this.setInputValues(this._previousProgramCounterRegister.inputs.D, this.getOutputValues(this._programCounterRegister.outputs.Q))
+
+        this.setInputValues(this._programCounterRegisterALU.inputs.A, this.getOutputValues(this._programCounterRegisterAdderMux.outputs.Z))
+        this.setInputValues(this._programCounterRegisterALU.inputs.B, operands)
+
+        const prevClock = this._lastClock
+        const clock = this._lastClock = this.inputs.Speed.value ? this.inputs.ClockS.value : this.inputs.ClockF.value
+        this._instructionRegister.inputs.Clock.value = clock
+        this._accumulatorRegister.inputs.Clock.value = clock
+        this._flagsRegister.inputs.Clock.value = clock
+        this._programCounterRegister.inputs.Clock.value  = clock
+        this._previousProgramCounterRegister.inputs.Clock.value = clock
 
         if (isUnknown(opCode)) {
             return {
@@ -333,13 +360,12 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
                 }
         }
 
-
         //return doCPUOpCode(op, din, isa)
         //return doCPUOpCode(opCode, isa, operands, this.numAddressInstructionBits, runstate)
         return {
-            isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
+            isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q),
             dadr: operands,
-            dout: ArrayFillWith(Unknown, this.numDataBits),
+            dout: this.getOutputValues(this._accumulatorRegister.outputs.Q),
             ramsync: false,
             ramwe: opCodeValues[3] && !opCodeValues[2] && opCodeValues[1] && opCodeValues[0],
             resetsync: false,

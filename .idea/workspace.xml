@@ -133,7 +133,7 @@
       <workItem from="1689414786940" duration="32868000" />
       <workItem from="1689661815776" duration="15586000" />
       <workItem from="1689752547950" duration="25181000" />
-      <workItem from="1689928981469" duration="18601000" />
+      <workItem from="1689928981469" duration="24374000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -357,7 +357,15 @@
       <option name="project" value="LOCAL" />
       <updated>1689961006182</updated>
     </task>
-    <option name="localTasksCounter" value="31" />
+    <task id="LOCAL-00031" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1689961652769</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1689961652769</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
