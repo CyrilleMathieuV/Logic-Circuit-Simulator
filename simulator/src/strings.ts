@@ -346,7 +346,7 @@ const Strings_fr = {
             },
             contextMenu: {
                 toggleShowOp: "Afficher l’opération",
-                ParamUseExtendedOpcode: "Utiliser opérations étendues",
+                ParamUseExtendedOp: "Utiliser opérations étendues",
             },
         },
         CPU: {
@@ -377,7 +377,7 @@ const Strings_fr = {
             },
             contextMenu: {
                 toggleShowOpCode: "Afficher l’opération",
-                ParamUseExtendedOpcode: "Utiliser opérations étendues",
+                ParamUseExtendedOpCode: "Utiliser opérations étendues",
             },
         },
         Clock: {
@@ -1113,7 +1113,7 @@ const Strings_en: Strings = {
             },
             contextMenu: {
                 toggleShowOp: "Show Operation",
-                ParamUseExtendedOpcode: "Use Extended Opcode",
+                ParamUseExtendedOp: "Use Extended Opcode",
             },
         },
         CPU: {
@@ -1144,7 +1144,7 @@ const Strings_en: Strings = {
             },
             contextMenu: {
                 toggleShowOpCode: "Show Operation",
-                ParamUseExtendedOpcode: "Use Extended Opcode",
+                ParamUseExtendedOpCode: "Use Extended Opcode",
             },
         },
         Clock: {

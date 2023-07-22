@@ -6,7 +6,7 @@ import {
     ArrayClampOrPad,
     ArrayFillUsing,
     ArrayFillWith,
-    EdgeTrigger,
+    EdgeTrigger, FixedArrayAssert, FixedArrayMap,
     isBoolean,
     isHighImpedance,
     isUnknown,
@@ -19,8 +19,9 @@ import { defineParametrizedComponent, groupHorizontal, groupVertical, param, par
 import { Drawable, DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
 import { Register } from "./Register";
-import { ALU, ALUDef, ALUTypes, doALUAdd} from "./ALU"
-import {Mux} from "./Mux";
+import { ALU } from "./ALU"
+import { Mux } from "./Mux";
+import { FlipflopD } from "./FlipflopD";
 /*
 import { MuxTypes } from "./Mux"
 import { DemuxTypes } from "./Demux"
@@ -41,7 +42,7 @@ export const CPUDef =
             addressInstructionBits: typeOrUndefined(t.number),
             dataBits: typeOrUndefined(t.number),
             addressDataBits: typeOrUndefined(t.number),
-            ext: typeOrUndefined(t.boolean),
+            extOpCode: typeOrUndefined(t.boolean),
             showOpCode: typeOrUndefined(t.boolean),
             //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         },
@@ -51,17 +52,17 @@ export const CPUDef =
         },
         params: {
             instructionBits: param(8, [8]),
-            addressInstructionBits: param(8, [1, 2, 3, 4, 5, 6, 7, 8]),
+            addressInstructionBits: param(8, [2, 4, 8]),
             dataBits: param(4, [4]),
             addressDataBits: param(4, [4]),
-            ext: paramBool(), // has the extended opcode
+            extOpCode: paramBool(), // has the extended opcode
         },
-        validateParams: ({ instructionBits, addressInstructionBits, dataBits, addressDataBits,  ext }) => ({
+        validateParams: ({ instructionBits, addressInstructionBits, dataBits, addressDataBits,  extOpCode }) => ({
             numInstructionBits: instructionBits,
             numAddressInstructionBits: addressInstructionBits,
             numDataBits: dataBits,
             numAddressDataBits: addressDataBits,
-            usesExtendedOpCode: ext,
+            usesExtendedOpCode: extOpCode,
         }),
         size: ({ numDataBits }) => ({
             //gridWidth: 7,
@@ -78,7 +79,7 @@ export const CPUDef =
             const inputY = bottom + 1.5
             const midY = bottom / 2
             const midX = right / 2
-            // const topGroupDataBits = usesExtendedOpcode ? 5 : 3
+            // const topGroupDataBits = usesExtendedOpCode ? 5 : 3
             // top group is built together
             // const topGroup = groupHorizontal("n", 0, top, topGroupDataBits)
             // const cin = topGroup.pop()!
@@ -184,6 +185,12 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
     private _programCounterMux : Mux
 
+    private _runStopFlipflopD : FlipflopD
+
+    private _runningStateMux : Mux
+    private _clockSpeedMux : Mux
+    private _autoManMux : Mux
+
     private _showOpCode: boolean
     //private _trigger: EdgeTrigger = CPUDef.aults.trigger
     protected _isInInvalidState = false
@@ -200,7 +207,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
         this.usesExtendedOpCode = params.usesExtendedOpCode
 
-        this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
+        this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOp: true},undefined)
 
         this._instructionRegister = new Register(parent,{numBits : this.numInstructionBits, hasIncDec: false}, undefined)
         this._accumulatorRegister = new Register(parent,{numBits : this.numDataBits, hasIncDec: false}, undefined)
@@ -216,13 +223,22 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this._programCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
         this._previousProgramCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
 
-        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOpcode: true},undefined)
-
-        this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
-
         // MUST change trigger of Registers
         this._programCounterRegister.setTrigger(EdgeTrigger.falling)
         this._previousProgramCounterRegister.setTrigger(EdgeTrigger.falling)
+
+        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOp: true},undefined)
+
+        this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
+
+        this._runStopFlipflopD = new FlipflopD(parent)
+
+        // MUST change trigger of Flipflops
+        this._runStopFlipflopD.setTrigger(EdgeTrigger.falling)
+
+        this._runningStateMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
+        this._clockSpeedMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
+        this._autoManMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
 
         this._showOpCode = saved?.showOpCode ?? CPUDef.aults.showOpCode
         //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
@@ -234,7 +250,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             addressInstructionBits: this.numAddressInstructionBits === CPUDef.aults.addressInstructionBits ? undefined : this.numAddressInstructionBits,
             dataBits: this.numDataBits === CPUDef.aults.dataBits ? undefined : this.numDataBits,
             addressDataBits: this.numAddressDataBits === CPUDef.aults.addressDataBits ? undefined : this.numAddressDataBits,
-            ext: this.usesExtendedOpCode === CPUDef.aults.ext ? undefined : this.usesExtendedOpCode,
+            extOpCode: this.usesExtendedOpCode === CPUDef.aults.extOpCode ? undefined : this.usesExtendedOpCode,
             ...this.toJSONBase(),
             showOpCode: (this._showOpCode !== CPUDef.aults.showOpCode) ? this._showOpCode : undefined,
             //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
@@ -269,7 +285,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         //opValues.push(this.inputs.Mode.value)
         const opCodeIndex = displayValuesFromArray(opCodeValues, true)[1]
         // TO DO
-        //return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? CPUOpCodes : CPUOpCodesExtended)[opIndex]
+        //return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodesExtended)[opIndex]
         return isUnknown(opCodeIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodes)[opCodeIndex]
     }
     /*
@@ -334,16 +350,42 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this.setInputValues(this._previousProgramCounterRegister.inputs.D, this.getOutputValues(this._programCounterRegister.outputs.Q))
 
         this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterMux.outputs.Z))
-        const BinputValueProgramCounterALU = ArrayClampOrPad(operands, this.numAddressInstructionBits,false)
-        this.setInputValues(this._programCounterALU.inputs.B, BinputValueProgramCounterALU)
+        // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
+        const BinputValueProgramCounterALU = operands.slice()
+        this.setInputValues(this._programCounterALU.inputs.B, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
+
+        const haltOpCodeSignal = opCodeValues[3] && !opCodeValues[2] && opCodeValues[1] && !opCodeValues[0]
+
+        this._runStopFlipflopD.inputs.Clock.value = (haltOpCodeSignal && this._autoManMux.outputs.Z[0].value) || this.inputs.RunStop.value
+
+        this._clockSpeedMux.inputs.S[0].value = this.inputs.Speed.value
+        this._clockSpeedMux.inputs.I[1][0].value = this.inputs.ClockF.value
+        this._clockSpeedMux.inputs.I[0][0].value = this.inputs.ClockS.value
+
+        this._autoManMux.inputs.S[0].value = this.inputs.Speed.value
+        this._autoManMux.inputs.I[1][0].value = this._clockSpeedMux.outputs.Z[0].value
+        this._autoManMux.inputs.I[0][0].value = this.inputs.ManStep.value
+
+        this._runningStateMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q.value
+        this._runningStateMux.inputs.I[1][0].value = this._runStopFlipflopD.outputs.Q̅.value
+        this._runningStateMux.inputs.I[0][0].value = this.inputs.ManStep.value && this._runStopFlipflopD.outputs.Q.value
 
         const prevClock = this._lastClock
-        const clock = this._lastClock = this.inputs.Speed.value ? this.inputs.ClockS.value : this.inputs.ClockF.value
-        this._instructionRegister.inputs.Clock.value = clock
-        this._accumulatorRegister.inputs.Clock.value = clock
-        this._flagsRegister.inputs.Clock.value = clock
-        this._programCounterRegister.inputs.Clock.value  = clock
-        this._previousProgramCounterRegister.inputs.Clock.value = clock
+        const clockSync = this._lastClock = this._autoManMux.outputs.Z[0].value
+        this._instructionRegister.inputs.Clock.value = clockSync
+        this._accumulatorRegister.inputs.Clock.value = clockSync
+        this._flagsRegister.inputs.Clock.value = clockSync
+        this._programCounterRegister.inputs.Clock.value  = clockSync
+        this._previousProgramCounterRegister.inputs.Clock.value = clockSync
+
+        const clrSignal = this.inputs.Reset.value && this._runStopFlipflopD.outputs.Q.value
+
+        this._instructionRegister.inputs.Clr.value = clrSignal
+        this._accumulatorRegister.inputs.Clr.value = clrSignal
+        this._flagsRegister.inputs.Clr.value = clrSignal
+        this._programCounterRegister.inputs.Clr.value  = clrSignal
+        this._previousProgramCounterRegister.inputs.Clr.value = clrSignal
+        this._runStopFlipflopD.inputs.Clr.value = clrSignal
 
         if (isUnknown(opCode)) {
             return {
@@ -367,14 +409,14 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q),
             dadr: operands,
             dout: this.getOutputValues(this._accumulatorRegister.outputs.Q),
-            ramsync: false,
+            ramsync: clockSync,
             ramwe: opCodeValues[3] && !opCodeValues[2] && opCodeValues[1] && opCodeValues[0],
-            resetsync: false,
-            sync: false,
+            resetsync: clrSignal,
+            sync: clockSync,
             z: this._flagsRegister.outputs.Q[0].value,
             v: false,
             cout: this._flagsRegister.outputs.Q[1].value,
-            runningstate: false,
+            runningstate: this._runningStateMux.outputs.Z[0].value,
         }
     }
 
@@ -405,7 +447,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         //this._instructionRegister.posX = 100
         //this._instructionRegister.posY = 100
         //this._instructionRegister.doDraw(g, ctx)
-        this._programCounterALU.doDraw(g, ctx)
+        //this._programCounterALU.doDraw(g, ctx)
 
         // inputs
         for (const input of this.inputs.Isa) {
@@ -525,7 +567,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
             ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
             //this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numInstructionBits, "instructionBits"),
-            this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpcode, this.usesExtendedOpCode, "ext"),
+            this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpCode, this.usesExtendedOpCode, "extOpCode"),
             //["mid", MenuData.sep()],
             //...makeTriggerItems(this._trigger, this.doSetTrigger.bind(this)),
             ["mid", MenuData.sep()],

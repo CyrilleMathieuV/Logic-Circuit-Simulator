@@ -170,6 +170,10 @@ export abstract class Flipflop<
         return this._trigger
     }
 
+    public setTrigger(trigger: EdgeTrigger) {
+        this._trigger = trigger
+    }
+
     public static doRecalcValueForSyncComponent<State>(comp: SyncComponent<State>, prevClock: LogicValue, clock: LogicValue, preset: LogicValue, clear: LogicValue): { isInInvalidState: boolean, newState: State } {
         // handle set and reset signals
         if (preset === true) {
