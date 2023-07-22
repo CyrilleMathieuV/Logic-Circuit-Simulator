@@ -2,29 +2,11 @@ import * as t from "io-ts"
 import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS, COLOR_GROUP_SPAN, displayValuesFromArray, drawLabel, drawWireLineToComponent, GRID_STEP } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
-import {
-    ArrayFillUsing,
-    ArrayFillWith,
-    isBoolean,
-    isHighImpedance,
-    isUnknown,
-    LogicValue,
-    RichStringEnum,
-    typeOrUndefined,
-    Unknown,
-} from "../utils"
+import { ArrayFillUsing, ArrayFillWith, isBoolean, isHighImpedance, isUnknown, LogicValue, typeOrUndefined, Unknown } from "../utils"
 import { defineParametrizedComponent, groupHorizontal, groupVertical, param, paramBool, ParametrizedComponentBase, Repr, ResolvedParams, Value } from "./Component"
 import { DrawableParent, DrawContext, GraphicsRendering, MenuData, MenuItems, Orientation } from "./Drawable"
 import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
 
-export type ALUTypeProps = {
-    includeInContextMenu: boolean
-    includeInPoseAs: boolean
-    fullShortDesc: () => [string, string | undefined, string]
-    out: (ins: LogicValue[]) => LogicValue
-}
-
-export type ALUTypes<TALUType extends string> = RichStringEnum<TALUType, ALUTypeProps>
 
 export const ALUDef =
     defineParametrizedComponent("alu", true, true, {
@@ -302,11 +284,6 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
             ...this.makeForceOutputsContextMenuItem(),
         ]
     }
-/*
-    public set doUsesExtendedOpcode(showOp: boolean) {
-        this.usesExtendedOpcode = showOp
-    }
-  */
 
 }
 ALUDef.impl = ALU
