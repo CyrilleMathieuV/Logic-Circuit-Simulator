@@ -3,6 +3,7 @@ import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, COLOR_COMPONENT_INNER_LABELS,
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import {
+    ArrayClampOrPad,
     ArrayFillUsing,
     ArrayFillWith,
     EdgeTrigger,
@@ -50,7 +51,7 @@ export const CPUDef =
         },
         params: {
             instructionBits: param(8, [8]),
-            addressInstructionBits: param(4, [1, 2, 3, 4, 5, 6, 7, 8]),
+            addressInstructionBits: param(8, [1, 2, 3, 4, 5, 6, 7, 8]),
             dataBits: param(4, [4]),
             addressDataBits: param(4, [4]),
             ext: paramBool(), // has the extended opcode
@@ -176,13 +177,12 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
 
     private _instructionMux : Mux
 
-    private _programCounterRegisterALU : ALU
+    private _programCounterALU : ALU
 
     private _programCounterRegister : Register
     private _previousProgramCounterRegister : Register
 
-    private _programCounterRegisterMux : Mux
-    private _programCounterRegisterAdderMux : Mux
+    private _programCounterMux : Mux
 
     private _showOpCode: boolean
     //private _trigger: EdgeTrigger = CPUDef.aults.trigger
@@ -216,10 +216,9 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this._programCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
         this._previousProgramCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
 
-        this._programCounterRegisterALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
+        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOpcode: true},undefined)
 
-        this._programCounterRegisterMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
-        this._programCounterRegisterAdderMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
+        this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
 
         // MUST change trigger of Registers
         this._programCounterRegister.setTrigger(EdgeTrigger.falling)
@@ -321,20 +320,22 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         this._flagsRegister.inputs.D[1].value = z
         this._flagsRegister.inputs.D[1].value = c
 
-        this._programCounterRegisterAdderMux.inputs.S[0].value = !noJump
+        this._programCounterMux.inputs.S[0].value = !noJump
 
-        this._programCounterRegisterALU.inputs.Mode.value = false
-        this._programCounterRegisterALU.inputs.Op[2].value = false
-        this._programCounterRegisterALU.inputs.Op[1].value = noJump
-        this._programCounterRegisterALU.inputs.Op[0].value = backwardJump
+        this._programCounterALU.inputs.Mode.value = false
+        this._programCounterALU.inputs.Op[2].value = false
+        this._programCounterALU.inputs.Op[1].value = noJump
+        this._programCounterALU.inputs.Op[0].value = backwardJump
 
-        this.setInputValues(this._programCounterRegisterAdderMux.inputs.I[1], this.getOutputValues(this._programCounterRegister.outputs.Q))
-        this.setInputValues(this._programCounterRegisterAdderMux.inputs.I[0], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
+        this.setInputValues(this._programCounterMux.inputs.I[1], this.getOutputValues(this._programCounterRegister.outputs.Q))
+        this.setInputValues(this._programCounterMux.inputs.I[0], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
 
+        this.setInputValues(this._programCounterRegister.inputs.D, this.getOutputValues(this._programCounterALU.outputs.S))
         this.setInputValues(this._previousProgramCounterRegister.inputs.D, this.getOutputValues(this._programCounterRegister.outputs.Q))
 
-        this.setInputValues(this._programCounterRegisterALU.inputs.A, this.getOutputValues(this._programCounterRegisterAdderMux.outputs.Z))
-        this.setInputValues(this._programCounterRegisterALU.inputs.B, operands)
+        this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterMux.outputs.Z))
+        const BinputValueProgramCounterALU = ArrayClampOrPad(operands, this.numAddressInstructionBits,false)
+        this.setInputValues(this._programCounterALU.inputs.B, BinputValueProgramCounterALU)
 
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputs.Speed.value ? this.inputs.ClockS.value : this.inputs.ClockF.value
@@ -404,7 +405,7 @@ export class CPU extends ParametrizedComponentBase<CPURepr> {
         //this._instructionRegister.posX = 100
         //this._instructionRegister.posY = 100
         //this._instructionRegister.doDraw(g, ctx)
-        //this._ALU.doDraw(g, ctx)
+        this._programCounterALU.doDraw(g, ctx)
 
         // inputs
         for (const input of this.inputs.Isa) {
