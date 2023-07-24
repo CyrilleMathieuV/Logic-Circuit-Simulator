@@ -49,7 +49,7 @@ import {
     MenuItems,
     Orientation,
 } from "./Drawable"
-import { makeTriggerItems } from "./FlipflopOrLatch";
+import { Flipflop, makeTriggerItems } from "./FlipflopOrLatch";
 import { Register } from "./Register";
 import { ALU } from "./ALU"
 import { Mux } from "./Mux";
@@ -330,6 +330,8 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         //return isUnknown(opCodeIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodes)[opCodeIndex]
         return this.getOutputValues(this._instructionRegister.outputs.Q).slice(4,8)
     }
+
+    //public abstract makeStateAfterClock(): LogicValue[]
 
     protected override propagateValue(newValue: CPUBaseValue) {
         this.outputValues(this.outputs.Isaadr , newValue.isaadr)
@@ -697,7 +699,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._clockSpeedMux.inputs.I[0][0].value = this.inputs.ClockS.value
 
         this._autoManMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q.value
-        this.setInputValues(this._autoManMux.inputs.I[1], this.getOutputValues(this._clockSpeedMux.outputs.Z))
+        this._autoManMux.inputs.I[1][0].value = this._clockSpeedMux.outputs.Z[0].value
         this._autoManMux.inputs.I[0][0].value = this.inputs.ManStep.value && !haltOpCodeSignal
 
         this._runningStateMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q̅.value
@@ -737,9 +739,37 @@ export class CPU extends CPUBase<CPURepr> {
                 runningstate: Unknown,
             }
         }
-
-        //return doCPUOpCode(op, din, isa)
-        //return doCPUOpCode(opCode, isa, operands, this.numAddressInstructionBits, runstate)
+/*
+        if (Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
+            return {
+                isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q),
+                dadr: operands,
+                dout: this.getOutputValues(this._accumulatorRegister.outputs.Q),
+                ramsync: clockSync,
+                ramwe: opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0],
+                resetsync: clrSignal,
+                sync: clockSync,
+                z: this._flagsRegister.outputs.Q[0].value,
+                v: false,
+                cout: this._flagsRegister.outputs.Q[1].value,
+                runningstate: this._runningStateMux.outputs.Z[0].value,
+            }
+        } else {
+            return {
+                isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
+                dadr: ArrayFillWith(Unknown, this.numDataBits),
+                dout: ArrayFillWith(Unknown, this.numDataBits),
+                ramsync: Unknown,
+                ramwe: Unknown,
+                resetsync: Unknown,
+                sync: Unknown,
+                z: Unknown,
+                v: Unknown,
+                cout: Unknown,
+                runningstate: Unknown,
+            }
+        }
+*/
         return {
             isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q),
             dadr: operands,
@@ -753,17 +783,25 @@ export class CPU extends CPUBase<CPURepr> {
             cout: this._flagsRegister.outputs.Q[1].value,
             runningstate: this._runningStateMux.outputs.Z[0].value,
         }
+
     }
 
     public override makeTooltip() {
         const opCode = this.opCode
         const s = S.Components.CPU.tooltip
         const opCodeDesc = isUnknown(opCode) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOpCode.fullName(opCode)
-        return tooltipContent(s.title, mods(
-            div(`${s.CurrentlyCarriesOut} ${opCodeDesc}.`)
-        ))
+        return tooltipContent(s.title,
+            mods(
+                div(`${s.CurrentlyCarriesOut} ${opCodeDesc}.`)
+            )
+        )
     }
-
+/*
+    public makeStateAfterClock(): LogicValue[] {
+        return this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ)
+        return this.inputValues(this.inputs.Din).map(LogicValue.filterHighZ)
+    }
+*/
     public override makeComponentSpecificContextMenuItems(): MenuItems {
         return [
             ...makeTriggerItems(this._trigger, this.doSetTrigger.bind(this)),
@@ -771,15 +809,6 @@ export class CPU extends CPUBase<CPURepr> {
             ...super.makeComponentSpecificContextMenuItems(),
         ]
     }
-
-    protected override() {
-        return [
-            ...makeTriggerItems(this._trigger, this.doSetTrigger.bind(this)),
-
-            ["mid", MenuData.sep()],
-        ]
-    }
-
 }
 
 CPUDef.impl = CPU
