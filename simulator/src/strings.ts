@@ -378,6 +378,7 @@ const Strings_fr = {
             contextMenu: {
                 toggleShowOpCode: "Afficher l’opération",
                 toggleShowOperands: "Afficher les opérandes",
+                toggleEnablePipeline: "Activer le pipeline",
                 //ParamUseExtendedOpCode: "Utiliser opérations étendues",
             },
         },
@@ -1146,6 +1147,7 @@ const Strings_en: Strings = {
             contextMenu: {
                 toggleShowOpCode: "Show Operation",
                 toggleShowOperands: "Show Operands",
+                toggleEnablePipeline: "Pipeline enabeled",
                 //ParamUseExtendedOpCode: "Use Extended Opcode",
             },
         },

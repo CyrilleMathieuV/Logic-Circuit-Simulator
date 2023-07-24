@@ -65,12 +65,14 @@ export const CPUBaseDef =
             addressDataBits: typeOrUndefined(t.number),
             showOpCode: typeOrUndefined(t.boolean),
             showOperands: typeOrUndefined(t.boolean),
-            trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
+            enablePipeline: typeOrUndefined(t.boolean),
+            //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
             //extOpCode: typeOrUndefined(t.boolean),
         },
         valueDefaults: {
             showOpCode: true,
             showOperands: true,
+            enablePipeline: true,
             //trigger: EdgeTrigger.falling,
         },
         params: {
@@ -226,6 +228,10 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
 
     protected _programCounterMux : Mux
 
+    protected _fetchFlipflopD : FlipflopD
+    protected _decodeFlipflopD : FlipflopD
+    protected _executeFlipflopD : FlipflopD
+
     protected _runStopFlipflopD : FlipflopD
 
     protected _runningStateMux : Mux
@@ -234,6 +240,7 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
 
     protected _showOpCode: boolean
     protected _showOperands: boolean
+    protected _enablePipeline: boolean
 
     protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef, params: CPUBaseParams, saved?: TRepr) {
         super(parent, CPUDef.with(params) as any, saved)
@@ -270,6 +277,15 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
 
         this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
 
+        this._fetchFlipflopD = new FlipflopD(parent)
+        this._decodeFlipflopD = new FlipflopD(parent)
+        this._executeFlipflopD = new FlipflopD(parent)
+
+        // MUST change trigger of Flipflops
+        this._fetchFlipflopD.setTrigger(EdgeTrigger.falling)
+        this._decodeFlipflopD.setTrigger(EdgeTrigger.falling)
+        this._executeFlipflopD.setTrigger(EdgeTrigger.falling)
+
         this._runStopFlipflopD = new FlipflopD(parent)
 
         // MUST change trigger of Flipflops
@@ -281,6 +297,7 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
 
         this._showOpCode = saved?.showOpCode ?? CPUDef.aults.showOpCode
         this._showOperands = saved?.showOperands ?? CPUDef.aults.showOperands
+        this._enablePipeline = saved?.enablePipeline ?? CPUDef.aults.enablePipeline
         //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
 /*
         this.isaadr = ArrayFillWith(Unknown, this.numAddressInstructionBits)
@@ -307,6 +324,7 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
             //extOpCode: this.usesExtendedOpCode === CPUDef.aults.extOpCode ? undefined : this.usesExtendedOpCode,
             showOpCode: (this._showOpCode !== CPUDef.aults.showOpCode) ? this._showOpCode : undefined,
             showOperands: (this._showOperands !== CPUDef.aults.showOperands) ? this._showOperands : undefined,
+            enablePipeline: (this._enablePipeline !== CPUDef.aults.enablePipeline) ? this._enablePipeline : undefined,
             //trigger: (this._trigger !== FlipflopBaseDef.aults.trigger) ? this._trigger : undefined,
         }
     }
@@ -353,9 +371,14 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         this.setNeedsRedraw("show opCodechanged")
     }
 
-    private doSetShowOperands(ShowOperands: boolean) {
-        this._showOperands = ShowOperands
+    private doSetShowOperands(showOperands: boolean) {
+        this._showOperands = showOperands
         this.setNeedsRedraw("show operdanschanged")
+    }
+
+    private doSetEnablePipeline(enabalePipeline: boolean) {
+        this._enablePipeline = enabalePipeline
+        this.setNeedsRedraw("show pipelinechanged")
     }
 
     protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
@@ -375,6 +398,7 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         //this._programCounterALU.doDraw(g, ctx)
         //this._clockSpeedMux.doDraw(g, ctx)
         //this._autoManMux.doDraw(g, ctx)
+        //this._fetchFlipflopD.doDraw(g, ctx)
 
         // inputs
         for (const input of this.inputs.Isa) {
@@ -497,10 +521,16 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         const toggleShowOperandsItem = MenuData.item(iconOperands, s.toggleShowOperands, () => {
             this.doSetShowOperands(!this._showOperands)
         })
+        const iconEnablePipeline = this._enablePipeline? "check" : "none"
+        const toggleEnablePipelineItem = MenuData.item(iconEnablePipeline, s.toggleEnablePipeline, () => {
+            this.doSetEnablePipeline(!this._enablePipeline)
+        })
 
         return [
             ["mid", toggleShowOpCodeItem],
             ["mid", toggleShowOperandsItem],
+            ["mid", MenuData.sep()],
+            ["mid", toggleEnablePipelineItem],
             ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
             ["mid", MenuData.sep()],
@@ -671,23 +701,31 @@ export class CPU extends CPUBase<CPURepr> {
         const noJump = !(((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && jumpControl)
         const backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
 
-        this._programCounterMux.inputs.S[0].value = !noJump
+        if (this._enablePipeline) {
+            this._programCounterMux.inputs.S[0].value = !noJump
 
-        this.setInputValues(this._programCounterMux.inputs.I[1], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
-        this.setInputValues(this._programCounterMux.inputs.I[0], this.getOutputValues(this._programCounterRegister.outputs.Q))
+            this.setInputValues(this._programCounterMux.inputs.I[1], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
+            this.setInputValues(this._programCounterMux.inputs.I[0], this.getOutputValues(this._programCounterRegister.outputs.Q))
+        }
 
         this._programCounterALU.inputs.Mode.value = false
         this._programCounterALU.inputs.Op[2].value = false
         this._programCounterALU.inputs.Op[1].value = noJump
         this._programCounterALU.inputs.Op[0].value = backwardJump
 
-        this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterMux.outputs.Z))
+        if (this._enablePipeline) {
+            this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterMux.outputs.Z))
+        } else {
+            this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterRegister.outputs.Q))
+        }
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const BinputValueProgramCounterALU = operands.slice().reverse()
         this.setInputValues(this._programCounterALU.inputs.B, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
 
         this.setInputValues(this._programCounterRegister.inputs.D, this.getOutputValues(this._programCounterALU.outputs.S))
-        this.setInputValues(this._previousProgramCounterRegister.inputs.D, this.getOutputValues(this._programCounterRegister.outputs.Q))
+        if (this._enablePipeline) {
+            this.setInputValues(this._previousProgramCounterRegister.inputs.D, this.getOutputValues(this._programCounterRegister.outputs.Q))
+        }
 
         const haltOpCodeSignal = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
 
@@ -709,11 +747,30 @@ export class CPU extends CPUBase<CPURepr> {
         //const prevClock = this._lastClock
         //const clockSync = this._lastClock = this._autoManMux.outputs.Z[0].value
         const clockSync = this._autoManMux.outputs.Z[0].value
-        this._instructionRegister.inputs.Clock.value = clockSync
-        this._accumulatorRegister.inputs.Clock.value = clockSync
-        this._flagsRegister.inputs.Clock.value = clockSync
-        this._programCounterRegister.inputs.Clock.value  = clockSync
-        this._previousProgramCounterRegister.inputs.Clock.value = clockSync
+        if (this._enablePipeline) {
+            const ramClockSync = clockSync
+            this._instructionRegister.inputs.Clock.value = clockSync
+            this._accumulatorRegister.inputs.Clock.value = clockSync
+            this._flagsRegister.inputs.Clock.value = clockSync
+            this._programCounterRegister.inputs.Clock.value  = clockSync
+            this._previousProgramCounterRegister.inputs.Clock.value = clockSync
+        } else {
+            this._fetchFlipflopD.inputs.Clock.value = clockSync
+            this._decodeFlipflopD.inputs.Clock.value = clockSync
+            this._executeFlipflopD.inputs.Clock.value = clockSync
+
+            this._decodeFlipflopD.inputs.D.value = this._fetchFlipflopD.outputs.Q.value
+            this._executeFlipflopD.inputs.D.value = this._decodeFlipflopD.outputs.Q.value
+            this._fetchFlipflopD.inputs.D.value = this._executeFlipflopD.outputs.Q.value
+
+            this._instructionRegister.inputs.Clock.value = clockSync && this._fetchFlipflopD.outputs.Q.value
+
+            this._accumulatorRegister.inputs.Clock.value = clockSync && this._fetchFlipflopD.outputs.Q.value
+            this._flagsRegister.inputs.Clock.value = clockSync && this._fetchFlipflopD.outputs.Q.value
+
+            this._programCounterRegister.inputs.Clock.value  = clockSync && this._executeFlipflopD.outputs.Q.value
+        }
+        const ramClockSync = this._enablePipeline ? clockSync : clockSync && this._fetchFlipflopD.outputs.Q.value
 
         const clrSignal = this.inputs.Reset.value && this._runStopFlipflopD.outputs.Q̅.value
 
@@ -721,8 +778,15 @@ export class CPU extends CPUBase<CPURepr> {
         this._accumulatorRegister.inputs.Clr.value = clrSignal
         this._flagsRegister.inputs.Clr.value = clrSignal
         this._programCounterRegister.inputs.Clr.value  = clrSignal
-        this._previousProgramCounterRegister.inputs.Clr.value = clrSignal
+        if (this._enablePipeline) {
+            this._previousProgramCounterRegister.inputs.Clr.value = clrSignal
+        }
         this._runStopFlipflopD.inputs.Clr.value = clrSignal
+        if (!this._enablePipeline) {
+            this._fetchFlipflopD.inputs.Pre.value = clrSignal
+            this._decodeFlipflopD.inputs.Clr.value = clrSignal
+            this._executeFlipflopD.inputs.Clr.value = clrSignal
+        }
 
         if (isUnknown(opCode)) {
             return {
@@ -774,7 +838,7 @@ export class CPU extends CPUBase<CPURepr> {
             isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q),
             dadr: operands,
             dout: this.getOutputValues(this._accumulatorRegister.outputs.Q),
-            ramsync: clockSync,
+            ramsync: ramClockSync,
             ramwe: opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0],
             resetsync: clrSignal,
             sync: clockSync,
