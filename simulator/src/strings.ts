@@ -377,6 +377,7 @@ const Strings_fr = {
             },
             contextMenu: {
                 toggleShowOpCode: "Afficher l’opération",
+                toggleShowOperands: "Afficher les opérandes",
                 ParamUseExtendedOpCode: "Utiliser opérations étendues",
             },
         },
@@ -1144,6 +1145,7 @@ const Strings_en: Strings = {
             },
             contextMenu: {
                 toggleShowOpCode: "Show Operation",
+                toggleShowOperands: "Show Operands",
                 ParamUseExtendedOpCode: "Use Extended Opcode",
             },
         },
