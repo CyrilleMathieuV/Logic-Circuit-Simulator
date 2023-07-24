@@ -168,6 +168,7 @@ export class Clock extends InputBase<ClockRepr> {
 
         const periodPresets: [number, string][] = [
             [100, "100 ms (10 Hz)"],
+            [125, "125 ms (8 Hz)"],
             [250, "250 ms (4 Hz)"],
             [500, "500 ms (2 Hz)"],
             [1000, "1 s (1 Hz)"],
