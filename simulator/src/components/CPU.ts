@@ -11,7 +11,7 @@ import {
     drawWireLineToComponent,
     formatWithRadix,
     GRID_STEP,
-    useCompact,
+    useCompact, COLOR_OFF_BACKGROUND,
 } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
@@ -120,7 +120,7 @@ export const CPUStageColorList = Object.keys(CPUStageColors) as CPUStageColor[]
 
 // Tricky thing : https://stackoverflow.com/questions/57086672/element-implicitly-has-an-any-type-because-expression-of-type-string-cant-b
 
-export const CPUStageColorText = {
+export const CPUStageColorKey = {
     color: function (stage: CPUStage): CPUStageColor {
         const stageColor = S.Components.CPU.StageColor[stage]
         return CPUStageColors[stageColor as CPUStageColor]
@@ -593,13 +593,14 @@ export abstract class CPUBase<
             if (this._showStage) {
                 const stage = this.stage
                 const stageName = isUnknown(stage) ? "??" : CPUStage.shortName(stage)
-                //console.log(isUnknown(stage) ? "*" : CPUStageColorText.color(stage))
-                const stageColor = isUnknown(stage) ? COLOR_COMPONENT_BORDER : COLOR_CPUSTAGE_TEXT[CPUStageColorText.color(stage)]
-                //g.font = "bold 14px sans-serif"
-                g.fillStyle = stageColor
-                g.fillStyle = COLOR_COMPONENT_BORDER
+                const stageColorText = isUnknown(stage) ? COLOR_COMPONENT_BORDER : COLOR_CPUSTAGE_TEXT[CPUStageColorKey.color(stage)]
+                const stageColorBackground = isUnknown(stage) ? COLOR_OFF_BACKGROUND : COLOR_CPUSTAGE_BACKGROUND[CPUStageColorKey.color(stage)]
+                g.font = "bold 14px monospace"
                 g.textAlign = "center"
                 g.textBaseline = "middle"
+                g.fillStyle = stageColorBackground
+                g.fillRect(this.posX - 40,this.posY - 30,80,20,)
+                g.fillStyle = stageColorText
                 g.fillText(stageName, ...ctx.rotatePoint(this.posX, this.posY - 20))
             }
 

@@ -13,10 +13,7 @@
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/FlipflopOrLatch.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/FlipflopOrLatch.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Register.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Register.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/drawutils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/drawutils.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/strings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/strings.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -150,7 +147,7 @@
       <workItem from="1690185256465" duration="24820000" />
       <workItem from="1690236011335" duration="7625000" />
       <workItem from="1690270529909" duration="111000" />
-      <workItem from="1690270660493" duration="45589000" />
+      <workItem from="1690270660493" duration="47391000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -470,7 +467,15 @@
       <option name="project" value="LOCAL" />
       <updated>1690284803684</updated>
     </task>
-    <option name="localTasksCounter" value="43" />
+    <task id="LOCAL-00043" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1690325796038</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1690325796038</updated>
+    </task>
+    <option name="localTasksCounter" value="44" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
