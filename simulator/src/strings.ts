@@ -379,6 +379,7 @@ const Strings_fr = {
                 toggleShowOpCode: "Afficher l’opération",
                 toggleShowOperands: "Afficher les opérandes",
                 toggleEnablePipeline: "Activer le pipeline",
+                toggleDirectAddressingMode: "Adressage direct",
                 //ParamUseExtendedOpCode: "Utiliser opérations étendues",
             },
         },
@@ -1139,7 +1140,7 @@ const Strings_en: Strings = {
             InputCinDesc: "input carry",
             OutputCoutDesc: "output carry",
             tooltip: {
-                title: "Arithmetic and Logic Unit (ALU)",
+                title: "Central Processing Unit (CPU)",
                 CurrentlyCarriesOut: "Currently carries out",
                 SomeUnknownInstruction: "an unknown instruction",
                 ThisInstruction: "instruction",
@@ -1147,7 +1148,8 @@ const Strings_en: Strings = {
             contextMenu: {
                 toggleShowOpCode: "Show Operation",
                 toggleShowOperands: "Show Operands",
-                toggleEnablePipeline: "Pipeline enabeled",
+                toggleEnablePipeline: "Pipeline enabled",
+                toggleDirectAddressingMode: "Direct addressing mode enabled",
                 //ParamUseExtendedOpCode: "Use Extended Opcode",
             },
         },

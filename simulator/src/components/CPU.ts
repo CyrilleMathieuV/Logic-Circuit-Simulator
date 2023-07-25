@@ -31,7 +31,7 @@ import {
     defineAbstractParametrizedComponent,
     defineParametrizedComponent, ExtractParamDefs, ExtractParams,
     groupHorizontal,
-    groupVertical, NodesIn, NodesOut,
+    groupVertical, InputNodeRepr, NodesIn, NodesOut,
     param,
     paramBool,
     ParametrizedComponentBase, ReadonlyGroupedNodeArray,
@@ -54,6 +54,7 @@ import { Register } from "./Register";
 import { ALU } from "./ALU"
 import { Mux } from "./Mux";
 import { FlipflopD } from "./FlipflopD";
+import { NodeIn } from "./Node";
 
 export const CPUBaseDef =
     defineAbstractParametrizedComponent( {
@@ -226,6 +227,8 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
     protected _programCounterRegister : Register
     protected _previousProgramCounterRegister : Register
 
+    protected _specialVoidProgramCounterFlipflopD : FlipflopD
+
     protected _programCounterMux : Mux
 
     protected _fetchFlipflopD : FlipflopD
@@ -266,14 +269,16 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         this._accumulatorRegister.setTrigger(EdgeTrigger.falling)
         this._flagsRegister.setTrigger(EdgeTrigger.falling)
 
-        this._programCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
+        this._programCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: true}, undefined)
         this._previousProgramCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
 
         // MUST change trigger of Registers
         this._programCounterRegister.setTrigger(EdgeTrigger.falling)
         this._previousProgramCounterRegister.setTrigger(EdgeTrigger.falling)
 
-        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOp: true},undefined)
+        this._specialVoidProgramCounterFlipflopD = new FlipflopD(parent)
+
+        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOp: false},undefined)
 
         this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
 
@@ -533,6 +538,7 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
             ["mid", toggleEnablePipelineItem],
             ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
+            ...this.makeCPUSpecificContextMenuItems(),
             ["mid", MenuData.sep()],
             //this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpCode, this.usesExtendedOpCode, "extOpCode"),
             //["mid", MenuData.sep()],
@@ -565,10 +571,12 @@ export const CPUDef =
         button: { imgWidth: 40 },
         repr: {
             ...CPUBaseDef.repr,
+            directAddressingMode: typeOrUndefined(t.boolean),
             trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         },
         valueDefaults: {
             ...CPUBaseDef.valueDefaults,
+            directAddressingMode: false,
             trigger: EdgeTrigger.falling,
         },
         params: {
@@ -625,18 +633,21 @@ export type CPUParams = ResolvedParams<typeof CPUDef>
 
 export class CPU extends CPUBase<CPURepr> {
 
+    private _directAddressingMode = CPUDef.aults.directAddressingMode
     private _trigger: EdgeTrigger = CPUDef.aults.trigger
     //private _lastClock: LogicValue = Unknown
 
     public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
         super(parent, CPUDef.with(params) as any, params, saved)
 
+        this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
         this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
 
     public toJSON() {
         return {
             ...this.toJSONBase(),
+            directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
             trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
@@ -653,6 +664,11 @@ export class CPU extends CPUBase<CPURepr> {
         this._trigger = trigger
         this.setNeedsRedraw("trigger changed")
     }
+
+    protected doSetDirectAddressingMode(directAddressingMode: boolean) {
+        this._directAddressingMode = directAddressingMode
+        this.setNeedsRedraw("directAddressingMode changed")
+    }
     /*
     public setTrigger(trigger: EdgeTrigger) {
         this._trigger = trigger
@@ -667,7 +683,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         //this._instructionRegister.makeStateAfterClock()
 
-        const opCodeValue = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0,4).reverse()
+        const opCodeValue = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0, 4).reverse()
         const opCode = this.opCode
 
         this._ALU.inputs.Mode.value = opCodeValue[2]
@@ -701,16 +717,15 @@ export class CPU extends CPUBase<CPURepr> {
         const noJump = !(((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && jumpControl)
         const backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
 
+        this._specialVoidProgramCounterFlipflopD.inputs.D.value = noJump
+
         if (this._enablePipeline) {
             this._programCounterMux.inputs.S[0].value = !noJump
-
             this.setInputValues(this._programCounterMux.inputs.I[1], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
             this.setInputValues(this._programCounterMux.inputs.I[0], this.getOutputValues(this._programCounterRegister.outputs.Q))
         }
 
         this._programCounterALU.inputs.Mode.value = false
-        this._programCounterALU.inputs.Op[2].value = false
-        this._programCounterALU.inputs.Op[1].value = noJump
         this._programCounterALU.inputs.Op[0].value = backwardJump
 
         if (this._enablePipeline) {
@@ -718,11 +733,20 @@ export class CPU extends CPUBase<CPURepr> {
         } else {
             this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterRegister.outputs.Q))
         }
+
+        this._programCounterRegister.inputs.Inc = this._programCounterRegister.hasIncDec? this._specialVoidProgramCounterFlipflopD.inputs.D : this._specialVoidProgramCounterFlipflopD.inputs.D
+
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const BinputValueProgramCounterALU = operands.slice().reverse()
-        this.setInputValues(this._programCounterALU.inputs.B, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
+        if (this._directAddressingMode) {
+            if (!noJump) {
+                this.setInputValues(this._programCounterRegister.inputs.D, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
+            }
+        } else {
+            this.setInputValues(this._programCounterALU.inputs.B, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
+            this.setInputValues(this._programCounterRegister.inputs.D, this.getOutputValues(this._programCounterALU.outputs.S))
+        }
 
-        this.setInputValues(this._programCounterRegister.inputs.D, this.getOutputValues(this._programCounterALU.outputs.S))
         if (this._enablePipeline) {
             this.setInputValues(this._previousProgramCounterRegister.inputs.D, this.getOutputValues(this._programCounterRegister.outputs.Q))
         }
@@ -866,11 +890,17 @@ export class CPU extends CPUBase<CPURepr> {
         return this.inputValues(this.inputs.Din).map(LogicValue.filterHighZ)
     }
 */
-    public override makeComponentSpecificContextMenuItems(): MenuItems {
+    protected override makeCPUSpecificContextMenuItems(): MenuItems {
+        const s = S.Components.CPU.contextMenu
+        const iconDirectAddressingMode = this._directAddressingMode? "check" : "none"
+        const toggleDirectAddressingMode: MenuItems = this.numAddressInstructionBits != 4 ? [] : [
+            ["mid", MenuData.item(iconDirectAddressingMode, s.toggleDirectAddressingMode,
+                () => {this.doSetDirectAddressingMode(!this._directAddressingMode)}
+            )],
+        ]
+
         return [
-            ...makeTriggerItems(this._trigger, this.doSetTrigger.bind(this)),
-            ["mid", MenuData.sep()],
-            ...super.makeComponentSpecificContextMenuItems(),
+            ...toggleDirectAddressingMode,
         ]
     }
 }
