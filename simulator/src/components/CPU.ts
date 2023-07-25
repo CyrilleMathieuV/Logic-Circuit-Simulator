@@ -4,6 +4,8 @@ import {
     COLOR_COMPONENT_BORDER,
     COLOR_COMPONENT_INNER_LABELS,
     COLOR_GROUP_SPAN,
+    COLOR_CPUSTAGE_BACKGROUND,
+    COLOR_CPUSTAGE_TEXT,
     displayValuesFromArray,
     drawLabel,
     drawWireLineToComponent,
@@ -49,12 +51,81 @@ import {
     MenuItems,
     Orientation,
 } from "./Drawable"
-import { Flipflop, makeTriggerItems } from "./FlipflopOrLatch";
+//import { Flipflop, makeTriggerItems } from "./FlipflopOrLatch";
+import { FlipflopD } from "./FlipflopD";
 import { Register } from "./Register";
+import { Counter } from "./Counter";
 import { ALU } from "./ALU"
 import { Mux } from "./Mux";
-import { FlipflopD } from "./FlipflopD";
-import { NodeIn } from "./Node";
+
+export const CPUOpCodes = [
+    "NOP", "DEC", "LDM", "LDK",
+    //0000  0001   0010   0011
+    "GDW", "GUP", "JIZ", "JIC",
+    //0100 0101   0110   0111
+    "ADM", "SBM", "HLT", "STM",
+    //1000  1001   1010    1011
+    "ORM", "ANM", "NOT", "XRM",
+    //1100 1101   1110   1111
+] as const
+
+// TO DO
+// Used to future CISC CPUOpCodes.
+// export const CPUOpCodesExtended:
+//  "NOP", "EX0", "LDM", "LDK",
+//0000  0001   0010   0011
+//    "GDW", "GUP", "JIZ", "JIC",
+//0100 0101   0110   0111
+//    "ADM", "SBM", "HLT", "STM",
+//1000  1001   1010    1011
+//    "ORM", "ANM", "EX1", "XRM",
+//1100 1101   1110   1111
+
+export type CPUOpCode = typeof CPUOpCodes[number]
+
+export const CPUOpCode = {
+    shortName(opCode: CPUOpCode): string {
+        return S.Components.CPU[opCode][0]
+    },
+    fullName(opCode: CPUOpCode): string {
+        return S.Components.CPU[opCode][1]
+    },
+}
+
+export const CPUStages = [
+    "FETCH", "DECODE", "EXECUTE",
+    //0      1         2
+] as const
+
+export type CPUStage = typeof CPUStages[number]
+
+export const CPUStage = {
+    shortName(stage: CPUStage): string {
+        return S.Components.CPU.Stage[stage][0]
+    },
+    fullName(stage: CPUStage): string {
+        return S.Components.CPU.Stage[stage][1]
+    },
+}
+
+export const CPUStageColors = {
+    green: "green",
+    blue: "blue",
+    orange: "orange",
+} as const
+
+export type CPUStageColor = keyof typeof CPUStageColors
+
+export const CPUStageColorList = Object.keys(CPUStageColors) as CPUStageColor[]
+
+// Tricky thing : https://stackoverflow.com/questions/57086672/element-implicitly-has-an-any-type-because-expression-of-type-string-cant-b
+
+export const CPUStageColorText = {
+    color: function (stage: CPUStage): CPUStageColor {
+        const stageColor = S.Components.CPU.StageColor[stage]
+        return CPUStageColors[stageColor as CPUStageColor]
+    }
+}
 
 export const CPUBaseDef =
     defineAbstractParametrizedComponent( {
@@ -66,15 +137,17 @@ export const CPUBaseDef =
             addressDataBits: typeOrUndefined(t.number),
             showOpCode: typeOrUndefined(t.boolean),
             showOperands: typeOrUndefined(t.boolean),
+            showStage: typeOrUndefined(t.boolean),
             enablePipeline: typeOrUndefined(t.boolean),
-            //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
+            trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
             //extOpCode: typeOrUndefined(t.boolean),
         },
         valueDefaults: {
             showOpCode: true,
             showOperands: true,
+            showStage: true,
             enablePipeline: true,
-            //trigger: EdgeTrigger.falling,
+            trigger: EdgeTrigger.falling,
         },
         params: {
             instructionBits: param(8, [8]),
@@ -114,8 +187,8 @@ export const CPUBaseDef =
                     Reset: [-15, inputY, "s", "Reset CPU", { prefersSpike: true }],
                     ManStep: [-13, inputY, "s","Man STEP", { prefersSpike: true }],
                     Speed: [-11, inputY, "s", "Select Clock"],
-                    ClockS: [-9, inputY, "s", "Slow Clock", { isClock: true }],
-                    ClockF: [-7, inputY, "s", "Fast Clock", { isClock: true }],
+                    ClockS: [-9, inputY, "s", "Slow Clock", { isClock: true, hasTriangle: true }],
+                    ClockF: [-7, inputY, "s", "Fast Clock", { isClock: true, hasTriangle: true }],
                     RunStop: [-5, inputY, "s", "Run/Stop", { prefersSpike: true }],
                     //Mode: opCodeMode,
                 },
@@ -152,39 +225,7 @@ export const CPUBaseDef =
         },
     })
 
-export type CPUOpCode = typeof CPUOpCodes[number]
 
-export const CPUOpCode = {
-    shortName(op: CPUOpCode): string {
-        return S.Components.CPU[op][0]
-    },
-    fullName(op: CPUOpCode): string {
-        return S.Components.CPU[op][1]
-    },
-}
-
-export const CPUOpCodes = [
-    "NOP", "DEC", "LDM", "LDK",
-    //0000  0001   0010   0011
-    "GDW", "GUP", "JIZ", "JIC",
-    //0100 0101   0110   0111
-    "ADM", "SBM", "HLT", "STM",
-    //1000  1001   1010    1011
-    "ORM", "ANM", "NOT", "XRM",
-    //1100 1101   1110   1111
-] as const
-
-// TO DO
-// Used to future CISC CPUOpCodes.
-// export const CPUOpCodesExtended:
-//  "NOP", "EX0", "LDM", "LDK",
-//0000  0001   0010   0011
-//    "GDW", "GUP", "JIZ", "JIC",
-//0100 0101   0110   0111
-//    "ADM", "SBM", "HLT", "STM",
-//1000  1001   1010    1011
-//    "ORM", "ANM", "EX1", "XRM",
-//1100 1101   1110   1111
 
 /*type CPUBaseValue = Value<typeof CPUBaseDef>*/
 
@@ -205,13 +246,19 @@ type CPUBaseValue = {
 export type CPUBaseRepr = Repr<typeof CPUBaseDef>
 export type CPUBaseParams = ResolvedParams<typeof CPUBaseDef>
 
-export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedComponentBase<TRepr, CPUBaseValue> {
+export abstract class CPUBase<
+    TRepr extends CPUBaseRepr
+> extends ParametrizedComponentBase<
+    TRepr,
+    CPUBaseValue
+> {
     public readonly numInstructionBits: number
     public readonly numAddressInstructionBits: number
 
     public readonly numDataBits: number
     public readonly numAddressDataBits: number
 
+    private _trigger: EdgeTrigger = CPUDef.aults.trigger
     //public readonly usesExtendedOpCode: boolean
 
     protected _ALU : ALU
@@ -241,8 +288,11 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
     protected _clockSpeedMux : Mux
     protected _autoManMux : Mux
 
+    protected _operationStageCounter : Counter
+
     protected _showOpCode: boolean
     protected _showOperands: boolean
+    protected _showStage: boolean
     protected _enablePipeline: boolean
 
     protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef, params: CPUBaseParams, saved?: TRepr) {
@@ -265,16 +315,16 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         this._instructionMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
 
         // MUST change trigger of Registers
-        this._instructionRegister.setTrigger(EdgeTrigger.falling)
-        this._accumulatorRegister.setTrigger(EdgeTrigger.falling)
-        this._flagsRegister.setTrigger(EdgeTrigger.falling)
+        this._instructionRegister.doSetTrigger(EdgeTrigger.falling)
+        this._accumulatorRegister.doSetTrigger(EdgeTrigger.falling)
+        this._flagsRegister.doSetTrigger(EdgeTrigger.falling)
 
         this._programCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: true}, undefined)
         this._previousProgramCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
 
         // MUST change trigger of Registers
-        this._programCounterRegister.setTrigger(EdgeTrigger.falling)
-        this._previousProgramCounterRegister.setTrigger(EdgeTrigger.falling)
+        this._programCounterRegister.doSetTrigger(EdgeTrigger.falling)
+        this._previousProgramCounterRegister.doSetTrigger(EdgeTrigger.falling)
 
         this._specialVoidProgramCounterFlipflopD = new FlipflopD(parent)
 
@@ -287,23 +337,26 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         this._executeFlipflopD = new FlipflopD(parent)
 
         // MUST change trigger of Flipflops
-        this._fetchFlipflopD.setTrigger(EdgeTrigger.falling)
-        this._decodeFlipflopD.setTrigger(EdgeTrigger.falling)
-        this._executeFlipflopD.setTrigger(EdgeTrigger.falling)
+        this._fetchFlipflopD.doSetTrigger(EdgeTrigger.falling)
+        this._decodeFlipflopD.doSetTrigger(EdgeTrigger.falling)
+        this._executeFlipflopD.doSetTrigger(EdgeTrigger.falling)
 
         this._runStopFlipflopD = new FlipflopD(parent)
 
         // MUST change trigger of Flipflops
-        this._runStopFlipflopD.setTrigger(EdgeTrigger.falling)
+        this._runStopFlipflopD.doSetTrigger(EdgeTrigger.falling)
 
         this._runningStateMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
         this._clockSpeedMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
         this._autoManMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
 
+        this._operationStageCounter = new Counter(parent, {numBits: 16}, undefined)
+
         this._showOpCode = saved?.showOpCode ?? CPUDef.aults.showOpCode
         this._showOperands = saved?.showOperands ?? CPUDef.aults.showOperands
+        this._showStage = saved?.showStage ?? CPUDef.aults.showStage
         this._enablePipeline = saved?.enablePipeline ?? CPUDef.aults.enablePipeline
-        //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
+        this._trigger = saved?.trigger ?? CPUDef.aults.trigger
 /*
         this.isaadr = ArrayFillWith(Unknown, this.numAddressInstructionBits)
         this.dadr = ArrayFillWith(Unknown, this.numDataBits)
@@ -319,6 +372,15 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
  */
     }
 
+    public get trigger() {
+        return this._trigger
+    }
+
+    protected doSetTrigger(trigger: EdgeTrigger) {
+        this._trigger = trigger
+        this.setNeedsRedraw("trigger changed")
+    }
+
     public override toJSONBase() {
         return {
             ...super.toJSONBase(),
@@ -329,14 +391,15 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
             //extOpCode: this.usesExtendedOpCode === CPUDef.aults.extOpCode ? undefined : this.usesExtendedOpCode,
             showOpCode: (this._showOpCode !== CPUDef.aults.showOpCode) ? this._showOpCode : undefined,
             showOperands: (this._showOperands !== CPUDef.aults.showOperands) ? this._showOperands : undefined,
+            showStage: (this._showStage !== CPUDef.aults.showStage) ? this._showStage : undefined,
             enablePipeline: (this._enablePipeline !== CPUDef.aults.enablePipeline) ? this._enablePipeline : undefined,
-            //trigger: (this._trigger !== FlipflopBaseDef.aults.trigger) ? this._trigger : undefined,
+            trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
 
     public get opCode(): CPUOpCode | Unknown {
         //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
-        const opCodeValues = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0,4)
+        const opCodeValues = this.inputValues(this._instructionRegister.inputs.D).slice(0,4)
         //opValues.push(this.inputs.Mode.value)
         const opCodeIndex = displayValuesFromArray(opCodeValues, true)[1]
         // TO DO
@@ -352,6 +415,16 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         // TO DO
         //return isUnknown(opCodeIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodes)[opCodeIndex]
         return this.getOutputValues(this._instructionRegister.outputs.Q).slice(4,8)
+    }
+
+    public get stage(): CPUStage | Unknown {
+        //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
+        const stageValues = this.getOutputValues(this._operationStageCounter.outputs.Q)
+        //opValues.push(this.inputs.Mode.value)
+        const stageIndex = displayValuesFromArray(stageValues, false)[1]
+        // TO DO
+        //return isUnknown(opCodeIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodes)[opCodeIndex]
+        return isUnknown(stageIndex) ? Unknown : CPUStages[stageIndex % 3]
     }
 
     //public abstract makeStateAfterClock(): LogicValue[]
@@ -373,17 +446,22 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
 
     private doSetShowOpCode(showOpCode: boolean) {
         this._showOpCode = showOpCode
-        this.setNeedsRedraw("show opCodechanged")
+        this.setNeedsRedraw("show opCode changed")
     }
 
     private doSetShowOperands(showOperands: boolean) {
         this._showOperands = showOperands
-        this.setNeedsRedraw("show operdanschanged")
+        this.setNeedsRedraw("show operands changed")
+    }
+
+    private doSetShowStage(ShowStage: boolean) {
+        this._showStage = ShowStage
+        this.setNeedsRedraw("show phase changed")
     }
 
     private doSetEnablePipeline(enabalePipeline: boolean) {
         this._enablePipeline = enabalePipeline
-        this.setNeedsRedraw("show pipelinechanged")
+        this.setNeedsRedraw("show pipeline changed")
     }
 
     protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
@@ -404,6 +482,7 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         //this._clockSpeedMux.doDraw(g, ctx)
         //this._autoManMux.doDraw(g, ctx)
         //this._fetchFlipflopD.doDraw(g, ctx)
+        //this._operationStageCounter.doDraw(g, ctx)
 
         // inputs
         for (const input of this.inputs.Isa) {
@@ -495,27 +574,44 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
             drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState)
 
             if (this._showOpCode) {
-                const opCodeName = isUnknown(this.opCode) ? "??" : CPUOpCode.shortName(this.opCode)
-                const size = opCodeName.length === 1 ? 25 : opCodeName.length === 2 ? 17 : 13
-                g.font = `bold ${size}px sans-serif`
+                const opCode = this.opCode
+                const opCodeName = isUnknown(opCode) ? "??" : CPUOpCode.shortName(opCode)
+                let operandsString = ""
+                if (this._showOperands) {
+                    const operandsValue = displayValuesFromArray(this.operands, true)[1]
+                    operandsString = formatWithRadix(operandsValue, 2, this.numDataBits, true)
+                }
+                const opDisplay = opCodeName + " " + operandsString
+                const size = opDisplay.length === 1 ? 25 : opDisplay.length === 2 ? 17 : 13
+                g.font = "bold ${size}px sans-serif"
                 g.fillStyle = COLOR_COMPONENT_BORDER
                 g.textAlign = "center"
                 g.textBaseline = "middle"
-                g.fillText(opCodeName, ...ctx.rotatePoint(this.posX + 5, this.posY))
+                g.fillText(opDisplay, ...ctx.rotatePoint(this.posX, this.posY))
             }
 
-            if (this._showOperands) {
-                const operandsValue = displayValuesFromArray(this.operands, true)[1]
-                const operandsString = formatWithRadix(operandsValue, 2, this.numDataBits, true)
-                g.font = `bold 13px sans-serif`
+            if (this._showStage) {
+                const stage = this.stage
+                const stageName = isUnknown(stage) ? "??" : CPUStage.shortName(stage)
+                //console.log(isUnknown(stage) ? "*" : CPUStageColorText.color(stage))
+                const stageColor = isUnknown(stage) ? COLOR_COMPONENT_BORDER : COLOR_CPUSTAGE_TEXT[CPUStageColorText.color(stage)]
+                //g.font = "bold 14px sans-serif"
+                g.fillStyle = stageColor
                 g.fillStyle = COLOR_COMPONENT_BORDER
                 g.textAlign = "center"
-                g.textBaseline = "top"
-                g.fillText(operandsString, ...ctx.rotatePoint(this.posX + 5, this.posY + 20))
+                g.textBaseline = "middle"
+                g.fillText(stageName, ...ctx.rotatePoint(this.posX, this.posY - 20))
             }
+
         })
     }
-
+    /*
+    export const CPUStageColorText = {
+        color: function (stage: CPUStage): string {
+            return S.Components.CPU.StageColor[stage]
+        }
+    }
+    */
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
         const s = S.Components.CPU.contextMenu
         const iconOpCode = this._showOpCode ? "check" : "none"
@@ -526,6 +622,10 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         const toggleShowOperandsItem = MenuData.item(iconOperands, s.toggleShowOperands, () => {
             this.doSetShowOperands(!this._showOperands)
         })
+        const iconStage = this._showStage ? "check" : "none"
+        const toggleShowStageItem = MenuData.item(iconStage, s.toggleShowStage, () => {
+            this.doSetShowOperands(!this._showStage)
+        })
         const iconEnablePipeline = this._enablePipeline? "check" : "none"
         const toggleEnablePipelineItem = MenuData.item(iconEnablePipeline, s.toggleEnablePipeline, () => {
             this.doSetEnablePipeline(!this._enablePipeline)
@@ -534,6 +634,7 @@ export abstract class CPUBase<TRepr extends CPUBaseRepr> extends ParametrizedCom
         return [
             ["mid", toggleShowOpCodeItem],
             ["mid", toggleShowOperandsItem],
+            ["mid", toggleShowStageItem],
             ["mid", MenuData.sep()],
             ["mid", toggleEnablePipelineItem],
             ["mid", MenuData.sep()],
@@ -572,12 +673,12 @@ export const CPUDef =
         repr: {
             ...CPUBaseDef.repr,
             directAddressingMode: typeOrUndefined(t.boolean),
-            trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
+            //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         },
         valueDefaults: {
             ...CPUBaseDef.valueDefaults,
             directAddressingMode: false,
-            trigger: EdgeTrigger.falling,
+            //trigger: EdgeTrigger.falling,
         },
         params: {
             instructionBits: CPUBaseDef.params.instructionBits,
@@ -634,21 +735,21 @@ export type CPUParams = ResolvedParams<typeof CPUDef>
 export class CPU extends CPUBase<CPURepr> {
 
     private _directAddressingMode = CPUDef.aults.directAddressingMode
-    private _trigger: EdgeTrigger = CPUDef.aults.trigger
+    //private _trigger: EdgeTrigger = CPUDef.aults.trigger
     //private _lastClock: LogicValue = Unknown
 
     public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
         super(parent, CPUDef.with(params) as any, params, saved)
 
         this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
-        this._trigger = saved?.trigger ?? CPUDef.aults.trigger
+        //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
 
     public toJSON() {
         return {
             ...this.toJSONBase(),
             directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
-            trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
+            //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
 
@@ -656,6 +757,11 @@ export class CPU extends CPUBase<CPURepr> {
         return "CPU"
     }
 
+    protected doSetDirectAddressingMode(directAddressingMode: boolean) {
+        this._directAddressingMode = directAddressingMode
+        this.setNeedsRedraw("directAddressingMode changed")
+    }
+    /*
     public get trigger() {
         return this._trigger
     }
@@ -664,12 +770,6 @@ export class CPU extends CPUBase<CPURepr> {
         this._trigger = trigger
         this.setNeedsRedraw("trigger changed")
     }
-
-    protected doSetDirectAddressingMode(directAddressingMode: boolean) {
-        this._directAddressingMode = directAddressingMode
-        this.setNeedsRedraw("directAddressingMode changed")
-    }
-    /*
     public setTrigger(trigger: EdgeTrigger) {
         this._trigger = trigger
     }
@@ -684,7 +784,8 @@ export class CPU extends CPUBase<CPURepr> {
         //this._instructionRegister.makeStateAfterClock()
 
         const opCodeValue = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0, 4).reverse()
-        const opCode = this.opCode
+        const opCodeIndex = displayValuesFromArray(opCodeValue, true)[1]
+        const opCode = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
 
         this._ALU.inputs.Mode.value = opCodeValue[2]
         this._ALU.inputs.Op[2].value = opCodeValue[1]
@@ -771,6 +872,7 @@ export class CPU extends CPUBase<CPURepr> {
         //const prevClock = this._lastClock
         //const clockSync = this._lastClock = this._autoManMux.outputs.Z[0].value
         const clockSync = this._autoManMux.outputs.Z[0].value
+        this._operationStageCounter.inputs.Clock.value = clockSync
         if (this._enablePipeline) {
             const ramClockSync = clockSync
             this._instructionRegister.inputs.Clock.value = clockSync
@@ -811,6 +913,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._decodeFlipflopD.inputs.Clr.value = clrSignal
             this._executeFlipflopD.inputs.Clr.value = clrSignal
         }
+        this._operationStageCounter.inputs.Clr.value = clrSignal
 
         if (isUnknown(opCode)) {
             return {
@@ -876,6 +979,7 @@ export class CPU extends CPUBase<CPURepr> {
 
     public override makeTooltip() {
         const opCode = this.opCode
+        const stage = this.stage
         const s = S.Components.CPU.tooltip
         const opCodeDesc = isUnknown(opCode) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOpCode.fullName(opCode)
         return tooltipContent(s.title,

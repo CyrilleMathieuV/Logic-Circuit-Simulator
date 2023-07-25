@@ -142,13 +142,9 @@ export abstract class RegisterBase<
         this.setNeedsRedraw("show content changed")
     }
 
-    protected doSetTrigger(trigger: EdgeTrigger) {
+    public doSetTrigger(trigger: EdgeTrigger) {
         this._trigger = trigger
         this.setNeedsRedraw("trigger changed")
-    }
-
-    public setTrigger(trigger: EdgeTrigger) {
-        this._trigger = trigger
     }
 
     protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {

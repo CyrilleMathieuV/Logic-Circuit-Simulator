@@ -3,8 +3,10 @@ import { LedColor } from "./components/DisplayBar"
 import { DrawContext, DrawContextExt, GraphicsRendering, HasPosition, Orientation } from "./components/Drawable"
 import { Node, WireColor } from "./components/Node"
 import { RectangleColor } from "./components/Rectangle"
+import { CPUStageColor } from "./components/CPU"
 import { LogicEditor } from "./LogicEditor"
 import { EdgeTrigger, FixedArray, FixedArrayAssert, InBrowser, isArray, isHighImpedance, isNumber, isString, isUnknown, LogicValue, Mode, Unknown } from "./utils"
+
 
 
 //
@@ -112,6 +114,8 @@ export let COLOR_LED_ON: { [C in LedColor]: ColorString }
 export let COLOR_WIRE: { [C in WireColor]: ColorString }
 export let COLOR_RECTANGLE_BACKGROUND: { [C in RectangleColor]: ColorString }
 export let COLOR_RECTANGLE_BORDER: { [C in RectangleColor]: ColorString }
+export let COLOR_CPUSTAGE_BACKGROUND : { [C in CPUStageColor] : ColorString }
+export let COLOR_CPUSTAGE_TEXT : { [C in CPUStageColor] : ColorString }
 export let PATTERN_STRIPED_GRAY: CanvasPattern
 
 let _currentModeIsDark = false
@@ -210,7 +214,6 @@ function doSetColors(darkMode: boolean) {
             green: ColorString([87, 136, 97]),
             white: ColorString([230, 217, 199]),
         }
-
         PATTERN_STRIPED_GRAY = createStripedPattern(COLOR_BACKGROUND, "rgba(128,128,128,0.4)")
 
     }
@@ -232,11 +235,20 @@ function doSetColors(darkMode: boolean) {
         grey: ColorString([35, 35, 35, 0.5]),
         turquoise: ColorString([0, 162, 162, 0.5]),
     }
+    COLOR_CPUSTAGE_BACKGROUND = {
+        green: ColorString([54, 255, 54, 0.2]),
+        blue: ColorString([54, 54, 255, 0.2]),
+        orange: ColorString([238, 154, 0, 0.2]),
+    }
+    COLOR_CPUSTAGE_TEXT = {
+        green: ColorString([0, 167, 0, 0.8]),
+        blue: ColorString([115, 115, 255, 0.8]),
+        orange: ColorString([204, 120, 0, 0.8]),
+    }
     COLOR_COMPONENT_BORDER = ColorString(COLORCOMP_COMPONENT_BORDER)
     setColorMouseOverIsDanger(false)
     COLOR_FULL = ColorString(COLORCOMPS_FULL)
     COLOR_EMPTY = ColorString(COLORCOMPS_EMPTY)
-
     _currentModeIsDark = darkMode
 }
 

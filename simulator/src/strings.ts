@@ -367,6 +367,16 @@ const Strings_fr = {
             "NOT": tuple("Not ACC", "Complément de l'ACC"),
             "XRM": tuple("Xor RAM and ACC", "ACC ou exclusif RAM"),
 
+            Stage: {
+                "FETCH": tuple("Fetch", "Fetch"),
+                "DECODE": tuple("Decode", "Decode"),
+                "EXECUTE": tuple("Execute", "Execute"),
+            },
+            StageColor: {
+                "FETCH": "green",
+                "DECODE": "blue",
+                "EXECUTE": "orange",
+            },
             InputCinDesc: "retenue d’entrée",
             OutputCoutDesc: "retenue de sortie",
             tooltip: {
@@ -378,6 +388,7 @@ const Strings_fr = {
             contextMenu: {
                 toggleShowOpCode: "Afficher l’opération",
                 toggleShowOperands: "Afficher les opérandes",
+                toggleShowStage: "Afficher l'étape",
                 toggleEnablePipeline: "Activer le pipeline",
                 toggleDirectAddressingMode: "Adressage direct",
                 //ParamUseExtendedOpCode: "Utiliser opérations étendues",
@@ -1137,6 +1148,16 @@ const Strings_en: Strings = {
             "NOT": tuple("Not ACC", "Complément de l'ACC"),
             "XRM": tuple("Xor RAM and ACC", "ACC ou exclusif RAM"),
 
+            Stage: {
+                "FETCH": tuple("Fetch", "Fetch"),
+                "DECODE": tuple("Decode", "Decode"),
+                "EXECUTE": tuple("Execute", "Execute"),
+            },
+            StageColor: {
+                "FETCH": "green",
+                "DECODE": "blue",
+                "EXECUTE": "orange",
+            },
             InputCinDesc: "input carry",
             OutputCoutDesc: "output carry",
             tooltip: {
@@ -1148,6 +1169,7 @@ const Strings_en: Strings = {
             contextMenu: {
                 toggleShowOpCode: "Show Operation",
                 toggleShowOperands: "Show Operands",
+                toggleShowStage: "Show Stage",
                 toggleEnablePipeline: "Pipeline enabled",
                 toggleDirectAddressingMode: "Direct addressing mode enabled",
                 //ParamUseExtendedOpCode: "Use Extended Opcode",
