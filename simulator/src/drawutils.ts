@@ -239,11 +239,13 @@ function doSetColors(darkMode: boolean) {
         green: ColorString([54, 255, 54, 0.2]),
         blue: ColorString([54, 54, 255, 0.2]),
         orange: ColorString([238, 154, 0, 0.2]),
+        grey: ColorString([120, 120, 120, 0.2]),
     }
     COLOR_CPUSTAGE_TEXT = {
         green: ColorString([0, 167, 0, 0.8]),
         blue: ColorString([115, 115, 255, 0.8]),
         orange: ColorString([204, 120, 0, 0.8]),
+        grey: ColorString([35, 35, 35, 0.5]),
     }
     COLOR_COMPONENT_BORDER = ColorString(COLORCOMP_COMPONENT_BORDER)
     setColorMouseOverIsDanger(false)

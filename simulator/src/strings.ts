@@ -367,7 +367,7 @@ const Strings_fr = {
             "NOT": tuple("Not ACC", "Complément de l'ACC"),
             "XRM": tuple("Xor RAM and ACC", "ACC ou exclusif RAM"),
 
-            Stage: {
+            StageName: {
                 "FETCH": tuple("Fetch", "Fetch"),
                 "DECODE": tuple("Decode", "Decode"),
                 "EXECUTE": tuple("Execute", "Execute"),
@@ -390,6 +390,7 @@ const Strings_fr = {
                 toggleShowOperands: "Afficher les opérandes",
                 toggleShowStage: "Afficher l'étape",
                 toggleEnablePipeline: "Activer le pipeline",
+                toggleShowClockCycle: "Afficher le dycle",
                 toggleDirectAddressingMode: "Adressage direct",
                 //ParamUseExtendedOpCode: "Utiliser opérations étendues",
             },
@@ -1148,7 +1149,7 @@ const Strings_en: Strings = {
             "NOT": tuple("Not ACC", "Complément de l'ACC"),
             "XRM": tuple("Xor RAM and ACC", "ACC ou exclusif RAM"),
 
-            Stage: {
+            StageName: {
                 "FETCH": tuple("Fetch", "Fetch"),
                 "DECODE": tuple("Decode", "Decode"),
                 "EXECUTE": tuple("Execute", "Execute"),
@@ -1171,6 +1172,7 @@ const Strings_en: Strings = {
                 toggleShowOperands: "Show Operands",
                 toggleShowStage: "Show Stage",
                 toggleEnablePipeline: "Pipeline enabled",
+                toggleShowClockCycle: "Show Cycle",
                 toggleDirectAddressingMode: "Direct addressing mode enabled",
                 //ParamUseExtendedOpCode: "Use Extended Opcode",
             },
