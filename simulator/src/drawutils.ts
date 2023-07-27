@@ -582,12 +582,14 @@ export function drawClockInput(g: GraphicsRendering, left: number, clockNode: No
     drawWireLineToComponent(g, clockNode, left - clockLineOffset, clockY, false)
 }
 
-
 export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: number, y: Node | ReadonlyGroupedNodeArray<Node>): void
+export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: number, y: Node | ReadonlyGroupedNodeArray<Node>, undefined : any, textOrientation: number): void
 export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: Node | ReadonlyGroupedNodeArray<Node>, y: number): void
+export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: Node | ReadonlyGroupedNodeArray<Node>, y: number, undefined : any, textOrientation: number): void
 export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: number, y: number, referenceNode: Node | ReadonlyGroupedNodeArray<Node> | undefined): void
+export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: number, y: number, referenceNode: Node | ReadonlyGroupedNodeArray<Node> | undefined, textOrientation: number): void
 
-export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: number | Node | ReadonlyGroupedNodeArray<Node>, y: number | Node | ReadonlyGroupedNodeArray<Node>, referenceNode?: Node | ReadonlyGroupedNodeArray<Node>) {
+export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: string | undefined, anchor: Orientation | undefined, x: number | Node | ReadonlyGroupedNodeArray<Node>, y: number | Node | ReadonlyGroupedNodeArray<Node>, referenceNode?: Node | ReadonlyGroupedNodeArray<Node>, textOrientation?: number) {
     if (text === undefined) {
         return
     }
@@ -607,6 +609,11 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
         return
     }
 
+    let tOrientention = 0
+    if (textOrientation !== undefined) {
+        tOrientention = (textOrientation % 4)
+    }
+
     const [halign, valign, dx, dy] = (() => {
         if (anchor === undefined) {
             return ["center", "middle", 0, 0] as const
@@ -614,9 +621,33 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
         const rotatedAnchor = Orientation.add(compOrient, anchor)
         switch (rotatedAnchor) {
             case "e": return ["right", "middle", -3, 0] as const
-            case "w": return ["left", "middle", 3, 0] as const
-            case "n": return ["center", "top", 0, 2] as const
-            case "s": return ["center", "bottom", 0, -2] as const
+            case "w": {
+                switch (tOrientention) {
+                    case 1: return ["left", "bottom", 0, 3] as const
+                    case 2: return ["left", "middle", 3, 3] as const
+                    case 3: return ["left", "middle", 3, 3] as const
+                    default : return ["left", "middle", 3, 0] as const
+                }
+            }
+            break
+            case "n": {
+                switch (tOrientention) {
+                    case 1: return ["left", "bottom", 0, 3] as const
+                    case 2: return ["left", "middle", 3, 3] as const
+                    case 3: return ["left", "middle", 3, 3] as const
+                    default : return ["center", "top", 0, 2] as const
+                }
+        }
+        break
+            case "s": {
+                switch (tOrientention) {
+                    case 1: return ["left", "middle", 0, -3] as const
+                    case 2: return ["left", "middle", 3, 3] as const
+                    case 3: return ["left", "middle", 3, 3] as const
+                    default : return ["center", "bottom", 0, -2] as const
+                }
+            }
+            default: return ["center", "middle", 0, 0] as const
         }
     })()
 
@@ -628,9 +659,14 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
 
     // we assume a color and a font have been set before this function is called
     const g = ctx.g
+    // http://www.java2s.com/Tutorials/HTML_CSS/HTML5_Canvas_Reference/rotate.htm
+    g.save()
     g.textAlign = halign
     g.textBaseline = valign
-    g.fillText(text, finalX + dx, finalY + dy)
+    g.translate(finalX + dx, finalY + dy)
+    g.rotate(tOrientention * (-Math.PI / 2));
+    g.fillText(text, 0, 0)
+    g.restore()
 }
 
 export function drawValueTextCentered(g: GraphicsRendering, value: LogicValue, comp: HasPosition, opts?: { fillStyle?: string, small?: boolean }) {

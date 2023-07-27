@@ -579,12 +579,12 @@ export abstract class CPUBase<
             const isVertical = Orientation.isVertical(this.orient)
             const carryHOffsetF = isVertical ? 0 : 1
             drawLabel(ctx, this.orient, "Din", "s", this.inputs.Din, bottom)
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom)
-            drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom)
-            drawLabel(ctx, this.orient, "Speed", "s", this.inputs.Speed, bottom)
-            drawLabel(ctx, this.orient, "Clock S", "s", this.inputs.ClockS, bottom)
-            drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom)
-            drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom,undefined, 1)
+            drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom,undefined, 1)
+            drawLabel(ctx, this.orient, "Speed", "s", this.inputs.Speed, bottom,undefined, 1)
+            drawLabel(ctx, this.orient, "Clock S", "s", this.inputs.ClockS, bottom,undefined, 1)
+            drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom,undefined, 1)
+            drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom,undefined, 1)
 
             // top outputs
             drawLabel(ctx, this.orient, "IsaAdr", "n", this.outputs.Isaadr, top)
@@ -699,7 +699,7 @@ export abstract class CPUBase<
 
                     const opCodeName = this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "opCode")
                     const operandsString = this._showOperands ? this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "operands") : ""
-                    const instructionDisplay = (opCodeName == "" && !this._enablePipeline) ? "" : opCodeName + " " + operandsString
+                    const instructionDisplay = (opCodeName == "") ? "" : opCodeName + " " + operandsString
 
                     //const fontSize = instructionDisplay.length <= 10 ? 16 : instructionDisplay.length <= 20 ? 14 : 12
                     const fontSize = 15
@@ -1179,7 +1179,7 @@ export class CPU extends CPUBase<CPURepr> {
 */
 
     public shiftOpCodeOperandsInStages(previousOpCodeOperandsInStages: any, cpuStage: CPUStage, opCode: string, operands: LogicValue[], isPipelineEnabled: boolean) {
-        console.log(previousOpCodeOperandsInStages)
+        //console.log(previousOpCodeOperandsInStages)
         let opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
         if (isPipelineEnabled) {
                 opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
