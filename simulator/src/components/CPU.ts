@@ -1020,6 +1020,28 @@ export class CPU extends CPUBase<CPURepr> {
         this._runningStateMux.inputs.I[1][0].value = this.inputs.ManStep.value && this._runStopFlipflopD.outputs.Q̅.value
         this._runningStateMux.inputs.I[0][0].value = this._runStopFlipflopD.outputs.Q.value
 
+        const clrSignal = this.inputs.Reset.value && this._runStopFlipflopD.outputs.Q̅.value
+
+        this._instructionRegister.inputs.Clr.value = clrSignal
+        this._accumulatorRegister.inputs.Clr.value = clrSignal
+        this._flagsRegister.inputs.Clr.value = clrSignal
+        this._programCounterRegister.inputs.Clr.value  = clrSignal
+        if (this._enablePipeline) {
+            this._previousProgramCounterRegister.inputs.Clr.value = clrSignal
+        }
+        this._runStopFlipflopD.inputs.Clr.value = clrSignal
+        if (!this._enablePipeline) {
+            this._fetchFlipflopD.inputs.Pre.value = clrSignal
+            this._decodeFlipflopD.inputs.Clr.value = clrSignal
+            this._executeFlipflopD.inputs.Clr.value = clrSignal
+        }
+        this._operationStageCounter.inputs.Clr.value = clrSignal
+
+        if (clrSignal) {
+            this._lastClock = Unknown
+            this._opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
+        }
+
         // EXECUTE STAGE
         const clockSync = this._autoManMux.outputs.Z[0].value
 
@@ -1054,38 +1076,20 @@ export class CPU extends CPUBase<CPURepr> {
         }
         const ramwesyncvalue = this._enablePipeline ? clockSync : clockSync && this._decodeFlipflopD.outputs.Q.value
 
-        const clrSignal = this.inputs.Reset.value && this._runStopFlipflopD.outputs.Q̅.value
 
-        this._instructionRegister.inputs.Clr.value = clrSignal
-        this._accumulatorRegister.inputs.Clr.value = clrSignal
-        this._flagsRegister.inputs.Clr.value = clrSignal
-        this._programCounterRegister.inputs.Clr.value  = clrSignal
-        if (this._enablePipeline) {
-            this._previousProgramCounterRegister.inputs.Clr.value = clrSignal
-        }
-        this._runStopFlipflopD.inputs.Clr.value = clrSignal
-        if (!this._enablePipeline) {
-            this._fetchFlipflopD.inputs.Pre.value = clrSignal
-            this._decodeFlipflopD.inputs.Clr.value = clrSignal
-            this._executeFlipflopD.inputs.Clr.value = clrSignal
-        }
-        this._operationStageCounter.inputs.Clr.value = clrSignal
-
-        if (clrSignal) {
-            this._lastClock = Unknown
-            this._opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
-        }
 
         const opCode = isHighImpedance(opCodeValue) ? "?" : this.opCode
         const operands = this.operands
 
         const prevClock = this._lastClock
         const clockSyncChanged = this._lastClock = clockSync
-        if (Flipflop.isClockTrigger(this._trigger, prevClock, clockSyncChanged)) {
-            console.log("clock : ",clockSync, " prevlck : ", prevClock, " change : ",clockSyncChanged)
-            if (this._enablePipeline) {
+        if (this._enablePipeline) {
+            if (Flipflop.isClockTrigger(this._trigger, prevClock, clockSyncChanged)) {
+                //console.log("clock : ",clockSync, " prevlck : ", prevClock, " change : ",clockSyncChanged)
                 this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
-            } else {
+            }
+        } else {
+            if (!Flipflop.isClockTrigger(this._trigger, prevClock, clockSyncChanged)) {
                 this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
             }
         }
