@@ -925,6 +925,10 @@ export class CPU extends CPUBase<CPURepr> {
     }
     */
     protected doRecalcValue(): CPUBaseValue {
+        /*
+        BE CAREFUL WITH .reverse()
+        IT AFFECTS THE OBJECT !!!
+         */
         // FETCH Stage
         const isa = this.inputValues(this.inputs.Isa)
         // Needs to revert all inputs to be compatible with choosen ISA
