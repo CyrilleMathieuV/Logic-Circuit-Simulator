@@ -620,7 +620,15 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
         }
         const rotatedAnchor = Orientation.add(compOrient, anchor)
         switch (rotatedAnchor) {
-            case "e": return ["right", "middle", -3, 0] as const
+            case "e": {
+                switch (tOrientention) {
+                    case 1: return ["left", "bottom", 0, 3] as const
+                    case 2: return ["left", "middle", 3, 3] as const
+                    case 3: return ["left", "middle", 3, 3] as const
+                    default : return ["right", "middle", -3, 0] as const
+                }
+            }
+            break
             case "w": {
                 switch (tOrientention) {
                     case 1: return ["left", "bottom", 0, 3] as const
@@ -637,8 +645,8 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
                     case 3: return ["left", "middle", 3, 3] as const
                     default : return ["center", "top", 0, 2] as const
                 }
-        }
-        break
+            }
+            break
             case "s": {
                 switch (tOrientention) {
                     case 1: return ["left", "middle", 0, -3] as const
@@ -648,7 +656,7 @@ export function drawLabel(ctx: DrawContextExt, compOrient: Orientation, text: st
                 }
             }
             default: return ["center", "middle", 0, 0] as const
-        }
+            }
     })()
 
     const xx = isNumber(x) ? x :
