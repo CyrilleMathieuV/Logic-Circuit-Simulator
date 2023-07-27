@@ -56,9 +56,7 @@ import { Register } from "./Register";
 import { Counter } from "./Counter";
 import { ALU } from "./ALU"
 import { Mux } from "./Mux";
-import { FlipflopOrLatch } from "./FlipflopOrLatch";
-import {tuple} from "fp-ts";
-//import { Flipflop, makeTriggerItems } from "./FlipflopOrLatch";
+import {Flipflop, FlipflopOrLatch} from "./FlipflopOrLatch";
 
 
 export const CPUOpCodes = [
@@ -209,7 +207,7 @@ export const CPUBaseDef =
                     Isaadr: groupHorizontal("n", -midX, -inputY, numAddressInstructionBits),
                     Dadr: groupHorizontal("n", midX, -inputY, numAddressDataBits),
                     Dout: groupVertical("e", inputX, -midY, numDataBits),
-                    RAMsync: [inputX, 1, "e", "RAM sync"],
+                    RAMweSync: [inputX, 1, "e", "RAM WE sync"],
                     RAMwe: [inputX, 3, "e", "RAM WE"],
                     ResetSync: [inputX, 5, "e", "Reset sync"],
                     Sync: [inputX, 7, "e", "Sync"],
@@ -226,7 +224,7 @@ export const CPUBaseDef =
                 isaadr: ArrayFillWith(false_, numAddressInstructionBits),
                 dadr: ArrayFillWith(false_, numDataBits),
                 dout: ArrayFillWith(false_, numDataBits),
-                ramsync: false_,
+                ramwesync: false_,
                 ramwe: false_,
                 resetsync: false_,
                 sync: false_,
@@ -246,7 +244,7 @@ type CPUBaseValue = {
     isaadr: LogicValue[]
     dadr: LogicValue[]
     dout: LogicValue[]
-    ramsync: LogicValue
+    ramwesync: LogicValue
     ramwe: LogicValue
     resetsync: LogicValue
     sync: LogicValue
@@ -271,7 +269,7 @@ export abstract class CPUBase<
     public readonly numDataBits: number
     public readonly numAddressDataBits: number
 
-    private _trigger: EdgeTrigger = CPUDef.aults.trigger
+    protected _trigger: EdgeTrigger = CPUDef.aults.trigger
     //public readonly usesExtendedOpCode: boolean
 
     protected _ALU : ALU
@@ -300,6 +298,8 @@ export abstract class CPUBase<
     protected _runningStateMux : Mux
     protected _clockSpeedMux : Mux
     protected _autoManMux : Mux
+
+    protected _haltSignalFlipflopD : FlipflopD
 
     protected _operationStageCounter : Counter
 
@@ -367,6 +367,11 @@ export abstract class CPUBase<
         // MUST change trigger of Flipflops
         this._runStopFlipflopD.doSetTrigger(EdgeTrigger.falling)
 
+        this._haltSignalFlipflopD = new FlipflopD(parent)
+
+        // MUST change trigger of Flipflops
+        this._haltSignalFlipflopD.doSetTrigger(EdgeTrigger.falling)
+
         this._runningStateMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
         this._clockSpeedMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
         this._autoManMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
@@ -387,7 +392,7 @@ export abstract class CPUBase<
         this.isaadr = ArrayFillWith(Unknown, this.numAddressInstructionBits)
         this.dadr = ArrayFillWith(Unknown, this.numDataBits)
         this.dout = ArrayFillWith(Unknown, this.numDataBits)
-        this.ramsync =  Unknown
+        this.ramwesync =  Unknown
         this.ramwe = Unknown
         this.resetsync = Unknown
         this.sync = Unknown
@@ -435,7 +440,7 @@ export abstract class CPUBase<
     }
 
     public get operands(): LogicValue[] {
-        return this.getOutputValues(this._instructionRegister.outputs.Q).slice(4,8)
+        return this.inputValues(this._instructionRegister.inputs.D).slice(4,8)
     }
 
     public get cycle(): number {
@@ -454,7 +459,7 @@ export abstract class CPUBase<
         this.outputValues(this.outputs.Isaadr , newValue.isaadr)
         this.outputValues(this.outputs.Dadr , newValue.dadr)
         this.outputValues(this.outputs.Dout , newValue.dout)
-        this.outputs.RAMsync.value = newValue.ramsync
+        this.outputs.RAMweSync.value = newValue.ramwesync
         this.outputs.RAMwe.value = newValue.ramwe
         this.outputs.ResetSync.value = newValue.resetsync
         this.outputs.Sync.value = newValue.sync
@@ -500,8 +505,8 @@ export abstract class CPUBase<
 
         // for debug (works only with "npm run bundle-watch")
         //this._instructionRegister.doDraw(g, ctx)
-        //this._instructionMux.doDraw(g, ctx)
         //this._ALU.doDraw(g, ctx)
+        //this._instructionMux.doDraw(g, ctx)
         //this._accumulatorRegister.doDraw(g, ctx)
         //this._programCounterRegister.doDraw(g, ctx)
         //this._programCounterALU.doDraw(g, ctx)
@@ -536,7 +541,7 @@ export abstract class CPUBase<
         }
         drawWireLineToComponent(g, this.outputs.ResetSync, right, this.outputs.ResetSync.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.Sync, right, this.outputs.Sync.posYInParentTransform)
-        drawWireLineToComponent(g, this.outputs.RAMsync, right, this.outputs.RAMsync.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.RAMweSync, right, this.outputs.RAMweSync.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.RAMwe, right, this.outputs.RAMwe.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.Z, right, this.outputs.Z.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.V, right, this.outputs.V.posYInParentTransform)
@@ -590,7 +595,7 @@ export abstract class CPUBase<
 
             // right outputs
             drawLabel(ctx, this.orient, "Dout", "e", right, this.outputs.Dout)
-            drawLabel(ctx, this.orient, "RAM Sync", "e", right, this.outputs.RAMsync)
+            drawLabel(ctx, this.orient, "RAM Sync", "e", right, this.outputs.RAMweSync)
             drawLabel(ctx, this.orient, "Reset Sync", "e", right, this.outputs.ResetSync)
             drawLabel(ctx, this.orient, "RAM WE", "e", right, this.outputs.RAMwe)
             drawLabel(ctx, this.orient, "Sync", "e", right, this.outputs.Sync)
@@ -612,29 +617,29 @@ export abstract class CPUBase<
 
                         switch (eachStage) {
                             case "FETCH":
-                                valueCenterVar = ctx.rotatePoint(this.outputs.Isaadr.group.posXInParentTransform - fontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                                valueCenterVar = ctx.rotatePoint(this.posX - 100, this.posY - 130)
                                 break
                             case "DECODE":
-                                valueCenterVar = ctx.rotatePoint(this.posX - fontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                                valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 130)
                                 break
                             case "EXECUTE":
-                                valueCenterVar = ctx.rotatePoint(this.outputs.Dadr.group.posXInParentTransform - fontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                                valueCenterVar = ctx.rotatePoint(this.posX + 100, this.posY - 130)
                                 break
                             default:
-                                valueCenterVar = ctx.rotatePoint(this.posX - fontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                                valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 130)
                         }
                         const valueCenter = valueCenterVar
 
                         g.fillStyle = stageColorBackground
-                        const frameWidth = 80 - fontSize / 2
-                        FlipflopOrLatch.drawStoredValueFrame(g, ...valueCenter, frameWidth, 28, false)
+                        const frameWidth = 100 - fontSize / 2
+                        FlipflopOrLatch.drawStoredValueFrame(g, ...ctx.rotatePoint(...valueCenter), frameWidth, 28, false)
                         //g.fillRect(this.posX - 40,this.posY - 30,80,20,)
 
                         g.fillStyle = stageColorText
                         g.font = `bold ${fontSize}px monospace`
                         g.textAlign = "center"
                         g.textBaseline = "middle"
-                        g.fillText(stageName, ...valueCenter)
+                        g.fillText(stageName, ...ctx.rotatePoint(...valueCenter))
                     }
                 } else {
                     const stage = this.stage
@@ -648,28 +653,28 @@ export abstract class CPUBase<
                     var valueCenterVar
                     switch (stage) {
                         case "FETCH":
-                            valueCenterVar = ctx.rotatePoint(this.outputs.Isaadr.group.posXInParentTransform- fontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                            valueCenterVar = ctx.rotatePoint(this.posX - 100, this.posY - 130)
                             break
                         case "DECODE":
-                            valueCenterVar = ctx.rotatePoint(this.posX - fontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                            valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 130)
                             break
                         case "EXECUTE":
-                            valueCenterVar = ctx.rotatePoint(this.outputs.Dadr.group.posXInParentTransform- fontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                            valueCenterVar = ctx.rotatePoint(this.posX + 100, this.posY - 130)
                             break
                         default:
-                        valueCenterVar = ctx.rotatePoint(this.posX - fontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                            valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 130)
                     }
                     const valueCenter = valueCenterVar
                     g.fillStyle = stageColorBackground
-                    const frameWidth = 80 - fontSize / 2
-                    FlipflopOrLatch.drawStoredValueFrame(g, ...valueCenter, frameWidth, 28, false)
+                    const frameWidth = 100 - fontSize / 2
+                    FlipflopOrLatch.drawStoredValueFrame(g, ...ctx.rotatePoint(...valueCenter), frameWidth, 28, false)
                     //g.fillRect(this.posX - 40,this.posY - 30,80,20,)
 
                     g.fillStyle = stageColorText
                     g.font = `bold ${fontSize}px monospace`
                     g.textAlign = "center"
                     g.textBaseline = "middle"
-                    g.fillText(stageName, ...valueCenter)
+                    g.fillText(stageName, ...ctx.rotatePoint(...valueCenter))
                 }
             }
 
@@ -679,31 +684,32 @@ export abstract class CPUBase<
                 for (let eachStage of CPUStages) {
                     switch (eachStage) {
                         case "FETCH":
-                            valueCenterVar = ctx.rotatePoint(this.outputs.Isaadr.group.posXInParentTransform - maxFontSize / 2, this.inputs.Isa.group.posYInParentTransform - 20)
+                            valueCenterVar = ctx.rotatePoint(this.posX - 100, this.posY - 100)
                             break
                         case "DECODE":
-                            valueCenterVar = ctx.rotatePoint(this.posX - maxFontSize / 2, this.inputs.Isa.group.posYInParentTransform)
+                            valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 100)
                             break
                         case "EXECUTE":
-                            valueCenterVar = ctx.rotatePoint(this.outputs.Dadr.group.posXInParentTransform - maxFontSize / 2, this.inputs.Isa.group.posYInParentTransform + 20)
+                            valueCenterVar = ctx.rotatePoint(this.posX + 100, this.posY - 100)
                             break
                         default:
-                            valueCenterVar = ctx.rotatePoint(this.posX - maxFontSize / 2, this.outputs.Dout.group.posYInParentTransform)
+                            valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 120)
                     }
                     const valueCenter = valueCenterVar
-                    const opCodeName = this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "opCode")
-                    let operandsString = ""
-                    if (this._showOperands) {
-                        operandsString = this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "operands")
-                    }
-                    const opDisplay = opCodeName + " " + operandsString
 
-                    const fontSize = opDisplay.length <= 10 ? 24 : opDisplay.length <= 20 ? 16 : 12
+                    const opCodeName = this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "opCode")
+                    const operandsString = this._showOperands ? this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "operands") : ""
+                    const instructionDisplay = (opCodeName == "" && !this._enablePipeline) ? "" : opCodeName + " " + operandsString
+
+                    //const fontSize = instructionDisplay.length <= 10 ? 16 : instructionDisplay.length <= 20 ? 14 : 12
+                    const fontSize = 15
                     g.font = `bold ${fontSize}px monospace`
                     g.fillStyle = COLOR_COMPONENT_BORDER
+                    //const frameWidth = 100 - fontSize / 2
+                    //FlipflopOrLatch.drawStoredValueFrame(g, ...ctx.rotatePoint(...valueCenter), frameWidth, 28, false)
                     g.textAlign = "center"
                     g.textBaseline = "middle"
-                    g.fillText(opDisplay, ...ctx.rotatePoint(...valueCenter))
+                    g.fillText(instructionDisplay, ...ctx.rotatePoint(...valueCenter))
                 }
             }
 
@@ -722,7 +728,7 @@ export abstract class CPUBase<
                 g.fillStyle = COLOR_LABEL_OFF
                 g.textAlign = "center"
                 g.textBaseline = "middle"
-                g.fillText(stringRep, ...valueCenter)
+                g.fillText(stringRep, ...ctx.rotatePoint(...valueCenter))
             }
 
         })
@@ -847,7 +853,7 @@ export const CPUDef =
                 isaadr: ArrayFillWith(false_, numAddressInstructionBits),
                 dadr: ArrayFillWith(false_, numDataBits),
                 dout: ArrayFillWith(false_, numDataBits),
-                ramsync: false_,
+                ramwesync: false_,
                 ramwe: false_,
                 resetsync: false_,
                 sync: false_,
@@ -883,7 +889,7 @@ export class CPU extends CPUBase<CPURepr> {
 
     private _directAddressingMode = CPUDef.aults.directAddressingMode
     //private _trigger: EdgeTrigger = CPUDef.aults.trigger
-    //private _lastClock: LogicValue = Unknown
+    private _lastClock: LogicValue = Unknown
 
     public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
         super(parent, CPUDef.with(params) as any, params, saved)
@@ -917,56 +923,55 @@ export class CPU extends CPUBase<CPURepr> {
         this._trigger = trigger
         this.setNeedsRedraw("trigger changed")
     }
-    public setTrigger(trigger: EdgeTrigger) {
-        this._trigger = trigger
-    }
     */
-
     protected doRecalcValue(): CPUBaseValue {
+        // FETCH Stage
         const isa = this.inputValues(this.inputs.Isa)
-
         // Needs to revert all inputs to be compatible with choosen ISA
         this.setInputValues(this._instructionRegister.inputs.D, isa, true)
 
-        //this._instructionRegister.makeStateAfterClock()
-
+        // DECCODE Stage
         const opCodeValue = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0, 4).reverse()
         const opCodeIndex = displayValuesFromArray(opCodeValue, true)[1]
-        const opCode = isUnknown(opCodeIndex) ? "NOP" : CPUOpCodes[opCodeIndex]
+        const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
+
+        const operandsValue = this.getOutputValues(this._instructionRegister.outputs.Q).slice(4, 8).reverse()
 
         this._ALU.inputs.Mode.value = opCodeValue[2]
         this._ALU.inputs.Op[2].value = opCodeValue[1]
         this._ALU.inputs.Op[1].value = !opCodeValue[3]
         this._ALU.inputs.Op[0].value = opCodeValue[0]
 
+        const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
+
         const commonInstructionMuxSelect = !opCodeValue[3] && !opCodeValue[2]
         this._instructionMux.inputs.S[1].value = commonInstructionMuxSelect && opCodeValue[1]
         this._instructionMux.inputs.S[0].value = (commonInstructionMuxSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2])
 
-        const operands = this.operands
+        this.setInputValues(this._ALU.inputs.A, this.getOutputValues(this._accumulatorRegister.outputs.Q).reverse())
+        this.setInputValues(this._ALU.inputs.B, this.inputValues(this.inputs.Din).reverse())
 
-        this.setInputValues(this._instructionMux.inputs.I[3], operands)
+        this.setInputValues(this._instructionMux.inputs.I[3], operandsValue)
         this.setInputValues(this._instructionMux.inputs.I[2], this.inputValues(this.inputs.Din))
-        this.setInputValues(this._instructionMux.inputs.I[1], this.getOutputValues(this._ALU.outputs.S))
+        this.setInputValues(this._instructionMux.inputs.I[1], this.getOutputValues(this._ALU.outputs.S).reverse())
         this.setInputValues(this._instructionMux.inputs.I[0], this.getOutputValues(this._accumulatorRegister.outputs.Q))
 
         this.setInputValues(this._accumulatorRegister.inputs.D, this.getOutputValues(this._instructionMux.outputs.Z))
 
-        this.setInputValues(this._ALU.inputs.A, this.getOutputValues(this._accumulatorRegister.outputs.Q))
-        this.setInputValues(this._ALU.inputs.B, this.inputValues(this.inputs.Din))
+        this._flagsRegister.inputs.D[1].value = this.outputs.Cout.value
+        this._flagsRegister.inputs.D[0].value = this.allZeros(this.getOutputValues(this._instructionMux.outputs.Z))
 
-        const z = this.allZeros(this.getOutputValues(this._instructionMux.outputs.Z))
-        const c = this.outputs.Cout.value
-
-        this._flagsRegister.inputs.D[1].value = c
-        this._flagsRegister.inputs.D[0].value = z
+        const c = this._flagsRegister.outputs.Q[1].value
+        const z = this._flagsRegister.outputs.Q[0].value
 
         const jumpControl = opCodeValue[2] && !opCodeValue[3]
         const noJump = !(((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && jumpControl)
         const backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
 
         this._specialVoidProgramCounterFlipflopD.inputs.D.value = noJump
+        this._haltSignalFlipflopD.inputs.D.value = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
 
+        // PROGRAM COUNTER LOGIC
         if (this._enablePipeline) {
             this._programCounterMux.inputs.S[0].value = !noJump
             this.setInputValues(this._programCounterMux.inputs.I[1], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
@@ -985,7 +990,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._programCounterRegister.inputs.Inc = this._programCounterRegister.hasIncDec? this._specialVoidProgramCounterFlipflopD.inputs.D : this._specialVoidProgramCounterFlipflopD.inputs.D
 
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
-        const BinputValueProgramCounterALU = operands.slice().reverse()
+        const BinputValueProgramCounterALU = operandsValue.slice()
         if (this._directAddressingMode) {
             if (!noJump) {
                 this.setInputValues(this._programCounterRegister.inputs.D, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
@@ -999,9 +1004,8 @@ export class CPU extends CPUBase<CPURepr> {
             this.setInputValues(this._previousProgramCounterRegister.inputs.D, this.getOutputValues(this._programCounterRegister.outputs.Q))
         }
 
-        const haltOpCodeSignal = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
-
-        this._runStopFlipflopD.inputs.Clock.value = (haltOpCodeSignal && this._autoManMux.outputs.Z[0].value) || this.inputs.RunStop.value
+        // RUN CONTROL LOGIC
+        this._runStopFlipflopD.inputs.Clock.value = (this._haltSignalFlipflopD.outputs.Q.value && this._autoManMux.outputs.Z[0].value) || this.inputs.RunStop.value
         this._runStopFlipflopD.inputs.D.value = this._runStopFlipflopD.outputs.Q̅.value
 
         this._clockSpeedMux.inputs.S[0].value = this.inputs.Speed.value
@@ -1010,25 +1014,27 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._autoManMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q.value
         this._autoManMux.inputs.I[1][0].value = this._clockSpeedMux.outputs.Z[0].value
-        this._autoManMux.inputs.I[0][0].value = this.inputs.ManStep.value && !haltOpCodeSignal
+        this._autoManMux.inputs.I[0][0].value = this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
 
         this._runningStateMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q̅.value
         this._runningStateMux.inputs.I[1][0].value = this.inputs.ManStep.value && this._runStopFlipflopD.outputs.Q̅.value
         this._runningStateMux.inputs.I[0][0].value = this._runStopFlipflopD.outputs.Q.value
 
-        //const prevClock = this._lastClock
-        //const clockSync = this._lastClock = this._autoManMux.outputs.Z[0].value
+        // EXECUTE STAGE
         const clockSync = this._autoManMux.outputs.Z[0].value
-        if (!haltOpCodeSignal) {
+
+        if (!this._haltSignalFlipflopD.outputs.Q.value) {
             this._operationStageCounter.inputs.Clock.value = clockSync
         }
         if (this._enablePipeline) {
-            const ramClockSync = clockSync
-            this._instructionRegister.inputs.Clock.value = clockSync
-            this._accumulatorRegister.inputs.Clock.value = clockSync
-            this._flagsRegister.inputs.Clock.value = clockSync
-            this._programCounterRegister.inputs.Clock.value  = clockSync
-            this._previousProgramCounterRegister.inputs.Clock.value = clockSync
+                this._instructionRegister.inputs.Clock.value = clockSync
+
+                this._accumulatorRegister.inputs.Clock.value = clockSync
+                this._flagsRegister.inputs.Clock.value = clockSync
+                this._haltSignalFlipflopD.inputs.Clock.value = clockSync
+
+                this._programCounterRegister.inputs.Clock.value = clockSync
+                this._previousProgramCounterRegister.inputs.Clock.value = clockSync
         } else {
             this._fetchFlipflopD.inputs.Clock.value = clockSync
             this._decodeFlipflopD.inputs.Clock.value = clockSync
@@ -1040,12 +1046,13 @@ export class CPU extends CPUBase<CPURepr> {
 
             this._instructionRegister.inputs.Clock.value = clockSync && this._fetchFlipflopD.outputs.Q.value
 
-            this._accumulatorRegister.inputs.Clock.value = clockSync && this._fetchFlipflopD.outputs.Q.value
-            this._flagsRegister.inputs.Clock.value = clockSync && this._fetchFlipflopD.outputs.Q.value
+            this._accumulatorRegister.inputs.Clock.value = clockSync && this._decodeFlipflopD.outputs.Q.value
+            this._flagsRegister.inputs.Clock.value = clockSync && this._decodeFlipflopD.outputs.Q.value
+            this._haltSignalFlipflopD.inputs.Clock.value = clockSync && this._decodeFlipflopD.outputs.Q.value
 
             this._programCounterRegister.inputs.Clock.value  = clockSync && this._executeFlipflopD.outputs.Q.value
         }
-        const ramClockSync = this._enablePipeline ? clockSync : clockSync && this._fetchFlipflopD.outputs.Q.value
+        const ramwesyncvalue = this._enablePipeline ? clockSync : clockSync && this._decodeFlipflopD.outputs.Q.value
 
         const clrSignal = this.inputs.Reset.value && this._runStopFlipflopD.outputs.Q̅.value
 
@@ -1064,14 +1071,31 @@ export class CPU extends CPUBase<CPURepr> {
         }
         this._operationStageCounter.inputs.Clr.value = clrSignal
 
-        this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
+        if (clrSignal) {
+            this._lastClock = Unknown
+            this._opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
+        }
+
+        const opCode = isHighImpedance(opCodeValue) ? "?" : this.opCode
+        const operands = this.operands
+
+        const prevClock = this._lastClock
+        const clockSyncChanged = this._lastClock = clockSync
+        if (Flipflop.isClockTrigger(this._trigger, prevClock, clockSyncChanged)) {
+            console.log("clock : ",clockSync, " prevlck : ", prevClock, " change : ",clockSyncChanged)
+            if (this._enablePipeline) {
+                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
+            } else {
+                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
+            }
+        }
         
-        if (isUnknown(opCode)) {
+        if (isUnknown(opCodeName)) {
             return {
-                isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
-                dadr: ArrayFillWith(Unknown, this.numDataBits),
-                dout: ArrayFillWith(Unknown, this.numDataBits),
-                ramsync: Unknown,
+                isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits).reverse(),
+                dadr: ArrayFillWith(Unknown, this.numDataBits).reverse(),
+                dout: ArrayFillWith(Unknown, this.numDataBits).reverse(),
+                ramwesync: Unknown,
                 ramwe: Unknown,
                 resetsync: Unknown,
                 sync: Unknown,
@@ -1087,7 +1111,7 @@ export class CPU extends CPUBase<CPURepr> {
                 isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q),
                 dadr: operands,
                 dout: this.getOutputValues(this._accumulatorRegister.outputs.Q),
-                ramsync: clockSync,
+                ramwesync: clockSync,
                 ramwe: opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0],
                 resetsync: clrSignal,
                 sync: clockSync,
@@ -1101,7 +1125,7 @@ export class CPU extends CPUBase<CPURepr> {
                 isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits),
                 dadr: ArrayFillWith(Unknown, this.numDataBits),
                 dout: ArrayFillWith(Unknown, this.numDataBits),
-                ramsync: Unknown,
+                ramwesync: Unknown,
                 ramwe: Unknown,
                 resetsync: Unknown,
                 sync: Unknown,
@@ -1113,11 +1137,11 @@ export class CPU extends CPUBase<CPURepr> {
         }
 */
         return {
-            isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q),
-            dadr: operands,
-            dout: this.getOutputValues(this._accumulatorRegister.outputs.Q),
-            ramsync: ramClockSync,
-            ramwe: opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0],
+            isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q).reverse(),
+            dadr: operandsValue.reverse(),
+            dout: this.getOutputValues(this._accumulatorRegister.outputs.Q).reverse(),
+            ramwesync: ramwesyncvalue,
+            ramwe: ramwevalue,
             resetsync: clrSignal,
             sync: clockSync,
             z: this._flagsRegister.outputs.Q[0].value,
@@ -1146,7 +1170,8 @@ export class CPU extends CPUBase<CPURepr> {
     }
 */
 
-    public shiftOpCodeOperandsInStages(previousOpCodeOperandsInStages: any, cpuStage: CPUStage, opCode: CPUOpCode, operands: LogicValue[], isPipelineEnabled: boolean) {
+    public shiftOpCodeOperandsInStages(previousOpCodeOperandsInStages: any, cpuStage: CPUStage, opCode: string, operands: LogicValue[], isPipelineEnabled: boolean) {
+        console.log(previousOpCodeOperandsInStages)
         let opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
         if (isPipelineEnabled) {
                 opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
