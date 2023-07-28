@@ -470,7 +470,6 @@ export abstract class CPUBase<
     }
 
     protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
-        this.doDrawDefault(g, ctx, (ctx) => {
         const bounds = this.bounds()
         const {left, top, right, bottom} = bounds
         const lowerTop = top - 2 * GRID_STEP
@@ -669,7 +668,6 @@ export abstract class CPUBase<
             }
             this.doDrawGenericCaption(g, ctx)
         })
-        })
     }
 
     protected abstract doDrawGenericCaption(g: GraphicsRendering, ctx: DrawContextExt): void
@@ -728,19 +726,19 @@ export abstract class CPUBase<
     }
 
     public getInstructionParts(instructionString: string, part :"opCode" | "operands"): string {
-            const instructionParts = instructionString.split(/\++/)
-            switch (part) {
-                case "opCode":
-                    return instructionParts[0]
-                case "operands":
-                    return instructionParts[1]
-            }
+        const instructionParts = instructionString.split(/\++/)
+        switch (part) {
+            case "opCode":
+                return instructionParts[0]
+            case "operands":
+                return instructionParts[1]
         }
+    }
 
     public getOperandsNumberWithRadix(operands: LogicValue[], radix: number ) : string {
-            const operandsValue = displayValuesFromArray(operands, true)[1]
-            return formatWithRadix(operandsValue, radix, operands.length, true)
-        }
+        const operandsValue = displayValuesFromArray(operands, true)[1]
+        return formatWithRadix(operandsValue, radix, operands.length, true)
+    }
 
     public allZeros(vals: LogicValue[]): LogicValue {
         for (const v of vals) {
@@ -991,14 +989,14 @@ export class CPU extends CPUBase<CPURepr> {
             this._operationStageCounter.inputs.Clock.value = clockSync
         }
         if (this._enablePipeline) {
-                this._instructionRegister.inputs.Clock.value = clockSync
+            this._instructionRegister.inputs.Clock.value = clockSync
 
-                this._accumulatorRegister.inputs.Clock.value = clockSync
-                this._flagsRegister.inputs.Clock.value = clockSync
-                this._haltSignalFlipflopD.inputs.Clock.value = clockSync
+            this._accumulatorRegister.inputs.Clock.value = clockSync
+            this._flagsRegister.inputs.Clock.value = clockSync
+            this._haltSignalFlipflopD.inputs.Clock.value = clockSync
 
-                this._programCounterRegister.inputs.Clock.value = clockSync
-                this._previousProgramCounterRegister.inputs.Clock.value = clockSync
+            this._programCounterRegister.inputs.Clock.value = clockSync
+            this._previousProgramCounterRegister.inputs.Clock.value = clockSync
         } else {
             this._fetchFlipflopD.inputs.Clock.value = clockSync
             this._decodeFlipflopD.inputs.Clock.value = clockSync
@@ -1035,7 +1033,7 @@ export class CPU extends CPUBase<CPURepr> {
                 this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
             }
         }
-        
+
         if (isUnknown(opCodeName)) {
             return {
                 isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits).reverse(),
@@ -1106,22 +1104,22 @@ export class CPU extends CPUBase<CPURepr> {
             g.fillText("Adressage direct", ...valueCenter)
         }
     }
-/*
-    public makeStateAfterClock(): LogicValue[] {
-        return this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ)
-        return this.inputValues(this.inputs.Din).map(LogicValue.filterHighZ)
-    }
-*/
+    /*
+        public makeStateAfterClock(): LogicValue[] {
+            return this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ)
+            return this.inputValues(this.inputs.Din).map(LogicValue.filterHighZ)
+        }
+    */
 
     public shiftOpCodeOperandsInStages(previousOpCodeOperandsInStages: any, cpuStage: CPUStage, opCode: string, operands: LogicValue[], isPipelineEnabled: boolean) {
         //console.log(previousOpCodeOperandsInStages)
         let opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
         if (isPipelineEnabled) {
-                opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
-                opCodeOperandsInStages["DECODE"] = previousOpCodeOperandsInStages["FETCH"]
-                opCodeOperandsInStages["EXECUTE"] = previousOpCodeOperandsInStages["DECODE"]
+            opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
+            opCodeOperandsInStages["DECODE"] = previousOpCodeOperandsInStages["FETCH"]
+            opCodeOperandsInStages["EXECUTE"] = previousOpCodeOperandsInStages["DECODE"]
         } else {
-                opCodeOperandsInStages[cpuStage] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
+            opCodeOperandsInStages[cpuStage] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
         }
         return opCodeOperandsInStages
     }
