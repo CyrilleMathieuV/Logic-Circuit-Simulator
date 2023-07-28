@@ -49,6 +49,9 @@ import { Counter } from "./Counter";
 import {ALU, ALUOps, doALUOp} from "./ALU"
 import { Mux } from "./Mux";
 import {Flipflop, FlipflopOrLatch} from "./FlipflopOrLatch";
+import {Input} from "./Input";
+import {Wire} from "./Wire";
+import {Output} from "./Output";
 
 
 export const CPUOpCodes = [
@@ -279,6 +282,10 @@ export abstract class CPUBase<
 
     protected _specialVoidProgramCounterFlipflopD : FlipflopD
 
+    protected _specialProgramCounterInput : Input
+    protected _specialProgramCounterOutput : Output
+    protected _specialProgramCounterWire : Wire
+
     protected _programCounterMux : Mux
 
     protected _fetchFlipflopD : FlipflopD
@@ -338,6 +345,11 @@ export abstract class CPUBase<
         // MUST change trigger of Registers
         this._programCounterRegister.doSetTrigger(EdgeTrigger.falling)
         this._previousProgramCounterRegister.doSetTrigger(EdgeTrigger.falling)
+
+        this._specialProgramCounterInput = new Input(parent, {numBits : 1})
+        this._specialProgramCounterOutput = new Output(parent, {numBits : 1})
+        this._specialProgramCounterWire = new Wire(this._specialProgramCounterInput.outputs.Out[0], (this._previousProgramCounterRegister.inputs.Inc === undefined)? this._specialProgramCounterOutput.inputs.In[0] : this._previousProgramCounterRegister.inputs.Inc)
+        this._specialProgramCounterInput.outputs.Out[0].value = true
 
         this._specialVoidProgramCounterFlipflopD = new FlipflopD(parent)
 
@@ -884,15 +896,18 @@ export class CPU extends CPUBase<CPURepr> {
             this.setInputValues(this._programCounterMux.inputs.I[1], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
             this.setInputValues(this._programCounterMux.inputs.I[0], this.getOutputValues(this._programCounterRegister.outputs.Q))
         }
-        this._specialVoidProgramCounterFlipflopD.inputs.D.value = noJump
+
+        //this._programCounterRegister.inputs.D[0].value = true
+        //this._programCounterRegister.inputs.Inc = this._programCounterRegister.hasIncDec? this._specialVoidProgramCounterFlipflopD.inputs.D : this._specialVoidProgramCounterFlipflopD.inputs.D
         Flipflop.doRecalcValueForSyncComponent(this._specialVoidProgramCounterFlipflopD, true, false, this._specialVoidProgramCounterFlipflopD.inputs.Pre.value, this._specialVoidProgramCounterFlipflopD.inputs.Clr.value)
 
-        this.setInputValues(this._programCounterRegister.inputs.Inc.value, this._specialVoidProgramCounterFlipflopD.outputs.Q.value)
         //this.setInputValues(this._programCounterRegister.inputs.Inc.value, noJump)
         /*
         this._programCounterALU.inputs.Mode.value = false
         this._programCounterALU.inputs.Op[0].value = this._backwardJump
         */
+        this._programCounterRegister.inputs.Clr.value = clrSignal
+        this._programCounterRegister.inputs.Clock.value = clockSync
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
         /*
         if (this._enablePipeline) {
@@ -914,7 +929,7 @@ export class CPU extends CPUBase<CPURepr> {
             this.setInputValues(this._programCounterALU.inputs.B, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
             this.setInputValues(this._programCounterRegister.inputs.D, this.getOutputValues(this._programCounterALU.outputs.S))
             */
-            const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, false)
+            const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, true)
             this.setInputValues(this._programCounterRegister.inputs.D, _programCounterALUoutputs.s)
         }
 
