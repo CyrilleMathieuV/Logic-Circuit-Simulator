@@ -46,7 +46,7 @@ import {
 import { FlipflopD } from "./FlipflopD";
 import { Register } from "./Register";
 import { Counter } from "./Counter";
-import { ALU } from "./ALU"
+import {ALU, ALUOps, doALUOp} from "./ALU"
 import { Mux } from "./Mux";
 import {Flipflop, FlipflopOrLatch} from "./FlipflopOrLatch";
 
@@ -264,15 +264,15 @@ export abstract class CPUBase<
     protected _trigger: EdgeTrigger = CPUDef.aults.trigger
     //public readonly usesExtendedOpCode: boolean
 
-    protected _ALU : ALU
+    //protected _ALU : ALU
 
     protected _instructionRegister : Register
     protected _accumulatorRegister : Register
     protected _flagsRegister : Register
 
-    protected _instructionMux : Mux
+    //protected _instructionMux : Mux
 
-    protected _programCounterALU : ALU
+    //protected _programCounterALU : ALU
 
     protected _programCounterRegister : Register
     protected _previousProgramCounterRegister : Register
@@ -287,9 +287,9 @@ export abstract class CPUBase<
 
     protected _runStopFlipflopD : FlipflopD
 
-    protected _runningStateMux : Mux
-    protected _clockSpeedMux : Mux
-    protected _autoManMux : Mux
+    //protected _runningStateMux : Mux
+    //protected _clockSpeedMux : Mux
+    //protected _autoManMux : Mux
 
     protected _haltSignalFlipflopD : FlipflopD
 
@@ -319,13 +319,13 @@ export abstract class CPUBase<
 
         //this.usesExtendedOpCode = params.usesExtendedOpCode
 
-        this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
+        //this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
 
         this._instructionRegister = new Register(parent,{numBits : this.numInstructionBits, hasIncDec: false}, undefined)
         this._accumulatorRegister = new Register(parent,{numBits : this.numDataBits, hasIncDec: false}, undefined)
         this._flagsRegister = new Register(parent,{numBits : 4, hasIncDec: false}, undefined)
 
-        this._instructionMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
+        //this._instructionMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
 
         // MUST change trigger of Registers
         this._instructionRegister.doSetTrigger(EdgeTrigger.falling)
@@ -341,7 +341,7 @@ export abstract class CPUBase<
 
         this._specialVoidProgramCounterFlipflopD = new FlipflopD(parent)
 
-        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOpcode: true},undefined)
+        //this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOpcode: false},undefined)
 
         this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
 
@@ -364,9 +364,9 @@ export abstract class CPUBase<
         // MUST change trigger of Flipflops
         this._haltSignalFlipflopD.doSetTrigger(EdgeTrigger.falling)
 
-        this._runningStateMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
-        this._clockSpeedMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
-        this._autoManMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
+        //this._runningStateMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
+        //this._clockSpeedMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
+        //this._autoManMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
 
         this._operationStageCounter = new Counter(parent, {numBits: 16}, undefined)
 
@@ -868,29 +868,59 @@ export class CPU extends CPUBase<CPURepr> {
 
         const operandsValue = this.getOutputValues(this._instructionRegister.outputs.Q).slice(4, 8).reverse()
 
+        /*
         this._ALU.inputs.Mode.value = opCodeValue[2]
         this._ALU.inputs.Op[2].value = opCodeValue[1]
         this._ALU.inputs.Op[1].value = !opCodeValue[3]
         this._ALU.inputs.Op[0].value = opCodeValue[0]
+        */
+
+        const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
+        const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
+        const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
 
         const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
 
+        /*
         const commonInstructionMuxSelect = !opCodeValue[3] && !opCodeValue[2]
         this._instructionMux.inputs.S[1].value = commonInstructionMuxSelect && opCodeValue[1]
         this._instructionMux.inputs.S[0].value = (commonInstructionMuxSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2])
+        */
 
-        this.setInputValues(this._ALU.inputs.A, this.getOutputValues(this._accumulatorRegister.outputs.Q).reverse())
-        this.setInputValues(this._ALU.inputs.B, this.inputValues(this.inputs.Din).reverse())
+        const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
+        const _operandsDataSelectValue = [(_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]), _operandsDataCommonSelect && opCodeValue[1]]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
+        _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 0 : _operandsDataSelectValueIndex
 
+        //this.setInputValues(this._ALU.inputs.A, this.getOutputValues(this._accumulatorRegister.outputs.Q).reverse())
+        //this.setInputValues(this._ALU.inputs.B, this.inputValues(this.inputs.Din).reverse())
+        const _ALUoutputs = doALUOp(_ALUop, this.getOutputValues(this._accumulatorRegister.outputs.Q).reverse(), this.inputValues(this.inputs.Din).reverse(), false)
+        /*
         this.setInputValues(this._instructionMux.inputs.I[3], operandsValue)
         this.setInputValues(this._instructionMux.inputs.I[2], this.inputValues(this.inputs.Din))
-        this.setInputValues(this._instructionMux.inputs.I[1], this.getOutputValues(this._ALU.outputs.S).reverse())
+        //this.setInputValues(this._instructionMux.inputs.I[1], this.getOutputValues(this._ALU.outputs.S).reverse())
+        this.setInputValues(this._instructionMux.inputs.I[1], _ALUoutputs.s.reverse())
         this.setInputValues(this._instructionMux.inputs.I[0], this.getOutputValues(this._accumulatorRegister.outputs.Q))
+        */
 
-        this.setInputValues(this._accumulatorRegister.inputs.D, this.getOutputValues(this._instructionMux.outputs.Z))
+        let _operandsData : LogicValue[]
+        if (_operandsDataSelectValueIndex === 0) {
+            _operandsData = this.getOutputValues(this._accumulatorRegister.outputs.Q)
+        } else if (_operandsDataSelectValueIndex === 1) {
+            _operandsData = _ALUoutputs.s.reverse()
+        } else if (_operandsDataSelectValueIndex === 2) {
+            _operandsData = this.inputValues(this.inputs.Din)
+        } else if (_operandsDataSelectValueIndex === 3) {
+            _operandsData = operandsValue
+        } else {
+            _operandsData = this.getOutputValues(this._accumulatorRegister.outputs.Q)
+        }
 
-        this._flagsRegister.inputs.D[1].value = this.outputs.Cout.value
-        this._flagsRegister.inputs.D[0].value = this.allZeros(this.getOutputValues(this._instructionMux.outputs.Z))
+        this.setInputValues(this._accumulatorRegister.inputs.D, _operandsData)
+
+        //this._flagsRegister.inputs.D[1].value = this._ALU.outputs.Cout.value
+        this._flagsRegister.inputs.D[1].value = _ALUoutputs.cout
+        this._flagsRegister.inputs.D[0].value = this.allZeros(_operandsData)
 
         const c = this._flagsRegister.outputs.Q[1].value
         const z = this._flagsRegister.outputs.Q[0].value
@@ -908,27 +938,38 @@ export class CPU extends CPUBase<CPURepr> {
             this.setInputValues(this._programCounterMux.inputs.I[1], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
             this.setInputValues(this._programCounterMux.inputs.I[0], this.getOutputValues(this._programCounterRegister.outputs.Q))
         }
-
+        /*
         this._programCounterALU.inputs.Mode.value = false
         this._programCounterALU.inputs.Op[0].value = backwardJump
+        */
+        const _programCounterALUop = backwardJump? "A-B" : "A+B"
 
+        /*
         if (this._enablePipeline) {
             this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterMux.outputs.Z))
         } else {
             this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterRegister.outputs.Q))
         }
+        */
+
+        const _programCounterALUinputA = this._enablePipeline? this.getOutputValues(this._programCounterMux.outputs.Z) : this.getOutputValues(this._programCounterRegister.outputs.Q)
 
         this._programCounterRegister.inputs.Inc = this._programCounterRegister.hasIncDec? this._specialVoidProgramCounterFlipflopD.inputs.D : this._specialVoidProgramCounterFlipflopD.inputs.D
 
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
-        const BinputValueProgramCounterALU = operandsValue.slice()
+        // const BinputValueProgramCounterALU = operandsValue.slice()
+        const _programCounterALUinputB = operandsValue.slice()
         if (this._directAddressingMode) {
             if (!noJump) {
-                this.setInputValues(this._programCounterRegister.inputs.D, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
+                this.setInputValues(this._programCounterRegister.inputs.D, ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits, false))
             }
         } else {
+            /*
             this.setInputValues(this._programCounterALU.inputs.B, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
             this.setInputValues(this._programCounterRegister.inputs.D, this.getOutputValues(this._programCounterALU.outputs.S))
+            */
+            const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, false)
+            this.setInputValues(this._programCounterRegister.inputs.D, _programCounterALUoutputs.s)
         }
 
         if (this._enablePipeline) {
@@ -936,20 +977,29 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         // RUN CONTROL LOGIC
-        this._runStopFlipflopD.inputs.Clock.value = (this._haltSignalFlipflopD.outputs.Q.value && this._autoManMux.outputs.Z[0].value) || this.inputs.RunStop.value
+        //this._runStopFlipflopD.inputs.Clock.value = (this._haltSignalFlipflopD.outputs.Q.value && this._autoManMux.outputs.Z[0].value) || this.inputs.RunStop.value
         this._runStopFlipflopD.inputs.D.value = this._runStopFlipflopD.outputs.Q̅.value
 
+        /*
         this._clockSpeedMux.inputs.S[0].value = this.inputs.Speed.value
         this._clockSpeedMux.inputs.I[1][0].value = this.inputs.ClockF.value
         this._clockSpeedMux.inputs.I[0][0].value = this.inputs.ClockS.value
+        */
+        const clockSpeed =  this.inputs.Speed.value? this.inputs.ClockF.value : this.inputs.ClockS.value
 
+        /*
         this._autoManMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q.value
         this._autoManMux.inputs.I[1][0].value = this._clockSpeedMux.outputs.Z[0].value
         this._autoManMux.inputs.I[0][0].value = this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
-
+        */
+        const autoMan = this._runStopFlipflopD.outputs.Q.value? clockSpeed : this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
+        this._runStopFlipflopD.inputs.Clock.value = (this._haltSignalFlipflopD.outputs.Q.value && autoMan) || this.inputs.RunStop.value
+        /*
         this._runningStateMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q̅.value
         this._runningStateMux.inputs.I[1][0].value = this.inputs.ManStep.value && this._runStopFlipflopD.outputs.Q̅.value
         this._runningStateMux.inputs.I[0][0].value = this._runStopFlipflopD.outputs.Q.value
+        */
+        const runningState = this._runStopFlipflopD.outputs.Q̅.value? this.inputs.ManStep.value && this._runStopFlipflopD.outputs.Q̅.value : this._runStopFlipflopD.outputs.Q.value
 
         const clrSignal = this.inputs.Reset.value && this._runStopFlipflopD.outputs.Q̅.value
 
@@ -974,7 +1024,8 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         // EXECUTE STAGE
-        const clockSync = this._autoManMux.outputs.Z[0].value
+        //const clockSync = this._autoManMux.outputs.Z[0].value
+        const clockSync = autoMan
 
         if (!this._haltSignalFlipflopD.outputs.Q.value) {
             this._operationStageCounter.inputs.Clock.value = clockSync
@@ -1050,7 +1101,7 @@ export class CPU extends CPUBase<CPURepr> {
             z: this._flagsRegister.outputs.Q[0].value,
             v: false,
             cout: this._flagsRegister.outputs.Q[1].value,
-            runningstate: this._runningStateMux.outputs.Z[0].value,
+            runningstate: runningState,
         }
 
     }
