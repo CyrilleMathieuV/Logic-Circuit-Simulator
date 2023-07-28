@@ -23,26 +23,26 @@ export const ALUDef =
         },
         params: {
             bits: param(4, [2, 4, 8, 16]),
-            ext: paramBool(), // has the extended op
+            ext: paramBool(), // has the extended opcode
         },
         validateParams: ({ bits, ext }) => ({
             numBits: bits,
-            usesExtendedOp: ext,
+            usesExtendedOpcode: ext,
         }),
         size: ({ numBits }) => ({
             gridWidth: 7,
             gridHeight: 19 + Math.max(0, numBits - 8) * 2,
         }),
-        makeNodes: ({ numBits, usesExtendedOp, gridWidth, gridHeight }) => {
+        makeNodes: ({ numBits, usesExtendedOpcode, gridWidth, gridHeight }) => {
             const inputCenterY = 5 + Math.max(0, (numBits - 8) / 2)
             const outputX = gridWidth / 2 + 1
             const bottom = (gridHeight + 1) / 2
             const top = -bottom
-            const topGroupBits = usesExtendedOp ? 5 : 3
+            const topGroupBits = usesExtendedOpcode ? 5 : 3
             // top group is built together
             const topGroup = groupHorizontal("n", 0, top, topGroupBits)
             const cin = topGroup.pop()!
-            // extracted to be mapped correctly when switching between reduced/extended op
+            // extracted to be mapped correctly when switching between reduced/extended opcodes
             const opMode = topGroup.pop()!
             return {
                 ins: {
@@ -96,22 +96,22 @@ export const ALUOps = [
 
 const ALUOpsReduced: readonly ALUOp[] = ["A+B", "A-B", "A|B", "A&B"]
 //                                         00     01    10     11
-// Used to lookup the ALUOp from the reduced op, which is compatible with the extended
-// op, provided the extra control bits are inserted between the leftmost and the
-// rightmost bits of the reduced op. Reason for this is to keep the leftmost bit
+// Used to lookup the ALUOp from the reduced opcode, which is compatible with the extended
+// opcode, provided the extra control bits are inserted between the leftmost and the
+// rightmost bits of the reduced opcode. Reason for this is to keep the leftmost bit
 // acting as a "mode" bit switching between arithmetic (0) and logic (1) operations.
 
 export class ALU extends ParametrizedComponentBase<ALURepr> {
 
     public readonly numBits: number
-    public readonly usesExtendedOp: boolean
+    public readonly usesExtendedOpcode: boolean
     private _showOp: boolean
 
     public constructor(parent: DrawableParent, params: ALUParams, saved?: ALURepr) {
         super(parent, ALUDef.with(params), saved)
 
         this.numBits = params.numBits
-        this.usesExtendedOp = params.usesExtendedOp
+        this.usesExtendedOpcode = params.usesExtendedOpcode
 
         this._showOp = saved?.showOp ?? ALUDef.aults.showOp
     }
@@ -119,7 +119,7 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
     public toJSON() {
         return {
             bits: this.numBits === ALUDef.aults.bits ? undefined : this.numBits,
-            ext: this.usesExtendedOp === ALUDef.aults.ext ? undefined : this.usesExtendedOp,
+            ext: this.usesExtendedOpcode === ALUDef.aults.ext ? undefined : this.usesExtendedOpcode,
             ...this.toJSONBase(),
             showOp: (this._showOp !== ALUDef.aults.showOp) ? this._showOp : undefined,
         }
@@ -138,7 +138,7 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
         const opValues = this.inputValues(this.inputs.Op)
         opValues.push(this.inputs.Mode.value)
         const opIndex = displayValuesFromArray(opValues, false)[1]
-        return isUnknown(opIndex) ? Unknown : (this.usesExtendedOp ? ALUOps : ALUOpsReduced)[opIndex]
+        return isUnknown(opIndex) ? Unknown : (this.usesExtendedOpcode ? ALUOps : ALUOpsReduced)[opIndex]
     }
 
     protected doRecalcValue(): ALUValue {
@@ -214,7 +214,7 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
         const opGroupHeight = 8
         const opGroupLeft = this.inputs.Mode.posXInParentTransform - 2
         const opGroupRight = this.inputs.Op[0].posXInParentTransform + 2
-        const opGroupLeftTop = top + (this.usesExtendedOp ? 8 : 11)
+        const opGroupLeftTop = top + (this.usesExtendedOpcode ? 8 : 11)
         const opGroupRightTop = top + 18
 
         g.moveTo(opGroupLeft, opGroupLeftTop)
@@ -279,7 +279,7 @@ export class ALU extends ParametrizedComponentBase<ALURepr> {
             ["mid", toggleShowOpItem],
             ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumBits, this.numBits, "bits"),
-            this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOp, this.usesExtendedOp, "ext"),
+            this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpcode, this.usesExtendedOpcode, "ext"),
             ["mid", MenuData.sep()],
             ...this.makeForceOutputsContextMenuItem(),
         ]

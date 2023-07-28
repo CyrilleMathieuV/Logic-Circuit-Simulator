@@ -346,7 +346,7 @@ const Strings_fr = {
             },
             contextMenu: {
                 toggleShowOp: "Afficher l’opération",
-                ParamUseExtendedOp: "Utiliser opérations étendues",
+                ParamUseExtendedOpcode: "Utiliser opérations étendues",
             },
         },
         CPU: {
@@ -1128,7 +1128,7 @@ const Strings_en: Strings = {
             },
             contextMenu: {
                 toggleShowOp: "Show Operation",
-                ParamUseExtendedOp: "Use Extended Opcode",
+                ParamUseExtendedOpcode: "Use Extended Opcode",
             },
         },
         CPU: {

@@ -338,7 +338,7 @@ export abstract class ComponentBase<
 
         // setNeedsRecalc with a force propadation is needed:
         // * the forced propagation allows the current value (e.g. for InputBits)
-        //   to be set to the outputs, if if the "new" value is the same as the current one
+        //   to be set to the outputs, if the "new" value is the same as the current one
         // * setNeedsRecalc schedules a recalculation (e.g. for Gates)
         if (!hasAnyPrecomputedInitialValues) {
             this.setNeedsRecalc(true)

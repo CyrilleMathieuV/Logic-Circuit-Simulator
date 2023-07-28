@@ -12,7 +12,12 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/ALU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/ALU.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/AdderArray.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/AdderArray.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/Component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/GateArray.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/GateArray.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/strings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/strings.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -150,7 +155,7 @@
       <workItem from="1690362256726" duration="27042000" />
       <workItem from="1690440274490" duration="26847000" />
       <workItem from="1690474543150" duration="29098000" />
-      <workItem from="1690549709142" duration="4194000" />
+      <workItem from="1690549709142" duration="7909000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -277,14 +282,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00023" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1689613744024</created>
-      <option name="number" value="00023" />
-      <option name="presentableId" value="LOCAL-00023" />
-      <option name="project" value="LOCAL" />
-      <updated>1689613744024</updated>
     </task>
     <task id="LOCAL-00024" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -526,7 +523,15 @@
       <option name="project" value="LOCAL" />
       <updated>1690553229654</updated>
     </task>
-    <option name="localTasksCounter" value="54" />
+    <task id="LOCAL-00054" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1690554094960</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1690554094960</updated>
+    </task>
+    <option name="localTasksCounter" value="55" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

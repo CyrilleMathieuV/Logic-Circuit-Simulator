@@ -29,6 +29,7 @@ import {
     Unknown, wordFromBinaryOrHexRepr,
 } from "../utils"
 import {
+    Component,
     ComponentGridSize,
     defineAbstractParametrizedComponent,
     defineParametrizedComponent, ExtractParamDefs, ExtractParams,
@@ -57,6 +58,7 @@ import { Counter } from "./Counter";
 import { ALU } from "./ALU"
 import { Mux } from "./Mux";
 import {Flipflop, FlipflopOrLatch} from "./FlipflopOrLatch";
+import {RecalcManager} from "../RedrawRecalcManager";
 
 
 export const CPUOpCodes = [
@@ -327,7 +329,7 @@ export abstract class CPUBase<
 
         //this.usesExtendedOpCode = params.usesExtendedOpCode
 
-        this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOp: true},undefined)
+        this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
 
         this._instructionRegister = new Register(parent,{numBits : this.numInstructionBits, hasIncDec: false}, undefined)
         this._accumulatorRegister = new Register(parent,{numBits : this.numDataBits, hasIncDec: false}, undefined)
@@ -349,7 +351,7 @@ export abstract class CPUBase<
 
         this._specialVoidProgramCounterFlipflopD = new FlipflopD(parent)
 
-        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOp: false},undefined)
+        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOpcode: false},undefined)
 
         this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
 
@@ -1015,8 +1017,6 @@ export class CPU extends CPUBase<CPURepr> {
             this._programCounterRegister.inputs.Clock.value  = clockSync && this._executeFlipflopD.outputs.Q.value
         }
         const ramwesyncvalue = this._enablePipeline ? clockSync : clockSync && this._decodeFlipflopD.outputs.Q.value
-
-
 
         const opCode = isHighImpedance(opCodeValue) ? "?" : this.opCode
         const operands = this.operands
