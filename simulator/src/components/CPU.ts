@@ -341,7 +341,7 @@ export abstract class CPUBase<
 
         this._specialVoidProgramCounterFlipflopD = new FlipflopD(parent)
 
-        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOpcode: false},undefined)
+        this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOpcode: true},undefined)
 
         this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
 

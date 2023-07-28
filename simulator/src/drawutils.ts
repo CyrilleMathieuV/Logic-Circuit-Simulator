@@ -361,7 +361,7 @@ export const FONT_LABEL_DEFAULT = "18px sans-serif"
 
 
 export function useCompact(numNodes: number) {
-    return numNodes >= 6
+    return numNodes >= 5
 }
 
 const trivialNameMatcher = /^(In|Out|in|out)\d*$/
