@@ -3,7 +3,6 @@ import {
     COLOR_BACKGROUND,
     COLOR_COMPONENT_BORDER,
     COLOR_COMPONENT_INNER_LABELS,
-    COLOR_GROUP_SPAN,
     COLOR_CPUSTAGE_BACKGROUND,
     COLOR_CPUSTAGE_TEXT,
     displayValuesFromArray,
@@ -11,39 +10,31 @@ import {
     drawWireLineToComponent,
     formatWithRadix,
     GRID_STEP,
-    useCompact, COLOR_OFF_BACKGROUND, COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED,
+    COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED,
 } from "../drawutils"
-import {br, div, mods, tooltipContent} from "../htmlgen"
+import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import {
     ArrayClampOrPad,
-    ArrayFillUsing,
     ArrayFillWith,
-    EdgeTrigger, FixedArrayAssert, FixedArrayMap, isArray,
-    isBoolean,
+    EdgeTrigger,
     isHighImpedance,
     isUnknown,
-    LogicValue, LogicValueRepr,
-    toLogicValue, toLogicValueRepr,
+    LogicValue,
     typeOrUndefined,
-    Unknown, wordFromBinaryOrHexRepr,
+    Unknown,
 } from "../utils"
 import {
-    Component,
-    ComponentGridSize,
     defineAbstractParametrizedComponent,
-    defineParametrizedComponent, ExtractParamDefs, ExtractParams,
+    defineParametrizedComponent,
     groupHorizontal,
-    groupVertical, InputNodeRepr, NodesIn, NodesOut,
+    groupVertical,
     param,
-    paramBool,
-    ParametrizedComponentBase, ReadonlyGroupedNodeArray,
+    ParametrizedComponentBase,
     Repr,
     ResolvedParams,
-    Value,
 } from "./Component"
 import {
-    Drawable,
     DrawableParent,
     DrawContext,
     DrawContextExt,
@@ -58,7 +49,6 @@ import { Counter } from "./Counter";
 import { ALU } from "./ALU"
 import { Mux } from "./Mux";
 import {Flipflop, FlipflopOrLatch} from "./FlipflopOrLatch";
-import {RecalcManager} from "../RedrawRecalcManager";
 
 
 export const CPUOpCodes = [
@@ -599,7 +589,6 @@ export abstract class CPUBase<
                             break
                         case "DECODE":
                             valueCenterX = valueCenterX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)
-                            valueCenterY = valueCenterY
                             break
                         case "EXECUTE":
                             valueCenterX = valueCenterX + valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)

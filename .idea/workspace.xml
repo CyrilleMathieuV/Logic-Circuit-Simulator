@@ -12,12 +12,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/ALU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/ALU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/AdderArray.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/AdderArray.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/GateArray.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/GateArray.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/strings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/strings.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,7 +61,7 @@
     <option name="stateVersion" value="1" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="ProjectErrors" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectId" id="2LgFAO0j8ridokprwZ8bWJYYyFi" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
@@ -95,6 +90,23 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="QodanaHighlightedReportService">
+    <option name="localRunNotPublishedPersistedInfo">
+      <LocalReportPersistedInfo>
+        <option name="path" value="/private/var/folders/5p/rj60lkx955772z0prf44spyw0000gn/T/qodana_output/qodana.sarif.json" />
+        <option name="reportGuid" value="2723c308-d93b-45cb-94df-ac14310391f5" />
+        <option name="reportName" value="workspace.xml/qodana/2023-07-28" />
+      </LocalReportPersistedInfo>
+    </option>
+  </component>
+  <component name="QodanaIsSelectedPersistenceService">
+    <option name="selectedOrLoading" value="true" />
+  </component>
+  <component name="QodanaReportsService">
+    <option name="descriptions">
+      <ReportDescription localRun="true" path="/private/var/folders/5p/rj60lkx955772z0prf44spyw0000gn/T/qodana_output/qodana.sarif.json" reportGuid="2723c308-d93b-45cb-94df-ac14310391f5" reportId="workspace.xml/qodana/2023-07-28" />
+    </option>
+  </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/simulator/img" />
@@ -155,7 +167,7 @@
       <workItem from="1690362256726" duration="27042000" />
       <workItem from="1690440274490" duration="26847000" />
       <workItem from="1690474543150" duration="29098000" />
-      <workItem from="1690549709142" duration="7909000" />
+      <workItem from="1690549709142" duration="8743000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -282,14 +294,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00024" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1689627542662</created>
-      <option name="number" value="00024" />
-      <option name="presentableId" value="LOCAL-00024" />
-      <option name="project" value="LOCAL" />
-      <updated>1689627542662</updated>
     </task>
     <task id="LOCAL-00025" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -531,7 +535,15 @@
       <option name="project" value="LOCAL" />
       <updated>1690554094960</updated>
     </task>
-    <option name="localTasksCounter" value="55" />
+    <task id="LOCAL-00055" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1690557915157</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1690557915157</updated>
+    </task>
+    <option name="localTasksCounter" value="56" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
