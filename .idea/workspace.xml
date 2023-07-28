@@ -150,7 +150,7 @@
       <workItem from="1690270660493" duration="47619000" />
       <workItem from="1690362256726" duration="27042000" />
       <workItem from="1690440274490" duration="26847000" />
-      <workItem from="1690474543150" duration="7046000" />
+      <workItem from="1690474543150" duration="21035000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -277,22 +277,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00019" summary="JFP major updates on components">
-      <option name="closed" value="true" />
-      <created>1689317012826</created>
-      <option name="number" value="00019" />
-      <option name="presentableId" value="LOCAL-00019" />
-      <option name="project" value="LOCAL" />
-      <updated>1689317012826</updated>
-    </task>
-    <task id="LOCAL-00020" summary="JFP major updates on components">
-      <option name="closed" value="true" />
-      <created>1689317702877</created>
-      <option name="number" value="00020" />
-      <option name="presentableId" value="LOCAL-00020" />
-      <option name="project" value="LOCAL" />
-      <updated>1689317702877</updated>
     </task>
     <task id="LOCAL-00021" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -526,7 +510,23 @@
       <option name="project" value="LOCAL" />
       <updated>1690470298032</updated>
     </task>
-    <option name="localTasksCounter" value="50" />
+    <task id="LOCAL-00050" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1690492452543</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1690492452544</updated>
+    </task>
+    <task id="LOCAL-00051" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1690492521862</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1690492521862</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

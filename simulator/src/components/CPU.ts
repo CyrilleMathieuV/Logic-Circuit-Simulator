@@ -579,12 +579,12 @@ export abstract class CPUBase<
             const isVertical = Orientation.isVertical(this.orient)
             const carryHOffsetF = isVertical ? 0 : 1
             drawLabel(ctx, this.orient, "Din", "s", this.inputs.Din, bottom)
-            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom,undefined, 1)
-            drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom,undefined, 1)
-            drawLabel(ctx, this.orient, "Speed", "s", this.inputs.Speed, bottom,undefined, 1)
-            drawLabel(ctx, this.orient, "Clock S", "s", this.inputs.ClockS, bottom,undefined, 1)
-            drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom,undefined, 1)
-            drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom,undefined, 1)
+            drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom,undefined, true)
+            drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom,undefined, true)
+            drawLabel(ctx, this.orient, "Speed", "s", this.inputs.Speed, bottom,undefined, true)
+            drawLabel(ctx, this.orient, "Clock S", "s", this.inputs.ClockS, bottom,undefined, true)
+            drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom,undefined, true)
+            drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom,undefined, true)
 
             // top outputs
             drawLabel(ctx, this.orient, "IsaAdr", "n", this.outputs.Isaadr, top)
@@ -595,51 +595,55 @@ export abstract class CPUBase<
 
             // right outputs
             drawLabel(ctx, this.orient, "Dout", "e", right, this.outputs.Dout)
-            drawLabel(ctx, this.orient, "RAM Sync", "e", right, this.outputs.RAMweSync)
-            drawLabel(ctx, this.orient, "Reset Sync", "e", right, this.outputs.ResetSync)
-            drawLabel(ctx, this.orient, "RAM WE", "e", right, this.outputs.RAMwe)
-            drawLabel(ctx, this.orient, "Sync", "e", right, this.outputs.Sync)
-            drawLabel(ctx, this.orient, "Z", "e", right, this.outputs.Z)
-            drawLabel(ctx, this.orient, "V", "e", right, this.outputs.V)
-            drawLabel(ctx, this.orient, "Cout", "e", right, this.outputs.Cout)
-            drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState)
+            drawLabel(ctx, this.orient, "RAM Sync", "e", right, this.outputs.RAMweSync, undefined, true)
+            drawLabel(ctx, this.orient, "Reset Sync", "e", right, this.outputs.ResetSync,undefined, true)
+            drawLabel(ctx, this.orient, "RAM WE", "e", right, this.outputs.RAMwe,undefined, true)
+            drawLabel(ctx, this.orient, "Sync", "e", right, this.outputs.Sync,undefined, true)
+            drawLabel(ctx, this.orient, "Z", "e", right, this.outputs.Z,undefined, true)
+            drawLabel(ctx, this.orient, "V", "e", right, this.outputs.V,undefined, true)
+            drawLabel(ctx, this.orient, "Cout", "e", right, this.outputs.Cout,undefined, true)
+            drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState,undefined, true)
 
             if (this._showStage) {
+                console.log("stage")
                 const fontSize = 14
                 if (this._enablePipeline) {
                     for (let eachStage of CPUStages) {
 
-                        const stageColor = isUnknown(eachStage) ? "grey" : CPUStageColorKey.color(eachStage)
+                        const stageColor = CPUStageColorKey.color(eachStage)
                         const stageColorText = COLOR_CPUSTAGE_TEXT[stageColor]
                         const stageColorBackground = COLOR_CPUSTAGE_BACKGROUND[stageColor]
 
-                        const stageName = isUnknown(eachStage) ? "??" : CPUStageName.shortName(eachStage)
+                        const stageName = CPUStageName.shortName(eachStage)
+                        const valueCenterDeltaX = (this.orient == "e")? 100 : (this.orient == "w")? -100 : 0
+                        const valueCenterDeltaY = (this.orient == "n")? 100 : (this.orient == "s")? -100 : 0
 
+                        let valueCenterX  = this.posX
+                        let valueCenterY = Orientation.isVertical(this.orient)? this.inputs.Isa.group.posYInParentTransform  : this.inputs.Isa.group.posYInParentTransform - 50
                         switch (eachStage) {
                             case "FETCH":
-                                valueCenterVar = ctx.rotatePoint(this.posX - 100, this.posY - 130)
+                                valueCenterX = valueCenterX - valueCenterDeltaX + (Orientation.isVertical(this.orient)? (this.orient == "n")? 20 : -20 : 0)
+                                valueCenterY = valueCenterY - valueCenterDeltaY + ((this.orient == "w")? 20 : 0)
                                 break
                             case "DECODE":
-                                valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 130)
+                                valueCenterX = valueCenterX + (Orientation.isVertical(this.orient)? (this.orient == "n")? 20 : -20 : 0)
+                                valueCenterY = valueCenterY + ((this.orient == "w")? 20 : 0)
                                 break
                             case "EXECUTE":
-                                valueCenterVar = ctx.rotatePoint(this.posX + 100, this.posY - 130)
+                                valueCenterX = valueCenterX + valueCenterDeltaX + (Orientation.isVertical(this.orient)? (this.orient == "n")? 20 : -20 : 0)
+                                valueCenterY = valueCenterY + valueCenterDeltaY + ((this.orient == "w")? 20 : 0)
                                 break
-                            default:
-                                valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 130)
                         }
-                        const valueCenter = valueCenterVar
-
+                        const valueCenter= ctx.rotatePoint(valueCenterX, valueCenterY)
                         g.fillStyle = stageColorBackground
                         const frameWidth = 100 - fontSize / 2
-                        FlipflopOrLatch.drawStoredValueFrame(g, ...ctx.rotatePoint(...valueCenter), frameWidth, 28, false)
-                        //g.fillRect(this.posX - 40,this.posY - 30,80,20,)
+                        FlipflopOrLatch.drawStoredValueFrame(g, ...valueCenter, frameWidth, 28, false)
 
                         g.fillStyle = stageColorText
                         g.font = `bold ${fontSize}px monospace`
                         g.textAlign = "center"
                         g.textBaseline = "middle"
-                        g.fillText(stageName, ...ctx.rotatePoint(...valueCenter))
+                        g.fillText(stageName, ...valueCenter)
                     }
                 } else {
                     const stage = this.stage
@@ -650,53 +654,46 @@ export abstract class CPUBase<
 
                     const stageName = isUnknown(stage) ? "??" : CPUStageName.shortName(stage)
 
-                    var valueCenterVar
+                    let valueCenter
                     switch (stage) {
                         case "FETCH":
-                            valueCenterVar = ctx.rotatePoint(this.posX - 100, this.posY - 130)
+                            valueCenter = ctx.rotatePoint(this.posX - 100, this.posY - 130)
                             break
                         case "DECODE":
-                            valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 130)
+                            valueCenter = ctx.rotatePoint(this.posX, this.posY - 130)
                             break
                         case "EXECUTE":
-                            valueCenterVar = ctx.rotatePoint(this.posX + 100, this.posY - 130)
+                            valueCenter = ctx.rotatePoint(this.posX + 100, this.posY - 130)
                             break
-                        default:
-                            valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 130)
                     }
-                    const valueCenter = valueCenterVar
                     g.fillStyle = stageColorBackground
                     const frameWidth = 100 - fontSize / 2
-                    FlipflopOrLatch.drawStoredValueFrame(g, ...ctx.rotatePoint(...valueCenter), frameWidth, 28, false)
-                    //g.fillRect(this.posX - 40,this.posY - 30,80,20,)
+                    FlipflopOrLatch.drawStoredValueFrame(g, ...valueCenter, frameWidth, 28, false)
 
                     g.fillStyle = stageColorText
                     g.font = `bold ${fontSize}px monospace`
                     g.textAlign = "center"
                     g.textBaseline = "middle"
-                    g.fillText(stageName, ...ctx.rotatePoint(...valueCenter))
+                    g.fillText(stageName, ...valueCenter)
                 }
             }
 
             if (this._showOpCode) {
+                console.log("instruction")
                 const maxFontSize = 24
-                var valueCenterVar
+                let valueCenter
                 for (let eachStage of CPUStages) {
                     switch (eachStage) {
                         case "FETCH":
-                            valueCenterVar = ctx.rotatePoint(this.posX - 100, this.posY - 100)
+                            valueCenter = ctx.rotatePoint(this.posX - 100, this.posY - 100)
                             break
                         case "DECODE":
-                            valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 100)
+                            valueCenter = ctx.rotatePoint(this.posX, this.posY - 100)
                             break
                         case "EXECUTE":
-                            valueCenterVar = ctx.rotatePoint(this.posX + 100, this.posY - 100)
+                            valueCenter = ctx.rotatePoint(this.posX + 100, this.posY - 100)
                             break
-                        default:
-                            valueCenterVar = ctx.rotatePoint(this.posX, this.posY - 120)
                     }
-                    const valueCenter = valueCenterVar
-
                     const opCodeName = this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "opCode")
                     const operandsString = this._showOperands ? this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "operands") : ""
                     const instructionDisplay = (opCodeName == "") ? "" : opCodeName + " " + operandsString
@@ -709,7 +706,7 @@ export abstract class CPUBase<
                     //FlipflopOrLatch.drawStoredValueFrame(g, ...ctx.rotatePoint(...valueCenter), frameWidth, 28, false)
                     g.textAlign = "center"
                     g.textBaseline = "middle"
-                    g.fillText(instructionDisplay, ...ctx.rotatePoint(...valueCenter))
+                    g.fillText(instructionDisplay, ...valueCenter)
                 }
             }
 
@@ -718,7 +715,8 @@ export abstract class CPUBase<
                 const stringRep =  formatWithRadix(counter, 10, 16, false)
 
                 const fontSize = 20
-                const valueCenter = ctx.rotatePoint(this.inputs.Din.group.posXInParentTransform - fontSize / 4, this.outputs.V.posYInParentTransform)
+                const valueCenterDeltaY = Orientation.isVertical(this.orient)? 120 : 90
+                const valueCenter= ctx.rotatePoint(this.inputs.Speed.posXInParentTransform + 10, this.inputs.Speed.posYInParentTransform - valueCenterDeltaY)
 
                 g.fillStyle = COLOR_EMPTY
                 const frameWidth = 100 - fontSize / 2
@@ -728,7 +726,7 @@ export abstract class CPUBase<
                 g.fillStyle = COLOR_LABEL_OFF
                 g.textAlign = "center"
                 g.textBaseline = "middle"
-                g.fillText(stringRep, ...ctx.rotatePoint(...valueCenter))
+                g.fillText(stringRep, ...valueCenter)
             }
 
         })
@@ -753,9 +751,11 @@ export abstract class CPUBase<
             this.doSetShowOpCode(!this._showOpCode)
         })
         const iconOperands = this._showOperands ? "check" : "none"
-        const toggleShowOperandsItem = MenuData.item(iconOperands, s.toggleShowOperands, () => {
-            this.doSetShowOperands(!this._showOperands)
-        })
+        const toggleShowOperandsItem: MenuItems = !this._showOpCode ? [] : [
+            ["mid", MenuData.item(iconOperands, s.toggleShowOperands,
+                () => {this.doSetShowOperands(!this._showOperands)}
+            )],
+        ]
 
         const iconEnablePipeline = this._enablePipeline? "check" : "none"
         const toggleEnablePipelineItem = MenuData.item(iconEnablePipeline, s.toggleEnablePipeline, () => {
@@ -770,7 +770,7 @@ export abstract class CPUBase<
         return [
             ["mid", toggleShowStageItem],
             ["mid", toggleShowOpCodeItem],
-            ["mid", toggleShowOperandsItem],
+            ...toggleShowOperandsItem,
             ["mid", MenuData.sep()],
             ["mid", toggleEnablePipelineItem],
             ["mid", MenuData.sep()],
