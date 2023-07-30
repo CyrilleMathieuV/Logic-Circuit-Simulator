@@ -16,7 +16,7 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import {
     ArrayClampOrPad,
-    ArrayFillWith,
+    ArrayFillWith, deepEquals,
     EdgeTrigger, HighImpedance,
     isHighImpedance,
     isUnknown,
@@ -78,7 +78,7 @@ export abstract class VirtualFlipflopOrLatch {
         this.outputQ̅ = true
     }
 
-    public propagateVirtualValue(newValue: [LogicValue, LogicValue]) {
+    public propagateVirtualValue(newValue: VirtualFlipflopOrLatchValue) {
         this.outputQ = newValue[0]
         this.outputQ̅ = newValue[1]
     }
@@ -95,7 +95,7 @@ interface VirtualSyncComponent<State> {
     makeVirtualStateFromMainValue(val: LogicValue): State
     makeVirtualStateAfterClock(): State
 }
-export abstract class VirtualFlipflop extends VirtualFlipflopOrLatch implements VirtualSyncComponent<[LogicValue, LogicValue]> {
+export abstract class VirtualFlipflop extends VirtualFlipflopOrLatch implements VirtualSyncComponent<VirtualFlipflopOrLatchValue> {
     public inputD: LogicValue
 
     public inputClock: LogicValue
@@ -144,18 +144,30 @@ export abstract class VirtualFlipflop extends VirtualFlipflopOrLatch implements 
     }
 
     public static isVirtualClockTrigger(trigger: EdgeTrigger, prevClock: LogicValue, clock: LogicValue): boolean {
-
         return (trigger === EdgeTrigger.rising && prevClock === false && clock === true)
             || (trigger === EdgeTrigger.falling && prevClock === true && clock === false)
     }
 
-    public doRecalcVirtualValue(): [LogicValue, LogicValue] {
+    public doRecalcVirtualValue(): VirtualFlipflopOrLatchValue {
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputClock
         const { isInInvalidState, newState } =
             VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
         this._isInInvalidState = isInInvalidState
         return newState
+    }
+
+    public doSetVirtualValue(newValue: VirtualFlipflopOrLatchValue, forcePropagate = false) {
+        const oldValue = this.value
+        if (forcePropagate || !deepEquals(newValue, oldValue)) {
+            this.value = newValue
+            //this.setNeedsPropagate()
+            this.propagateVirtualValue(newValue)
+        }
+    }
+
+    public recalcVirtualValue() {
+        this.doSetVirtualValue(this.doRecalcVirtualValue(), false)
     }
 
     public makeVirtualInvalidState(): [LogicValue, LogicValue] {
@@ -187,6 +199,27 @@ export abstract class VirtualFlipflop extends VirtualFlipflopOrLatch implements 
         const { isInInvalidState, newState } =
             VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
         this._isInInvalidState = isInInvalidState
+        /*
+        if (this.outputReinjection == "Q") {
+            this.inputD = this.outputQ
+        } else if (this.outputReinjection == "Q̅") {
+            this.inputD = this.outputQ̅
+        }
+        */
+        if (prevClock) {
+            if (!clock) {
+                console.log("Falling")
+                console.log("! ", newState)
+            }
+        }
+        if (clock) {
+            if (prevClock) {
+                console.log("Rising")
+                console.log("* ", newState)
+            }
+        }
+        //console.log("stable")
+        //console.log("= ", newState)
         this.propagateVirtualValue(newState)
     }
 }
@@ -249,11 +282,11 @@ export abstract class VirtualRegisterBase {
 
     public abstract makeVirtualStateAfterClock(): LogicValue[]
 
-    public virtualOutputs() : VirtualRegisterBaseValue {
+    public virtualOutputs() : LogicValue[] {
         return this.outputsQ
     }
 
-    protected propagateVirtualValue(newValue: LogicValue[]) {
+    protected propagateVirtualValue(newValue: VirtualRegisterBaseValue) {
         this.outputsQ = newValue
     }
 }
@@ -262,7 +295,7 @@ export abstract class VirtualRegisterBase {
         return output.map(node => output.value)
     }
 */
-export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncComponent<LogicValue[]>{
+export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncComponent<VirtualRegisterBaseValue>{
     public inputsD: LogicValue[]
 
     public inputInc: LogicValue
@@ -308,8 +341,7 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         return value
     }
 
-    public makeVirtualStateAfterClock(): LogicValue[] | [LogicValue, LogicValue] {
-        console.log("was here")
+    public makeVirtualStateAfterClock(): LogicValue[] {
         const inc = this.inputInc ?? false
         const dec = this.inputDec ?? false
         if (isUnknown(inc) || isUnknown(dec) || isHighImpedance(inc) || isHighImpedance(dec)) {
@@ -361,6 +393,19 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
                 this.inputClr)
         this._isInInvalidState = isInInvalidState
         return newState
+    }
+
+    public doSetVirtualValue(newValue: VirtualRegisterBaseValue, forcePropagate = false) {
+        const oldValue = this.value
+        if (forcePropagate || !deepEquals(newValue, oldValue)) {
+            this.value = newValue
+            //this.setNeedsPropagate()
+            this.propagateVirtualValue(newValue)
+        }
+    }
+
+    public recalcVirtualValue() {
+        this.doSetVirtualValue(this.doRecalcVirtualValue(), false)
     }
 
     public isVirtualClockTrigger(prevClock: LogicValue, clock: LogicValue): boolean {
@@ -640,7 +685,8 @@ export abstract class CPUBase<
     //protected _clockSpeedMux : Mux
     //protected _autoManMux : Mux
 
-    protected _haltSignalFlipflopD : FlipflopD
+    //protected _haltSignalFlipflopD : FlipflopD
+    protected _virtualHaltSignalFlipflopD : VirtualFlipflopD
 
     protected _operationStageCounter : Counter
 
@@ -672,10 +718,11 @@ export abstract class CPUBase<
         // MUST change trigger of Flipflops
         // this._runStopFlipflopD.doSetTrigger(EdgeTrigger.falling)
 
-        this._haltSignalFlipflopD = new FlipflopD(parent)
+        //this._haltSignalFlipflopD = new FlipflopD(parent)
+        this._virtualHaltSignalFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
         // MUST change trigger of Flipflops
-        this._haltSignalFlipflopD.doSetTrigger(EdgeTrigger.falling)
+        //this._haltSignalFlipflopD.doSetTrigger(EdgeTrigger.falling)
 
         //this.usesExtendedOpCode = params.usesExtendedOpCode
 
@@ -1223,8 +1270,10 @@ export class CPU extends CPUBase<CPURepr> {
         const clockSpeed =  this.inputs.Speed.value? this.inputs.ClockF.value : this.inputs.ClockS.value
         //const clockSync = this._lastClock = this._runStopFlipflopD.outputs.Q.value? clockSpeed : this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
         //const clockSync = this._lastClock = this._virtualRunStopFlipflopD.outputsQ[0]? clockSpeed : this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
-        const clockSync = this._lastClock = this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
+        //const clockSync = this._lastClock = this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
+        const clockSync = this._lastClock = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && this._virtualHaltSignalFlipflopD.outputQ̅  : clockSpeed
         const clrSignal = this.inputs.Reset.value && this._virtualRunStopFlipflopD.outputQ̅
+
         const runningState = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && !this._virtualRunStopFlipflopD.outputQ̅  : this._virtualRunStopFlipflopD.outputQ
 
         //this._runStopFlipflopD.inputs.Clock.value = (this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value
@@ -1236,14 +1285,19 @@ export class CPU extends CPUBase<CPURepr> {
         //VirtualFlipflopD.setVirtualInputValue(this._virtualRunStopFlipflopD.inputD, this._virtualRunStopFlipflopD.outputQ̅)
         //VirtualFlipflopD.setVirtualInputValue(this._virtualRunStopFlipflopD.inputClock,(this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value)
         //VirtualFlipflopD.setVirtualInputValue(this._virtualRunStopFlipflopD.inputClr, clrSignal)
-
+        //console.log("Db : ",this._virtualRunStopFlipflopD.inputD)
         this._virtualRunStopFlipflopD.inputD = this._virtualRunStopFlipflopD.outputQ̅
-        this._virtualRunStopFlipflopD.inputClock = (this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value
+        console.log("D : ",this._virtualRunStopFlipflopD.inputD)
+        //console.log("Clk : ",this._virtualRunStopFlipflopD._lastClock)
+        //this._virtualRunStopFlipflopD.inputClock = (this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value
+        this._virtualRunStopFlipflopD.inputClock = (this._virtualHaltSignalFlipflopD.outputQ && clockSync) || this.inputs.RunStop.value
         //console.log("Clk : ",this._virtualRunStopFlipflopD.inputClock)
         this._virtualRunStopFlipflopD.inputClr = clrSignal
+        this._virtualHaltSignalFlipflopD.inputClr = clrSignal
 
-        this._virtualRunStopFlipflopD.doRecalcVirtualValueIntoDoRecalcValue()
+        this._virtualRunStopFlipflopD.recalcVirtualValue()
         //console.log("Qrun : ",this._virtualRunStopFlipflopD.outputQ)
+        this._virtualHaltSignalFlipflopD.inputD = clockSync
 
         //Flipflop.doRecalcValueForSyncComponent(this._runStopFlipflopD, prevClock, (this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value,  this._runStopFlipflopD.inputs.Pre.value, this._runStopFlipflopD.inputs.Clr.value)
         //const runningState = false
@@ -1341,7 +1395,7 @@ export class CPU extends CPUBase<CPURepr> {
             //this._lastClock = Unknown
             this._opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
         }
-        this._haltSignalFlipflopD.inputs.Clock.value = clockSync
+
         //const clockSync = this._autoManMux.outputs.Z[0].value
         /*
                 if (!this._haltSignalFlipflopD.outputs.Q.value) {
@@ -1456,13 +1510,13 @@ export class CPU extends CPUBase<CPURepr> {
         this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
 
 
-        this._haltSignalFlipflopD.inputs.D.value = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
+        this._virtualHaltSignalFlipflopD.inputD = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
 
         Flipflop.doRecalcValueForSyncComponent(this._accumulatorRegister, prevClock, clockSync,  this._accumulatorRegister.inputs.Pre.value, this._accumulatorRegister.inputs.Clr.value)
         Flipflop.doRecalcValueForSyncComponent(this._flagsRegister, prevClock, clockSync,  this._flagsRegister.inputs.Pre.value, this._flagsRegister.inputs.Clr.value)
         Flipflop.doRecalcValueForSyncComponent(this._specialVoidProgramCounterFlipflopD, prevClock, clockSync,  this._specialVoidProgramCounterFlipflopD.inputs.Pre.value, this._specialVoidProgramCounterFlipflopD.inputs.Clr.value)
-        Flipflop.doRecalcValueForSyncComponent(this._haltSignalFlipflopD, prevClock, clockSync,  this._haltSignalFlipflopD.inputs.Pre.value, this._haltSignalFlipflopD.inputs.Clr.value)
-
+        //Flipflop.doRecalcValueForSyncComponent(this._haltSignalFlipflopD, prevClock, clockSync,  this._haltSignalFlipflopD.inputs.Pre.value, this._haltSignalFlipflopD.inputs.Clr.value)
+        this._virtualHaltSignalFlipflopD.recalcVirtualValue()
 
         // EXECUTE STAGE
         const ramwesyncvalue = this._enablePipeline ? clockSync : clockSync && this._decodeFlipflopD.outputs.Q.value
