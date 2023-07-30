@@ -1,6 +1,6 @@
 import { VirtualComponent } from "./components/VirtualComponent"
 
-export class RecalcManagerVirtual {
+export class VirtualRecalcManager {
 
     private _propagateQueueVirtual: Array<VirtualComponent> = []
     private _recalcQueueVirtual: Array<[VirtualComponent, boolean]> = []

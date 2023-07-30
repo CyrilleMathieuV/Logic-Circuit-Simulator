@@ -10,9 +10,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN begins to implement CPU">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/src/components/VirtualFlipflopD.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/src/components/VirtualFlipflopOrLatch.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/src/components/VirtualRegister.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -168,7 +168,7 @@
       <workItem from="1690549709142" duration="9211000" />
       <workItem from="1690558948334" duration="23354000" />
       <workItem from="1690610810584" duration="58566000" />
-      <workItem from="1690742328097" duration="8215000" />
+      <workItem from="1690742328097" duration="8877000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -295,14 +295,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00035" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690032858399</created>
-      <option name="number" value="00035" />
-      <option name="presentableId" value="LOCAL-00035" />
-      <option name="project" value="LOCAL" />
-      <updated>1690032858400</updated>
     </task>
     <task id="LOCAL-00036" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -544,7 +536,15 @@
       <option name="project" value="LOCAL" />
       <updated>1690742372978</updated>
     </task>
-    <option name="localTasksCounter" value="66" />
+    <task id="LOCAL-00066" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1690754240835</created>
+      <option name="number" value="00066" />
+      <option name="presentableId" value="LOCAL-00066" />
+      <option name="project" value="LOCAL" />
+      <updated>1690754240835</updated>
+    </task>
+    <option name="localTasksCounter" value="67" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

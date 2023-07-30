@@ -8,7 +8,7 @@ import { S, Template } from "../strings"
 import { ArrayFillUsing, ArrayOrDirect, EdgeTrigger, Expand, FixedArrayMap, HasField, HighImpedance, InteractionResult, LogicValue, LogicValueRepr, Mode, Unknown, brand, deepEquals, isArray, isBoolean, isNumber, isRecord, isString, mergeWhereDefined, toLogicValueRepr, typeOrUndefined, validateJson } from "../utils"
 import { DrawContext, DrawContextExt, DrawableParent, DrawableWithDraggablePosition, GraphicsRendering, MenuData, MenuItem, MenuItemPlacement, MenuItems, Orientation, PositionSupportRepr } from "./Drawable"
 import { DEFAULT_WIRE_COLOR, Node, NodeBase, NodeIn, NodeOut, WireColor } from "./Node"
-import { RecalcManagerVirtual } from "../RecalcManagerVirtual";
+import { VirtualRecalcManager } from "../VirtualRecalcManager";
 import {NodeGroup} from "./Component";
 
 
@@ -79,11 +79,11 @@ export abstract class VirtualComponent {
     }
 /*
     public setNeedsRecalc(forcePropagate = false) {
-        this.RecalcManagerVirtual.enqueueForRecalcVirtual(this, forcePropagate)
+        this.VirtualRecalcManager.enqueueForRecalcVirtual(this, forcePropagate)
     }
 
     private setNeedsPropagate() {
-        this.RecalcManagerVirtual.enqueueForPropagateVirtual(this)
+        this.VirtualRecalcManager.enqueueForPropagateVirtual(this)
     }
  */
 }
