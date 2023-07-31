@@ -47,7 +47,7 @@ import {
 } from "./Drawable"
 import {
     Flipflop,
-    FlipflopOrLatch, FlipflopOrLatchValue,
+    FlipflopOrLatch, FlipflopOrLatchDef, FlipflopOrLatchValue,
 } from "./FlipflopOrLatch";
 import { ALUOps, doALUOp } from "./ALU"
 import { VirtualFlipflopD } from "./VirtualFlipflopD";
@@ -210,9 +210,10 @@ export const CPUBaseDef =
                 },
             }
         },
+        //initialValue: (saved, defaults): [LogicValue, LogicValue] => {
         initialValue: (saved, defaults) => {
             const false_ = false as LogicValue
-            return {
+            const undefinedState = {
                 isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
                 dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                 dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
@@ -225,6 +226,26 @@ export const CPUBaseDef =
                 cout: false_,
                 runningstate: false_,
             }
+            let initialState
+            if (saved === undefined) {
+                initialState = undefinedState
+            } else {
+                initialState = {
+                    isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
+                    dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                    dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                    ramwesync: false_,
+                    ramwe: false_,
+                    resetsync: false_,
+                    sync: false_,
+                    z: false_,
+                    v: false_,
+                    cout: false_,
+                    runningstate: false_,
+                }
+            }
+            //const state = saved.state === undefined ? defaults.state : toLogicValue(saved.state)
+            return initialState
         }
     })
 
@@ -288,18 +309,22 @@ export abstract class CPUBase<
 
         this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
-/*
-    public doRecalcValue(): CPUBaseValue {
-        const prevClock = this._lastClock
-        const clockSpeed =  this.inputs.Speed.value? this.inputs.ClockF.value : this.inputs.ClockS.value
-        //const clock = this._lastClock = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && this._virtualHaltSignalFlipflopD.outputQ̅  : clockSpeed
-        const clock = this._lastClock = this._lastClock
-        const { isInInvalidState, newState } =
-            Flipflop.doRecalcValueForSyncComponent(this, prevClock, clock, Unknown, this.inputs.Reset)
-        this._isInInvalidState = isInInvalidState
-        return newState as CPUBaseValue
-    }
-*/
+    /*
+        public doRecalcValue(): CPUBaseValue {
+            const prevClock = this._lastClock
+            const clockSpeed =  this.inputs.Speed.value? this.inputs.ClockF.value : this.inputs.ClockS.value
+            //const clock = this._lastClock = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && this._virtualHaltSignalFlipflopD.outputQ̅  : clockSpeed
+            const clock = this._lastClock = this._lastClock
+            const { isInInvalidState, newState } =
+                Flipflop.doRecalcValueForSyncComponent(this, prevClock, clock, Unknown, this.inputs.Reset)
+            this._isInInvalidState = isInInvalidState
+            return newState as CPUBaseValue
+        }
+
+     */
+
+    //protected abstract override doRecalcValue(): CPUBaseValue
+
     public makeInvalidState(): LogicValue[] {
         return ArrayFillWith<LogicValue>(false, this.numAddressInstructionBits)
     }
@@ -321,10 +346,10 @@ export abstract class CPUBase<
 
     public override toJSONBase() {
         return {
-            ...super.toJSONBase(),
             addressInstructionBits: this.numAddressInstructionBits === CPUDef.aults.addressInstructionBits ? undefined : this.numAddressInstructionBits,
             dataBits: this.numDataBits === CPUDef.aults.dataBits ? undefined : this.numDataBits,
             addressDataBits: this.numAddressDataBits === CPUDef.aults.addressDataBits ? undefined : this.numAddressDataBits,
+            ...super.toJSONBase(),
             //extOpCode: this.usesExtendedOpCode === CPUDef.aults.extOpCode ? undefined : this.usesExtendedOpCode,
             showStage: (this._showStage !== CPUDef.aults.showStage) ? this._showStage : undefined,
             showOpCode: (this._showOpCode !== CPUDef.aults.showOpCode) ? this._showOpCode : undefined,
@@ -489,12 +514,54 @@ export const CPUDef =
             return {
                 ins: {
                     ...base.ins,
-                        Isa: groupVertical("w", -inputX, 0, params.numInstructionBits),
-                        Din: groupHorizontal("s", midX, inputY, params.numDataBits),
+                    Isa: groupVertical("w", -inputX, 0, params.numInstructionBits),
+                    Din: groupHorizontal("s", midX, inputY, params.numDataBits),
                 },
                 outs: base.outs,
             }
-        }
+        },
+        initialValue: CPUBaseDef.initialValue
+        /*
+        initialValue: (saved,defaults) => {
+            const false_ = false as LogicValue
+            const undefinedState = {
+                isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
+                dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                //isa: ArrayFillWith<LogicValue>(false_, defaults.numInstructionBits),
+                //din: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                ramwesync: false_,
+                ramwe: false_,
+                resetsync: false_,
+                sync: false_,
+                z: false_,
+                v: false_,
+                cout: false_,
+                runningstate: false_,
+            }
+            let initialState
+            if (saved === undefined) {
+                initialState = undefinedState
+            } else {
+                initialState = {
+                    isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
+                    dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                    dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                    //isa: ArrayFillWith<LogicValue>(false_, defaults.numInstructionBits),
+                    //din: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                    ramwesync: false_,
+                    ramwe: false_,
+                    resetsync: false_,
+                    sync: false_,
+                    z: false_,
+                    v: false_,
+                    cout: false_,
+                    runningstate: false_,
+                }
+            }
+            //const state = saved.state === undefined ? defaults.state : toLogicValue(saved.state)
+            return initialState
+        }*/
     })
 
 type CPUValue = Value<typeof CPUDef>
@@ -559,8 +626,8 @@ export class CPU extends CPUBase<CPURepr> {
 
     public toJSON() {
         return {
-            ...this.toJSONBase(),
             instructionBits: this.numInstructionBits === CPUDef.aults.instructionBits ? undefined : this.numInstructionBits,
+            ...this.toJSONBase(),
             directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
             //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
@@ -579,8 +646,28 @@ export class CPU extends CPUBase<CPURepr> {
         return (trigger === EdgeTrigger.rising && prevClock === false && clock === true)
             || (trigger === EdgeTrigger.falling && prevClock === true && clock === false)
     }
-
-    protected doRecalcValue(): CPUValue {
+/*
+    protected doRecalcValue(): CPUBaseValue {
+        const false_ = false as LogicValue
+        const result: any = {
+                isaadr: ArrayFillWith<LogicValue>(false_, this.numAddressInstructionBits),
+                dadr: ArrayFillWith<LogicValue>(false_, this.numDataBits),
+                dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
+                //isa: ArrayFillWith<LogicValue>(false_, defaults.numInstructionBits),
+                //din: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                ramwesync: false_,
+                ramwe: false_,
+                resetsync: false_,
+                sync: false_,
+                z: false_,
+                v: false_,
+                cout: false_,
+                runningstate: false_
+            }
+            return result as CPUBaseValue
+    }
+*/
+    protected doRecalcValue(): CPUBaseValue {
         /*
         BE CAREFUL WITH .reverse()
         IT AFFECTS THE OBJECT !!!
@@ -753,9 +840,10 @@ export class CPU extends CPUBase<CPURepr> {
 
         const false_ = false as LogicValue
 
-        if (isUnknown(opCodeName)) {
+        let newState : any
 
-            return {
+        if (isUnknown(opCodeName)) {
+            newState = {
                 isaadr: ArrayFillWith<LogicValue>(false_, this.numAddressInstructionBits),
                 dadr: ArrayFillWith<LogicValue>(false_, this.numDataBits),
                 dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
@@ -767,24 +855,24 @@ export class CPU extends CPUBase<CPURepr> {
                 v: false_,
                 cout: false_,
                 runningstate: false_
-            } as CPUValue
+            }
+        } else {
+            newState = {
+                isaadr: this._virtualProgramCounterRegister.outputsQ.reverse(),
+                dadr: this._operandsValue.reverse(),
+                dout: this._virtualAccumulatorRegister.outputsQ.reverse(),
+                ramwesync: ramwesyncvalue,
+                ramwe: ramwevalue,
+                resetsync: clrSignal,
+                sync: clockSync,
+                z: this._virtualFlagsRegister.outputsQ[0],
+                v: false_,
+                cout: this._virtualFlagsRegister.outputsQ[1],
+                runningstate: runningState,
+            }
         }
 
-        const newState = {
-            isaadr: this._virtualProgramCounterRegister.outputsQ.reverse(),
-            dadr: this._operandsValue.reverse(),
-            dout: this._virtualAccumulatorRegister.outputsQ.reverse(),
-            ramwesync: ramwesyncvalue,
-            ramwe: ramwevalue,
-            resetsync: clrSignal,
-            sync: clockSync,
-            z: this._virtualFlagsRegister.outputsQ[0],
-            v: false_,
-            cout: this._virtualFlagsRegister.outputsQ[1],
-            runningstate: runningState,
-        } as CPUValue
-
-        return newState
+        return newState as CPUBaseValue
     }
 
     public override propagateValue(newValue: CPUValue) {
@@ -801,11 +889,11 @@ export class CPU extends CPUBase<CPURepr> {
         this.outputs.Cout.value = newValue.cout
         this.outputs.RunningState.value = newValue.runningstate
     }
-/*
-    public makeStateAfterClock():[[LogicValue[], LogicValue[], LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue]] {
-        return []
-    }
-*/
+    /*
+        public makeStateAfterClock():[[LogicValue[], LogicValue[], LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue]] {
+            return []
+        }
+    */
     public doRecalcValueAfterClock(): [LogicValue[], LogicValue[], LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue] {
         return [
             this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ),
