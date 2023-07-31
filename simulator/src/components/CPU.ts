@@ -53,8 +53,7 @@ import { ALUOps, doALUOp } from "./ALU"
 import { VirtualFlipflopD } from "./VirtualFlipflopD";
 import { VirtualRegister } from "./VirtualRegister";
 import { VirtualCounter } from "./VirtualCounter";
-import {VirtualFlipflop, VirtualFlipflopOrLatchValue, VirtualSyncComponent} from "./VirtualFlipflopOrLatch";
-import {RegisterBaseParams, RegisterDef, RegisterParams, RegisterRepr} from "./Register";
+
 
 export const CPUOpCodes = [
     "NOP", "DEC", "LDM", "LDK",
