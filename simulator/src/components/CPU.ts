@@ -519,49 +519,7 @@ export const CPUDef =
                 },
                 outs: base.outs,
             }
-        },
-        initialValue: CPUBaseDef.initialValue
-        /*
-        initialValue: (saved,defaults) => {
-            const false_ = false as LogicValue
-            const undefinedState = {
-                isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
-                dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
-                dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
-                //isa: ArrayFillWith<LogicValue>(false_, defaults.numInstructionBits),
-                //din: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
-                ramwesync: false_,
-                ramwe: false_,
-                resetsync: false_,
-                sync: false_,
-                z: false_,
-                v: false_,
-                cout: false_,
-                runningstate: false_,
-            }
-            let initialState
-            if (saved === undefined) {
-                initialState = undefinedState
-            } else {
-                initialState = {
-                    isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
-                    dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
-                    dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
-                    //isa: ArrayFillWith<LogicValue>(false_, defaults.numInstructionBits),
-                    //din: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
-                    ramwesync: false_,
-                    ramwe: false_,
-                    resetsync: false_,
-                    sync: false_,
-                    z: false_,
-                    v: false_,
-                    cout: false_,
-                    runningstate: false_,
-                }
-            }
-            //const state = saved.state === undefined ? defaults.state : toLogicValue(saved.state)
-            return initialState
-        }*/
+        }
     })
 
 type CPUValue = Value<typeof CPUDef>
