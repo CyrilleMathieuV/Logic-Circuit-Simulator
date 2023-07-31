@@ -22,13 +22,13 @@ import {
     isUnknown,
     LogicValue, LogicValueRepr, toLogicValue,
     typeOrUndefined,
-    Unknown,
+    Unknown, wordFromBinaryOrHexRepr,
 } from "../utils"
 import {
     ComponentBase,
     defineAbstractComponent,
     defineAbstractParametrizedComponent,
-    defineParametrizedComponent,
+    defineParametrizedComponent, ExtractParamDefs, ExtractParams,
     groupHorizontal,
     groupVertical, InstantiatedComponentDef, NodeGroup, NodesIn, NodesOut,
     param,
@@ -45,26 +45,16 @@ import {
     MenuItems,
     Orientation,
 } from "./Drawable"
-import {FlipflopD, FlipflopDDef} from "./FlipflopD";
-import {Register, RegisterBase, RegisterBaseParams, RegisterDef} from "./Register";
-import { Counter } from "./Counter";
-import { ALU, ALUDef, ALUOps, doALUOp } from "./ALU"
-import { Mux } from "./Mux";
 import {
     Flipflop,
-    FlipflopBaseRepr,
-    FlipflopOrLatch,
-    FlipflopOrLatchDef, FlipflopOrLatchRepr,
-    FlipflopOrLatchValue,
-    SyncComponent,
+    FlipflopOrLatch, FlipflopOrLatchValue,
 } from "./FlipflopOrLatch";
-import { Input } from "./Input";
-import { Wire } from "./Wire";
-import { Output } from "./Output";
-import {NodeIn, NodeOut} from "./Node";
-import {ShiftRegisterDef} from "./ShiftRegister";
-import {VirtualFlipflopD} from "./VirtualFlipflopD";
-import {VirtualRegister} from "./VirtualRegister";
+import { ALUOps, doALUOp } from "./ALU"
+import { VirtualFlipflopD } from "./VirtualFlipflopD";
+import { VirtualRegister } from "./VirtualRegister";
+import { VirtualCounter } from "./VirtualCounter";
+import {VirtualFlipflop, VirtualFlipflopOrLatchValue, VirtualSyncComponent} from "./VirtualFlipflopOrLatch";
+import {RegisterBaseParams, RegisterDef, RegisterParams, RegisterRepr} from "./Register";
 
 export const CPUOpCodes = [
     "NOP", "DEC", "LDM", "LDK",
@@ -143,11 +133,11 @@ export const CPUStageColorKey2 = {
     }
 }
 */
+
 export const CPUBaseDef =
     defineAbstractParametrizedComponent( {
         button: { imgWidth: 40 },
         repr: {
-            instructionBits: typeOrUndefined(t.number),
             addressInstructionBits: typeOrUndefined(t.number),
             dataBits: typeOrUndefined(t.number),
             addressDataBits: typeOrUndefined(t.number),
@@ -168,15 +158,13 @@ export const CPUBaseDef =
             trigger: EdgeTrigger.falling,
         },
         params: {
-            instructionBits: param(8, [8]),
             addressInstructionBits: param(4, [4, 8]),
             dataBits: param(4, [4]),
             addressDataBits: param(4, [4]),
             // future use
             // extOpCode: paramBool(), // has the extended opcode
         },
-        validateParams: ({ instructionBits, addressInstructionBits, dataBits, addressDataBits}) => ({
-            numInstructionBits: instructionBits,
+        validateParams: ({ addressInstructionBits, dataBits, addressDataBits}) => ({
             numAddressInstructionBits: addressInstructionBits,
             numDataBits: dataBits,
             numAddressDataBits: addressDataBits,
@@ -188,7 +176,7 @@ export const CPUBaseDef =
             gridWidth: 32,
             gridHeight: 32,
         }),
-        makeNodes: ({ numInstructionBits, numAddressInstructionBits, numDataBits, numAddressDataBits, /*usesExtendedOpCode*/ gridWidth, gridHeight }) => {
+        makeNodes: ({ numAddressInstructionBits, numDataBits, numAddressDataBits, /*usesExtendedOpCode*/ gridWidth, gridHeight }) => {
             const bottom = gridHeight / 2
             const top = -bottom
             const right = gridWidth / 2
@@ -200,8 +188,6 @@ export const CPUBaseDef =
 
             return {
                 ins: {
-                    Isa: groupVertical("w", -inputX, 0, numInstructionBits),
-                    Din: groupHorizontal("s", midX, inputY, numDataBits),
                     Reset: [-15, inputY, "s", "Reset CPU", { prefersSpike: true }],
                     ManStep: [-13, inputY, "s","Man STEP", { prefersSpike: true }],
                     Speed: [-11, inputY, "s", "Select Clock"],
@@ -220,17 +206,17 @@ export const CPUBaseDef =
                     Sync: [inputX, 7, "e", "Sync"],
                     Z: [inputX, 9, "e", "Z (Zero)"],
                     V: [inputX, 11, "e", "V (oVerflow)"],
-                    Cout: [inputX, 13, "e", `Cout (${S.Components.CPU.OutputCoutDesc})`],
+                    Cout: [inputX, 13, "e", `Cout`],
                     RunningState: [inputX, 15, "e", "Run state"],
                 },
             }
         },
-        initialValue: (saved, {numAddressInstructionBits, numDataBits}) => {
+        initialValue: (saved, defaults) => {
             const false_ = false as LogicValue
             return {
-                isaadr: ArrayFillWith(false_, numAddressInstructionBits),
-                dadr: ArrayFillWith(false_, numDataBits),
-                dout: ArrayFillWith(false_, numDataBits),
+                isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
+                dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                 ramwesync: false_,
                 ramwe: false_,
                 resetsync: false_,
@@ -240,81 +226,36 @@ export const CPUBaseDef =
                 cout: false_,
                 runningstate: false_,
             }
-        },
+        }
     })
 
-
-
-/*type CPUBaseValue = Value<typeof CPUBaseDef>*/
-
-type CPUBaseValue = {
-    isaadr: LogicValue[]
-    dadr: LogicValue[]
-    dout: LogicValue[]
-    ramwesync: LogicValue
-    ramwe: LogicValue
-    resetsync: LogicValue
-    sync: LogicValue
-    z: LogicValue
-    v: LogicValue
-    cout: LogicValue
-    runningstate: LogicValue
-}
+type CPUBaseValue = Value<typeof CPUBaseDef>
 
 export type CPUBaseRepr = Repr<typeof CPUBaseDef>
 export type CPUBaseParams = ResolvedParams<typeof CPUBaseDef>
 
 export abstract class CPUBase<
-    TRepr extends CPUBaseRepr
+    TRepr extends CPUBaseRepr,
+    TParamDefs extends ExtractParamDefs<TRepr> = ExtractParamDefs<TRepr>,
 > extends ParametrizedComponentBase<
     TRepr,
-    CPUBaseValue
+    CPUBaseValue,
+    TParamDefs,
+    ExtractParams<TRepr>,
+    NodesIn<TRepr>,
+    NodesOut<TRepr>,
+    true, true
 > {
-    public readonly numInstructionBits: number
     public readonly numAddressInstructionBits: number
 
     public readonly numDataBits: number
     public readonly numAddressDataBits: number
 
     protected _trigger: EdgeTrigger = CPUDef.aults.trigger
+    protected _isInInvalidState = false
+
+    protected _lastClock: LogicValue = Unknown
     //public readonly usesExtendedOpCode: boolean
-
-    //protected _runStopFlipflopD : FlipflopD
-    protected _virtualRunStopFlipflopD : VirtualFlipflopD
-
-    //protected _ALU : ALU
-
-    protected _instructionRegister : Register
-    protected _accumulatorRegister : Register
-    protected _flagsRegister : Register
-
-    //protected _instructionMux : Mux
-
-    //protected _programCounterALU : ALU
-
-    protected _programCounterRegister : Register
-    protected _previousProgramCounterRegister : Register
-
-    protected _specialVoidProgramCounterFlipflopD : FlipflopD
-
-    protected _specialProgramCounterInput : Input
-    protected _specialProgramCounterOutput : Output
-    protected _specialProgramCounterWire : Wire
-
-    protected _programCounterMux : Mux
-
-    protected _fetchFlipflopD : FlipflopD
-    protected _decodeFlipflopD : FlipflopD
-    protected _executeFlipflopD : FlipflopD
-
-    //protected _runningStateMux : Mux
-    //protected _clockSpeedMux : Mux
-    //protected _autoManMux : Mux
-
-    //protected _haltSignalFlipflopD : FlipflopD
-    protected _virtualHaltSignalFlipflopD : VirtualFlipflopD
-
-    protected _operationStageCounter : Counter
 
     protected _showStage: boolean
 
@@ -328,75 +269,14 @@ export abstract class CPUBase<
     public _opCodeOperandsInStages : any
 
     protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef, params: CPUBaseParams, saved?: TRepr) {
-        super(parent, CPUDef.with(params) as any, saved)
+        super(parent, SubclassDef.with(params as any) as any /* TODO */, saved)
 
-        this.numInstructionBits = params.numInstructionBits
         this.numAddressInstructionBits = params.numAddressInstructionBits
 
         this.numDataBits = params.numDataBits
         this.numAddressDataBits = params.numAddressDataBits
 
         this._opCodeOperandsInStages = { FETCH : "", DECODE : "", EXECUTE : ""}
-
-        //this._runStopFlipflopD = new FlipflopD(parent)
-        this._virtualRunStopFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-
-        // MUST change trigger of Flipflops
-        // this._runStopFlipflopD.doSetTrigger(EdgeTrigger.falling)
-
-        //this._haltSignalFlipflopD = new FlipflopD(parent)
-        this._virtualHaltSignalFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-
-        // MUST change trigger of Flipflops
-        //this._haltSignalFlipflopD.doSetTrigger(EdgeTrigger.falling)
-
-        //this.usesExtendedOpCode = params.usesExtendedOpCode
-
-        //this._ALU = new ALU(parent,{numBits: this.numDataBits, usesExtendedOpcode: true},undefined)
-
-        this._instructionRegister = new Register(parent,{numBits : this.numInstructionBits, hasIncDec: false}, undefined)
-        this._accumulatorRegister = new Register(parent,{numBits : this.numDataBits, hasIncDec: false}, undefined)
-        this._flagsRegister = new Register(parent,{numBits : 4, hasIncDec: false}, undefined)
-
-        //this._instructionMux = new Mux (parent, {numFrom: 4 * this.numDataBits, numTo: this.numDataBits, numGroups: 4, numSel: 2}, undefined)
-
-        // MUST change trigger of Registers
-        this._instructionRegister.doSetTrigger(EdgeTrigger.falling)
-        this._accumulatorRegister.doSetTrigger(EdgeTrigger.falling)
-        this._flagsRegister.doSetTrigger(EdgeTrigger.falling)
-
-        this._programCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: true}, undefined)
-        this._previousProgramCounterRegister = new Register(parent,{numBits : this.numAddressInstructionBits, hasIncDec: false}, undefined)
-
-        // MUST change trigger of Registers
-        this._programCounterRegister.doSetTrigger(EdgeTrigger.falling)
-        this._previousProgramCounterRegister.doSetTrigger(EdgeTrigger.falling)
-
-        this._specialProgramCounterInput = new Input(parent, {numBits : 1})
-        this._specialProgramCounterOutput = new Output(parent, {numBits : 1})
-        this._specialProgramCounterWire = new Wire(this._specialProgramCounterInput.outputs.Out[0], (this._previousProgramCounterRegister.inputs.Inc === undefined)? this._specialProgramCounterOutput.inputs.In[0] : this._previousProgramCounterRegister.inputs.Inc)
-        this._specialProgramCounterInput.outputs.Out[0].value = true
-
-        this._specialVoidProgramCounterFlipflopD = new FlipflopD(parent)
-
-        //this._programCounterALU = new ALU(parent,{numBits: this.numAddressInstructionBits, usesExtendedOpcode: false},undefined)
-
-        this._programCounterMux = new Mux (parent, {numFrom: 2 * this.numAddressInstructionBits, numTo: this.numAddressInstructionBits, numGroups: 2, numSel: 1}, undefined)
-
-        this._fetchFlipflopD = new FlipflopD(parent)
-        this._decodeFlipflopD = new FlipflopD(parent)
-        this._executeFlipflopD = new FlipflopD(parent)
-
-        // MUST change trigger of Flipflops
-        this._fetchFlipflopD.doSetTrigger(EdgeTrigger.falling)
-        this._decodeFlipflopD.doSetTrigger(EdgeTrigger.falling)
-        this._executeFlipflopD.doSetTrigger(EdgeTrigger.falling)
-
-        //this._runningStateMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
-        //this._clockSpeedMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
-        //this._autoManMux = new Mux (parent, {numFrom: 2, numTo: 1, numGroups: 2, numSel: 1}, undefined)
-
-        this._operationStageCounter = new Counter(parent, {numBits: 16}, undefined)
 
         this._showStage = saved?.showStage ?? CPUDef.aults.showStage
 
@@ -409,6 +289,27 @@ export abstract class CPUBase<
 
         this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
+/*
+    public doRecalcValue(): CPUBaseValue {
+        const prevClock = this._lastClock
+        const clockSpeed =  this.inputs.Speed.value? this.inputs.ClockF.value : this.inputs.ClockS.value
+        //const clock = this._lastClock = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && this._virtualHaltSignalFlipflopD.outputQ̅  : clockSpeed
+        const clock = this._lastClock = this._lastClock
+        const { isInInvalidState, newState } =
+            Flipflop.doRecalcValueForSyncComponent(this, prevClock, clock, Unknown, this.inputs.Reset)
+        this._isInInvalidState = isInInvalidState
+        return newState as CPUBaseValue
+    }
+*/
+    public makeInvalidState(): LogicValue[] {
+        return ArrayFillWith<LogicValue>(false, this.numAddressInstructionBits)
+    }
+
+    public makeStateFromMainValue(val: LogicValue): LogicValue[] {
+        return ArrayFillWith<LogicValue>(val, this.numAddressInstructionBits)
+    }
+
+    //public abstract makeStateAfterClock(): [LogicValue[], LogicValue[], LogicValue[], LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue]
 
     public get trigger() {
         return this._trigger
@@ -422,7 +323,6 @@ export abstract class CPUBase<
     public override toJSONBase() {
         return {
             ...super.toJSONBase(),
-            instructionBits: this.numInstructionBits === CPUDef.aults.instructionBits ? undefined : this.numInstructionBits,
             addressInstructionBits: this.numAddressInstructionBits === CPUDef.aults.addressInstructionBits ? undefined : this.numAddressInstructionBits,
             dataBits: this.numDataBits === CPUDef.aults.dataBits ? undefined : this.numDataBits,
             addressDataBits: this.numAddressDataBits === CPUDef.aults.addressDataBits ? undefined : this.numAddressDataBits,
@@ -435,32 +335,6 @@ export abstract class CPUBase<
             trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
-
-    public get opCode(): CPUOpCode | Unknown {
-        //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
-        const opCodeValues = this.inputValues(this._instructionRegister.inputs.D).slice(0,4)
-        //opValues.push(this.inputs.Mode.value)
-        const opCodeIndex = displayValuesFromArray(opCodeValues, true)[1]
-        // TO DO
-        //return isUnknown(opCodeIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodes)[opCodeIndex]
-        return isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
-    }
-
-    public get operands(): LogicValue[] {
-        return this.inputValues(this._instructionRegister.inputs.D).slice(4,8)
-    }
-
-    public get cycle(): number {
-        const cycleValue = displayValuesFromArray(this.getOutputValues(this._operationStageCounter.outputs.Q), false)[1]
-        return isUnknown(cycleValue) ? 0 : cycleValue
-    }
-
-    public get stage(): CPUStage {
-        const stageIndex = this.cycle
-        return CPUStages[stageIndex % 3]
-    }
-
-    //public abstract makeStateAfterClock(): LogicValue[]
 
     protected override propagateValue(newValue: CPUBaseValue) {    }
 
@@ -489,6 +363,475 @@ export abstract class CPUBase<
         this.setNeedsRedraw("show pipeline changed")
     }
 
+    protected abstract doDrawGenericCaption(g: GraphicsRendering, ctx: DrawContextExt): void
+
+    protected override makeComponentSpecificContextMenuItems(): MenuItems {
+        const s = S.Components.CPU.contextMenu
+
+        const iconStage = this._showStage ? "check" : "none"
+        const toggleShowStageItem = MenuData.item(iconStage, s.toggleShowStage, () => {
+            this.doSetShowStage(!this._showStage)
+            this._showOpCode ? this.doSetShowOpCode(!this._showOpCode) : {}
+        })
+        const iconOpCode = this._showOpCode ? "check" : "none"
+        const toggleShowOpCodeItem: MenuItems = !this._showStage ? [] : [
+            ["mid", MenuData.item(iconOpCode, s.toggleShowOpCode,
+                () => {this.doSetShowOpCode(!this._showOpCode)}
+            )],
+        ]
+        const iconOperands = this._showOperands ? "check" : "none"
+        const toggleShowOperandsItem: MenuItems = (!this._showStage || !this._showOpCode) ? [] : [
+            ["mid", MenuData.item(iconOperands, s.toggleShowOperands,
+                () => {this.doSetShowOperands(!this._showOperands)}
+            )],
+        ]
+
+        const iconEnablePipeline = this._enablePipeline? "check" : "none"
+        const toggleEnablePipelineItem = MenuData.item(iconEnablePipeline, s.toggleEnablePipeline, () => {
+            this.doSetEnablePipeline(!this._enablePipeline)
+        })
+
+        const iconClockCycle = this._showClockCycle ? "check" : "none"
+        const toggleShowClockCycleItem = MenuData.item(iconClockCycle, s.toggleShowClockCycle, () => {
+            this.doSetShowClockCycle(!this._showClockCycle)
+        })
+
+        return [
+            ["mid", toggleShowStageItem],
+            ...toggleShowOpCodeItem,
+            ...toggleShowOperandsItem,
+            ["mid", MenuData.sep()],
+            ["mid", toggleEnablePipelineItem],
+            ["mid", MenuData.sep()],
+            ["mid", toggleShowClockCycleItem],
+            ["mid", MenuData.sep()],
+            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
+            ...this.makeCPUSpecificContextMenuItems(),
+            ["mid", MenuData.sep()],
+            //this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpCode, this.usesExtendedOpCode, "extOpCode"),
+            //["mid", MenuData.sep()],
+            ...this.makeForceOutputsContextMenuItem(),
+        ]
+    }
+
+    protected makeCPUSpecificContextMenuItems(): MenuItems {
+        return []
+    }
+
+    public getInstructionParts(instructionString: string, part :"opCode" | "operands"): string {
+        const instructionParts = instructionString.split(/\++/)
+        switch (part) {
+            case "opCode":
+                return instructionParts[0]
+            case "operands":
+                return instructionParts[1]
+        }
+    }
+
+    public getOperandsNumberWithRadix(operands: LogicValue[], radix: number ) : string {
+        const operandsValue = displayValuesFromArray(operands, true)[1]
+        return formatWithRadix(operandsValue, radix, operands.length, true)
+    }
+
+    public allZeros(vals: LogicValue[]): LogicValue {
+        for (const v of vals) {
+            if (isUnknown(v) || isHighImpedance(v)) {
+                return Unknown
+            }
+            if (v === true) {
+                return false
+            }
+        }
+        return true
+    }
+
+}
+
+export const CPUDef =
+    defineParametrizedComponent("CPU", true, true, {
+        variantName: ({ addressInstructionBits }) => `CPU-${addressInstructionBits}`,
+        idPrefix: "CPU",
+        ...CPUBaseDef,
+        repr: {
+            ...CPUBaseDef.repr,
+            instructionBits: typeOrUndefined(t.number),
+            directAddressingMode: typeOrUndefined(t.boolean),
+            //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
+        },
+        valueDefaults: {
+            ...CPUBaseDef.valueDefaults,
+            directAddressingMode: false,
+            //trigger: EdgeTrigger.falling,
+        },
+        params: {
+            addressInstructionBits: CPUBaseDef.params.addressInstructionBits,
+            dataBits: CPUBaseDef.params.dataBits,
+            addressDataBits: CPUBaseDef.params.addressDataBits,
+            instructionBits: param(8, [8]),
+            //extOpCode: CPUBaseDef.params.extOpCode,
+        },
+        validateParams: ({ addressInstructionBits, dataBits, addressDataBits, instructionBits}) => ({
+            numAddressInstructionBits: addressInstructionBits,
+            numDataBits: dataBits,
+            numAddressDataBits: addressDataBits,
+            numInstructionBits: instructionBits,
+            //usesExtendedOpCode: extOpCode,
+        }),
+        makeNodes: (params, defaults) => {
+            const base = CPUBaseDef.makeNodes(params, defaults)
+            const bottom = params.gridHeight / 2
+            const top = -bottom
+            const right = params.gridWidth / 2
+            const left = -right
+            const inputX = right + 1.5
+            const inputY = bottom + 1.5
+            const midY = bottom / 2
+            const midX = right / 2
+            return {
+                ins: {
+                    ...base.ins,
+                        Isa: groupVertical("w", -inputX, 0, params.numInstructionBits),
+                        Din: groupHorizontal("s", midX, inputY, params.numDataBits),
+                },
+                outs: base.outs,
+            }
+        }
+    })
+
+type CPUValue = Value<typeof CPUDef>
+
+export type CPURepr = Repr<typeof CPUDef>
+export type CPUParams = ResolvedParams<typeof CPUDef>
+
+export class CPU extends CPUBase<CPURepr> {
+    public readonly numInstructionBits: number
+    private _directAddressingMode = CPUDef.aults.directAddressingMode
+    //private _trigger: EdgeTrigger = CPUDef.aults.trigger
+
+    protected _virtualRunStopFlipflopD : VirtualFlipflopD
+
+    protected _virtualInstructionRegister : VirtualRegister
+    protected _virtualAccumulatorRegister : VirtualRegister
+    protected _virtualFlagsRegister: VirtualRegister
+
+    protected _virtualProgramCounterRegister : VirtualRegister
+    protected _virtualPreviousProgramCounterRegister : VirtualRegister
+
+    protected _virtualSpecialVoidProgramCounterFlipflopD : VirtualFlipflopD
+
+    protected _virtualFetchFlipflopD : VirtualFlipflopD
+    protected _virtualDecodeFlipflopD : VirtualFlipflopD
+    protected _virtualExecuteFlipflopD : VirtualFlipflopD
+
+    protected _virtualHaltSignalFlipflopD : VirtualFlipflopD
+
+    protected _virtualOperationStageCounter : VirtualCounter
+
+    private _noJump : LogicValue = true
+    private _backwardJump : LogicValue = Unknown
+    private _operandsValue : LogicValue[] = ArrayFillWith(false, this.numDataBits)
+
+    public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
+        super(parent, CPUDef, params, saved)
+
+        this.numInstructionBits = params.numInstructionBits
+        this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
+        //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
+
+        this._virtualRunStopFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+
+        this._virtualHaltSignalFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+
+        this._virtualInstructionRegister = new VirtualRegister(this.numInstructionBits, EdgeTrigger.falling)
+        this._virtualAccumulatorRegister = new VirtualRegister(this.numDataBits, EdgeTrigger.falling)
+        this._virtualFlagsRegister = new VirtualRegister(4, EdgeTrigger.falling)
+
+        this. _virtualProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
+        this. _virtualPreviousProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
+
+        this._virtualSpecialVoidProgramCounterFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+
+        this._virtualFetchFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+        this._virtualDecodeFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+        this._virtualExecuteFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+
+        this._virtualOperationStageCounter = new VirtualCounter(16, EdgeTrigger.falling, 10)
+    }
+
+    public toJSON() {
+        return {
+            ...this.toJSONBase(),
+            instructionBits: this.numInstructionBits === CPUDef.aults.instructionBits ? undefined : this.numInstructionBits,
+            directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
+            //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
+        }
+    }
+
+    protected get moduleName() {
+        return "CPU"
+    }
+
+    protected doSetDirectAddressingMode(directAddressingMode: boolean) {
+        this._directAddressingMode = directAddressingMode
+        this.setNeedsRedraw("directAddressingMode changed")
+    }
+
+    public static isVirtualClockTrigger(trigger: EdgeTrigger, prevClock: LogicValue, clock: LogicValue): boolean {
+        return (trigger === EdgeTrigger.rising && prevClock === false && clock === true)
+            || (trigger === EdgeTrigger.falling && prevClock === true && clock === false)
+    }
+
+    protected doRecalcValue(): CPUValue {
+        /*
+        BE CAREFUL WITH .reverse()
+        IT AFFECTS THE OBJECT !!!
+         */
+        // RUN CONTROL LOGIC
+        const prevClock = this._lastClock
+        const clockSpeed =  this.inputs.Speed.value? this.inputs.ClockF.value : this.inputs.ClockS.value
+        const clockSync = this._lastClock = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && this._virtualHaltSignalFlipflopD.outputQ̅  : clockSpeed
+
+        const clrSignal = this.inputs.Reset.value && this._virtualRunStopFlipflopD.outputQ̅
+
+        const runningState = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && !this._virtualRunStopFlipflopD.outputQ̅  : this._virtualRunStopFlipflopD.outputQ
+
+        this._virtualRunStopFlipflopD.inputD = this._virtualRunStopFlipflopD.outputQ̅
+        this._virtualRunStopFlipflopD.inputClock = (this._virtualHaltSignalFlipflopD.outputQ && clockSync) || this.inputs.RunStop.value
+
+        this._virtualRunStopFlipflopD.inputClr = clrSignal
+        this._virtualHaltSignalFlipflopD.inputClr = clrSignal
+
+        this._virtualProgramCounterRegister.inputClr = clrSignal
+        this._virtualPreviousProgramCounterRegister.inputClr = clrSignal
+
+        this._virtualFetchFlipflopD.inputPre = clrSignal
+        this._virtualDecodeFlipflopD.inputClr = clrSignal
+        this._virtualExecuteFlipflopD.inputClr = clrSignal
+
+        this._virtualInstructionRegister.inputClr = clrSignal
+        this._virtualAccumulatorRegister.inputClr = clrSignal
+        this._virtualFlagsRegister.inputClr = clrSignal
+
+        this._virtualOperationStageCounter.inputClr = clrSignal
+
+        this._virtualRunStopFlipflopD.recalcVirtualValue()
+
+        this._virtualHaltSignalFlipflopD.inputD = clockSync
+        this._virtualOperationStageCounter.inputClock = clockSync
+        this._virtualProgramCounterRegister.inputClock = clockSync
+
+        this._virtualOperationStageCounter.recalcVirtualValue()
+
+        const noJump = this._noJump
+        // PROGRAM COUNTER LOGIC
+
+        const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
+        const _programCounterALUinputA = this._enablePipeline ? noJump ? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
+        // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
+        // const BinputValueProgramCounterALU = this._operandsValue.slice()
+        const _programCounterALUinputB = this._operandsValue.slice().reverse()
+        if (this._directAddressingMode) {
+            if (!noJump) {
+                this._virtualProgramCounterRegister.inputsD = ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits, false)
+            }
+        } else {
+            const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, true)
+            this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
+        }
+
+        if (this._enablePipeline) {
+            this._virtualPreviousProgramCounterRegister.inputsD = this._virtualProgramCounterRegister.outputsQ
+        }
+
+        this._virtualProgramCounterRegister.recalcVirtualValue()
+
+        if (clrSignal) {
+            this._lastClock = Unknown
+            this._opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
+        }
+
+        if (!this._virtualHaltSignalFlipflopD.outputQ) {
+            this._virtualOperationStageCounter.inputClock = clockSync
+        }
+        if (this._enablePipeline) {
+            this._virtualInstructionRegister.inputClock = clockSync
+
+            this._virtualAccumulatorRegister.inputClock = clockSync
+            this._virtualFlagsRegister.inputClock = clockSync
+            this._virtualHaltSignalFlipflopD.inputClock = clockSync
+
+            this._virtualProgramCounterRegister.inputClock = clockSync
+            this._virtualPreviousProgramCounterRegister.inputClock = clockSync
+        } else {
+            this._virtualDecodeFlipflopD.inputD = this._virtualFetchFlipflopD.outputQ
+            this._virtualExecuteFlipflopD.inputD = this._virtualDecodeFlipflopD.outputQ
+            this._virtualFetchFlipflopD.inputD = this._virtualExecuteFlipflopD.outputQ
+
+            this._virtualFetchFlipflopD.inputClock = clockSync
+            this._virtualDecodeFlipflopD.inputClock = clockSync
+            this._virtualExecuteFlipflopD.inputClock = clockSync
+
+            this._virtualInstructionRegister.inputClock= clockSync && this._virtualFetchFlipflopD.outputQ
+
+            this._virtualAccumulatorRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
+            this._virtualFlagsRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
+            this._virtualHaltSignalFlipflopD.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
+
+            this._virtualProgramCounterRegister.inputClock  = clockSync && this._virtualExecuteFlipflopD.outputQ
+        }
+
+        // FETCH Stage
+        const isa = this.inputValues(this.inputs.Isa)
+        // Needs to revert all inputs to be compatible with choosen ISA
+        this._virtualInstructionRegister.inputsD = isa.reverse()
+
+        // DECCODE Stage
+        const opCodeValue = this._virtualInstructionRegister.outputsQ.slice(0, 4).reverse()
+        const opCodeIndex = displayValuesFromArray(opCodeValue, true)[1]
+        const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
+
+        this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
+
+        const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
+        const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
+        const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
+
+        const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
+
+        const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
+        const _operandsDataSelectValue = [(_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]), _operandsDataCommonSelect && opCodeValue[1]]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
+        _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 0 : _operandsDataSelectValueIndex
+
+
+        const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ.reverse(), this.inputValues(this.inputs.Din).reverse(), false)
+
+        let _operandsData : LogicValue[]
+        if (_operandsDataSelectValueIndex === 0) {
+            _operandsData = this._virtualAccumulatorRegister.outputsQ
+        } else if (_operandsDataSelectValueIndex === 1) {
+            _operandsData = _ALUoutputs.s.reverse()
+        } else if (_operandsDataSelectValueIndex === 2) {
+            _operandsData = this.inputValues(this.inputs.Din)
+        } else if (_operandsDataSelectValueIndex === 3) {
+            _operandsData = this._operandsValue
+        } else {
+            _operandsData = this._virtualAccumulatorRegister.outputsQ
+        }
+
+        this._virtualAccumulatorRegister.inputsD = _operandsData
+
+        this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
+        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_operandsData)
+
+        const c = this._virtualFlagsRegister.outputsQ[1]
+        const z = this._virtualFlagsRegister.outputsQ[0]
+
+        const jumpControl = opCodeValue[2] && !opCodeValue[3]
+        this._noJump = !(((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && jumpControl)
+        this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
+
+        this._virtualHaltSignalFlipflopD.inputD = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
+
+        this._virtualHaltSignalFlipflopD.recalcVirtualValue()
+
+        // EXECUTE STAGE
+        const ramwesyncvalue = this._enablePipeline ? clockSync : clockSync && this._virtualDecodeFlipflopD.outputQ
+
+        const opCode = isHighImpedance(opCodeValue) ? "?" : this.opCode
+        const operands = this.operands
+
+        if (this._enablePipeline) {
+            if (Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
+                //console.log("clock : ",clockSync, " prevlck : ", prevClock, " change : ",clockSync)
+                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
+            }
+        } else {
+            if (!Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
+                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
+            }
+        }
+
+        const false_ = false as LogicValue
+
+        if (isUnknown(opCodeName)) {
+
+            return {
+                isaadr: ArrayFillWith<LogicValue>(false_, this.numAddressInstructionBits),
+                dadr: ArrayFillWith<LogicValue>(false_, this.numDataBits),
+                dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
+                ramwesync: false_,
+                ramwe: false_,
+                resetsync: false_,
+                sync: false_,
+                z: false_,
+                v: false_,
+                cout: false_,
+                runningstate: false_
+            } as CPUValue
+        }
+
+        const newState = {
+            isaadr: this._virtualProgramCounterRegister.outputsQ.reverse(),
+            dadr: this._operandsValue.reverse(),
+            dout: this._virtualAccumulatorRegister.outputsQ.reverse(),
+            ramwesync: ramwesyncvalue,
+            ramwe: ramwevalue,
+            resetsync: clrSignal,
+            sync: clockSync,
+            z: this._virtualFlagsRegister.outputsQ[0],
+            v: false_,
+            cout: this._virtualFlagsRegister.outputsQ[1],
+            runningstate: runningState,
+        } as CPUValue
+
+        return newState
+    }
+
+    public override propagateValue(newValue: CPUValue) {
+        this.outputValues(this.outputs.Isaadr , newValue.isaadr)
+        this.outputValues(this.outputs.Dadr , newValue.dadr)
+        this.outputValues(this.outputs.Dout , newValue.dout)
+        this.outputs.RAMweSync.value = newValue.ramwesync
+        this.outputs.RAMwe.value = newValue.ramwe
+        this.outputs.ResetSync.value = newValue.resetsync
+        this.outputs.Sync.value = newValue.sync
+        this.outputs.Z.value = newValue.z
+        //this.outputs.Z.value = allZeros(newValue.dout)
+        this.outputs.V.value = newValue.v
+        this.outputs.Cout.value = newValue.cout
+        this.outputs.RunningState.value = newValue.runningstate
+    }
+/*
+    public makeStateAfterClock():[[LogicValue[], LogicValue[], LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue]] {
+        return []
+    }
+*/
+    public doRecalcValueAfterClock(): [LogicValue[], LogicValue[], LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue] {
+        return [
+            this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ),
+            this.inputValues(this.inputs.Din).map(LogicValue.filterHighZ),
+            LogicValue.filterHighZ(this.inputs.Reset.value),
+            LogicValue.filterHighZ(this.inputs.ManStep.value),
+            LogicValue.filterHighZ(this.inputs.Speed.value),
+            LogicValue.filterHighZ(this.inputs.ClockS.value),
+            LogicValue.filterHighZ(this.inputs.ClockF.value),
+            LogicValue.filterHighZ(this.inputs.RunStop.value)
+        ]
+    }
+
+    public override makeTooltip() {
+        const opCode = this.opCode
+        const stage = this.stage
+        const s = S.Components.CPU.tooltip
+        const opCodeDesc = isUnknown(opCode) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOpCode.fullName(opCode)
+        return tooltipContent(s.title,
+            mods(
+                div(`${s.CurrentlyCarriesOut} ${opCodeDesc}.`)
+            )
+        )
+    }
+
     protected override doDraw(g: GraphicsRendering, ctx: DrawContext) {
         const bounds = this.bounds()
         const {left, top, right, bottom} = bounds
@@ -496,21 +839,6 @@ export abstract class CPUBase<
         const lowerBottom = top - 2 * GRID_STEP
         const lowerLeft = left - 2 * GRID_STEP
         const lowerRight = right - 2 * GRID_STEP
-
-        // for debug (works only with "npm run bundle-watch")
-        //this._runStopFlipflopD.doDraw(g, ctx)
-
-        this._programCounterRegister.doDraw(g, ctx)
-        //this._instructionRegister.doDraw(g, ctx)
-        //this._ALU.doDraw(g, ctx)
-        //this._instructionMux.doDraw(g, ctx)
-        //this._accumulatorRegister.doDraw(g, ctx)
-
-        //this._programCounterALU.doDraw(g, ctx)
-        //this._clockSpeedMux.doDraw(g, ctx)
-        //this._autoManMux.doDraw(g, ctx)
-        //this._fetchFlipflopD.doDraw(g, ctx)
-        //this._operationStageCounter.doDraw(g, ctx)
 
         // inputs
         for (const input of this.inputs.Isa) {
@@ -671,7 +999,7 @@ export abstract class CPUBase<
             }
 
             if (this._showClockCycle) {
-                const counter = displayValuesFromArray(this.getOutputValues(this._operationStageCounter.outputs.Q), false)[1]
+                const counter = displayValuesFromArray(this._virtualOperationStageCounter.outputsQ, false)[1]
                 const stringRep = formatWithRadix(counter, 10, 16, false)
 
                 const fontSize = 20
@@ -692,534 +1020,6 @@ export abstract class CPUBase<
         })
     }
 
-    protected abstract doDrawGenericCaption(g: GraphicsRendering, ctx: DrawContextExt): void
-
-    protected override makeComponentSpecificContextMenuItems(): MenuItems {
-        const s = S.Components.CPU.contextMenu
-
-        const iconStage = this._showStage ? "check" : "none"
-        const toggleShowStageItem = MenuData.item(iconStage, s.toggleShowStage, () => {
-            this.doSetShowStage(!this._showStage)
-            this._showOpCode ? this.doSetShowOpCode(!this._showOpCode) : {}
-        })
-        const iconOpCode = this._showOpCode ? "check" : "none"
-        const toggleShowOpCodeItem: MenuItems = !this._showStage ? [] : [
-            ["mid", MenuData.item(iconOpCode, s.toggleShowOpCode,
-                () => {this.doSetShowOpCode(!this._showOpCode)}
-            )],
-        ]
-        const iconOperands = this._showOperands ? "check" : "none"
-        const toggleShowOperandsItem: MenuItems = (!this._showStage || !this._showOpCode) ? [] : [
-            ["mid", MenuData.item(iconOperands, s.toggleShowOperands,
-                () => {this.doSetShowOperands(!this._showOperands)}
-            )],
-        ]
-
-        const iconEnablePipeline = this._enablePipeline? "check" : "none"
-        const toggleEnablePipelineItem = MenuData.item(iconEnablePipeline, s.toggleEnablePipeline, () => {
-            this.doSetEnablePipeline(!this._enablePipeline)
-        })
-
-        const iconClockCycle = this._showClockCycle ? "check" : "none"
-        const toggleShowClockCycleItem = MenuData.item(iconClockCycle, s.toggleShowClockCycle, () => {
-            this.doSetShowClockCycle(!this._showClockCycle)
-        })
-
-        return [
-            ["mid", toggleShowStageItem],
-            ...toggleShowOpCodeItem,
-            ...toggleShowOperandsItem,
-            ["mid", MenuData.sep()],
-            ["mid", toggleEnablePipelineItem],
-            ["mid", MenuData.sep()],
-            ["mid", toggleShowClockCycleItem],
-            ["mid", MenuData.sep()],
-            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
-            ...this.makeCPUSpecificContextMenuItems(),
-            ["mid", MenuData.sep()],
-            //this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpCode, this.usesExtendedOpCode, "extOpCode"),
-            //["mid", MenuData.sep()],
-            ...this.makeForceOutputsContextMenuItem(),
-        ]
-    }
-
-    protected makeCPUSpecificContextMenuItems(): MenuItems {
-        return []
-    }
-
-    public getInstructionParts(instructionString: string, part :"opCode" | "operands"): string {
-        const instructionParts = instructionString.split(/\++/)
-        switch (part) {
-            case "opCode":
-                return instructionParts[0]
-            case "operands":
-                return instructionParts[1]
-        }
-    }
-
-    public getOperandsNumberWithRadix(operands: LogicValue[], radix: number ) : string {
-        const operandsValue = displayValuesFromArray(operands, true)[1]
-        return formatWithRadix(operandsValue, radix, operands.length, true)
-    }
-
-    public allZeros(vals: LogicValue[]): LogicValue {
-        for (const v of vals) {
-            if (isUnknown(v) || isHighImpedance(v)) {
-                return Unknown
-            }
-            if (v === true) {
-                return false
-            }
-        }
-        return true
-    }
-
-}
-
-export const CPUDef =
-    defineParametrizedComponent("CPU", true, true, {
-        variantName: ({ addressInstructionBits }) => `CPU-${addressInstructionBits}`,
-        idPrefix: "CPU",
-        button: { imgWidth: 40 },
-        repr: {
-            ...CPUBaseDef.repr,
-            directAddressingMode: typeOrUndefined(t.boolean),
-            //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
-        },
-        valueDefaults: {
-            ...CPUBaseDef.valueDefaults,
-            directAddressingMode: false,
-            //trigger: EdgeTrigger.falling,
-        },
-        params: {
-            instructionBits: CPUBaseDef.params.instructionBits,
-            addressInstructionBits: CPUBaseDef.params.addressInstructionBits,
-            dataBits: CPUBaseDef.params.dataBits,
-            addressDataBits: CPUBaseDef.params.addressDataBits,
-            //extOpCode: CPUBaseDef.params.extOpCode,
-        },
-        validateParams: ({ instructionBits, addressInstructionBits, dataBits, addressDataBits}) => ({
-            numInstructionBits: instructionBits,
-            numAddressInstructionBits: addressInstructionBits,
-            numDataBits: dataBits,
-            numAddressDataBits: addressDataBits,
-            //usesExtendedOpCode: extOpCode,
-        }),
-        initialValue: (saved, {numAddressInstructionBits, numDataBits}) => {
-            const false_ = false as LogicValue
-            return {
-                isaadr: ArrayFillWith(false_, numAddressInstructionBits),
-                dadr: ArrayFillWith(false_, numDataBits),
-                dout: ArrayFillWith(false_, numDataBits),
-                ramwesync: false_,
-                ramwe: false_,
-                resetsync: false_,
-                sync: false_,
-                z: false_,
-                v: false_,
-                cout: false_,
-                runningstate: false_,
-            }
-        },
-        size: () => ({
-            //gridWidth: 7,
-            //gridHeight: 19 + Math.max(0, numDataBits - 8) * 2,
-            gridWidth: 32,
-            gridHeight: 32,
-        }),
-        makeNodes: (params, defaults) => {
-            const base = CPUBaseDef.makeNodes(params, defaults)
-            return {
-                ins: {
-                    ...base.ins,
-                },
-                outs: {
-                    ...base.outs,
-                },
-            }
-        }
-    })
-
-export type CPURepr = Repr<typeof CPUDef>
-export type CPUParams = ResolvedParams<typeof CPUDef>
-
-export class CPU extends CPUBase<CPURepr> {
-
-    private _directAddressingMode = CPUDef.aults.directAddressingMode
-    //private _trigger: EdgeTrigger = CPUDef.aults.trigger
-    private _noJump : LogicValue = true
-    private _backwardJump : LogicValue = Unknown
-    private _operandsValue : LogicValue[] = ArrayFillWith(false, this.numDataBits)
-    private _lastClock: LogicValue = Unknown
-
-    public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
-        super(parent, CPUDef.with(params) as any, params, saved)
-
-        this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
-        //this._trigger = saved?.trigger ?? CPUDef.aults.trigger
-    }
-
-    public toJSON() {
-        return {
-            ...this.toJSONBase(),
-            directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
-            //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
-        }
-    }
-
-    protected get moduleName() {
-        return "CPU"
-    }
-
-    protected doSetDirectAddressingMode(directAddressingMode: boolean) {
-        this._directAddressingMode = directAddressingMode
-        this.setNeedsRedraw("directAddressingMode changed")
-    }
-    /*
-    public get trigger() {
-        return this._trigger
-    }
-
-    protected doSetTrigger(trigger: EdgeTrigger) {
-        this._trigger = trigger
-        this.setNeedsRedraw("trigger changed")
-    }
-    */
-    protected doRecalcValue(): CPUBaseValue {
-        /*
-        BE CAREFUL WITH .reverse()
-        IT AFFECTS THE OBJECT !!!
-         */
-        // RUN CONTROL LOGIC
-        //this._runStopFlipflopD.inputs.Clock.value = (this._haltSignalFlipflopD.outputs.Q.value && this._autoManMux.outputs.Z[0].value) || this.inputs.RunStop.value
-        const prevClock = this._lastClock
-        const clockSpeed =  this.inputs.Speed.value? this.inputs.ClockF.value : this.inputs.ClockS.value
-        //const clockSync = this._lastClock = this._runStopFlipflopD.outputs.Q.value? clockSpeed : this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
-        //const clockSync = this._lastClock = this._virtualRunStopFlipflopD.outputsQ[0]? clockSpeed : this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
-        //const clockSync = this._lastClock = this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
-        const clockSync = this._lastClock = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && this._virtualHaltSignalFlipflopD.outputQ̅  : clockSpeed
-        const clrSignal = this.inputs.Reset.value && this._virtualRunStopFlipflopD.outputQ̅
-
-        const runningState = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && !this._virtualRunStopFlipflopD.outputQ̅  : this._virtualRunStopFlipflopD.outputQ
-
-        //this._runStopFlipflopD.inputs.Clock.value = (this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value
-        //this._runStopFlipflopD.inputs.D.value = this._runStopFlipflopD.outputs.Q̅.value
-
-        //console.log("pClk : ", prevClock, " | Clk : ", clockSync)
-        //this._virtualRunStopFlipflopD.inputsD[0] = !(this._virtualRunStopFlipflopD.outputsQ[0])
-
-        //VirtualFlipflopD.setVirtualInputValue(this._virtualRunStopFlipflopD.inputD, this._virtualRunStopFlipflopD.outputQ̅)
-        //VirtualFlipflopD.setVirtualInputValue(this._virtualRunStopFlipflopD.inputClock,(this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value)
-        //VirtualFlipflopD.setVirtualInputValue(this._virtualRunStopFlipflopD.inputClr, clrSignal)
-        //console.log("Db : ",this._virtualRunStopFlipflopD.inputD)
-        this._virtualRunStopFlipflopD.inputD = this._virtualRunStopFlipflopD.outputQ̅
-        //console.log("D : ",this._virtualRunStopFlipflopD.inputD)
-        //console.log("Clk : ",this._virtualRunStopFlipflopD._lastClock)
-        //this._virtualRunStopFlipflopD.inputClock = (this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value
-        this._virtualRunStopFlipflopD.inputClock = (this._virtualHaltSignalFlipflopD.outputQ && clockSync) || this.inputs.RunStop.value
-        //console.log("Clk : ",this._virtualRunStopFlipflopD.inputClock)
-        this._virtualRunStopFlipflopD.inputClr = clrSignal
-        this._virtualHaltSignalFlipflopD.inputClr = clrSignal
-
-        this._virtualRunStopFlipflopD.recalcVirtualValue()
-        //console.log("Qrun : ",this._virtualRunStopFlipflopD.outputQ)
-        this._virtualHaltSignalFlipflopD.inputD = clockSync
-
-        //Flipflop.doRecalcValueForSyncComponent(this._runStopFlipflopD, prevClock, (this._haltSignalFlipflopD.outputs.Q.value && clockSync) || this.inputs.RunStop.value,  this._runStopFlipflopD.inputs.Pre.value, this._runStopFlipflopD.inputs.Clr.value)
-        //const runningState = false
-        //const clrSignal = false
-        // const runningState = this._runStopFlipflopD.outputs.Q̅.value? this.inputs.ManStep.value && this._runStopFlipflopD.outputs.Q̅.value : this._runStopFlipflopD.outputs.Q.value
-        //const clrSignal = this.inputs.Reset.value && this._runStopFlipflopD.outputs.Q̅.value
-        //const clrSignal = this.inputs.Reset.value && !this._virtualRunStopFlipflopD.outputQ
-
-        const noJump = this._noJump
-        // PROGRAM COUNTER LOGIC
-        if (this._enablePipeline) {
-            this._programCounterMux.inputs.S[0].value = !noJump
-            this.setInputValues(this._programCounterMux.inputs.I[1], this.getOutputValues(this._previousProgramCounterRegister.outputs.Q))
-            this.setInputValues(this._programCounterMux.inputs.I[0], this.getOutputValues(this._programCounterRegister.outputs.Q))
-        }
-
-        //this._programCounterRegister.inputs.D[0].value = true
-        //this._programCounterRegister.inputs.Inc = this._programCounterRegister.hasIncDec? this._specialVoidProgramCounterFlipflopD.inputs.D : this._specialVoidProgramCounterFlipflopD.inputs.D
-        //Flipflop.doRecalcValueForSyncComponent(this._specialVoidProgramCounterFlipflopD, true, false, this._specialVoidProgramCounterFlipflopD.inputs.Pre.value, this._specialVoidProgramCounterFlipflopD.inputs.Clr.value)
-
-        //this.setInputValues(this._programCounterRegister.inputs.Inc.value, noJump)
-        /*
-        this._programCounterALU.inputs.Mode.value = false
-        this._programCounterALU.inputs.Op[0].value = this._backwardJump
-        */
-        this._programCounterRegister.inputs.Clr.value = clrSignal
-        this._programCounterRegister.inputs.Clock.value = clockSync
-        const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
-        /*
-        if (this._enablePipeline) {
-            this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterMux.outputs.Z))
-        } else {
-            this.setInputValues(this._programCounterALU.inputs.A, this.getOutputValues(this._programCounterRegister.outputs.Q))
-        }
-        */
-        const _programCounterALUinputA = this._enablePipeline? this.getOutputValues(this._programCounterMux.outputs.Z) : this.getOutputValues(this._programCounterRegister.outputs.Q)
-        // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
-        // const BinputValueProgramCounterALU = this._operandsValue.slice()
-        const _programCounterALUinputB = this._operandsValue.slice().reverse()
-        if (this._directAddressingMode) {
-            if (!noJump) {
-                this.setInputValues(this._programCounterRegister.inputs.D, ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits, false))
-            }
-        } else {
-            /*
-            this.setInputValues(this._programCounterALU.inputs.B, ArrayClampOrPad(BinputValueProgramCounterALU, this.numAddressInstructionBits, false))
-            this.setInputValues(this._programCounterRegister.inputs.D, this.getOutputValues(this._programCounterALU.outputs.S))
-            */
-            const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, true)
-            this.setInputValues(this._programCounterRegister.inputs.D, _programCounterALUoutputs.s)
-        }
-
-        if (this._enablePipeline) {
-            this.setInputValues(this._previousProgramCounterRegister.inputs.D, this.getOutputValues(this._programCounterRegister.outputs.Q))
-        }
-
-        Flipflop.doRecalcValueForSyncComponent(this._programCounterRegister, prevClock, clockSync,  this._programCounterRegister.inputs.Pre.value, this._programCounterRegister.inputs.Clr.value)
-        this._programCounterRegister.makeStateAfterClock()
-        Flipflop.doRecalcValueForSyncComponent(this._previousProgramCounterRegister, prevClock, clockSync,  this._previousProgramCounterRegister.inputs.Pre.value, this._previousProgramCounterRegister.inputs.Clr.value)
-
-        /*
-        this._clockSpeedMux.inputs.S[0].value = this.inputs.Speed.value
-        this._clockSpeedMux.inputs.I[1][0].value = this.inputs.ClockF.value
-        this._clockSpeedMux.inputs.I[0][0].value = this.inputs.ClockS.value
-        */
-
-        /*
-        this._autoManMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q.value
-        this._autoManMux.inputs.I[1][0].value = this._clockSpeedMux.outputs.Z[0].value
-        this._autoManMux.inputs.I[0][0].value = this.inputs.ManStep.value && !this._haltSignalFlipflopD.outputs.Q.value
-        */
-
-        /*
-        this._runningStateMux.inputs.S[0].value = this._runStopFlipflopD.outputs.Q̅.value
-        this._runningStateMux.inputs.I[1][0].value = this.inputs.ManStep.value && this._runStopFlipflopD.outputs.Q̅.value
-        this._runningStateMux.inputs.I[0][0].value = this._runStopFlipflopD.outputs.Q.value
-        */
-
-
-
-
-        //this._runStopFlipflopD.inputs.Clr.value = clrSignal
-
-
-        this._instructionRegister.inputs.Clr.value = clrSignal
-        this._accumulatorRegister.inputs.Clr.value = clrSignal
-        this._flagsRegister.inputs.Clr.value = clrSignal
-
-        this._fetchFlipflopD.inputs.Pre.value = clrSignal
-        this._decodeFlipflopD.inputs.Clr.value = clrSignal
-        this._executeFlipflopD.inputs.Clr.value = clrSignal
-        this._operationStageCounter.inputs.Clr.value = clrSignal
-
-        if (clrSignal) {
-            //this._lastClock = Unknown
-            this._opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
-        }
-
-        //const clockSync = this._autoManMux.outputs.Z[0].value
-        /*
-                if (!this._haltSignalFlipflopD.outputs.Q.value) {
-                    this._operationStageCounter.inputs.Clock.value = clockSync
-                }
-                if (this._enablePipeline) {
-                    this._instructionRegister.inputs.Clock.value = clockSync
-
-                    this._accumulatorRegister.inputs.Clock.value = clockSync
-                    this._flagsRegister.inputs.Clock.value = clockSync
-                    this._haltSignalFlipflopD.inputs.Clock.value = clockSync
-
-                    this._programCounterRegister.inputs.Clock.value = clockSync
-                    this._previousProgramCounterRegister.inputs.Clock.value = clockSync
-                } else {
-                    this._decodeFlipflopD.inputs.D.value = this._fetchFlipflopD.outputs.Q.value
-                    this._executeFlipflopD.inputs.D.value = this._decodeFlipflopD.outputs.Q.value
-                    this._fetchFlipflopD.inputs.D.value = this._executeFlipflopD.outputs.Q.value
-
-                    this._fetchFlipflopD.inputs.Clock.value = clockSync
-                    this._decodeFlipflopD.inputs.Clock.value = clockSync
-                    this._executeFlipflopD.inputs.Clock.value = clockSync
-
-                    this._instructionRegister.inputs.Clock.value = clockSync && this._fetchFlipflopD.outputs.Q.value
-
-                    this._accumulatorRegister.inputs.Clock.value = clockSync && this._decodeFlipflopD.outputs.Q.value
-                    this._flagsRegister.inputs.Clock.value = clockSync && this._decodeFlipflopD.outputs.Q.value
-                    this._haltSignalFlipflopD.inputs.Clock.value = clockSync && this._decodeFlipflopD.outputs.Q.value
-
-                    this._programCounterRegister.inputs.Clock.value  = clockSync && this._executeFlipflopD.outputs.Q.value
-                }
-          */
-
-        //this._virtualRunStopFlipflopD.outputsQ = this._virtualRunStopFlipflopD.doRecalcValueForSync(prevClock, clockSync)
-
-        Flipflop.doRecalcValueForSyncComponent(this._fetchFlipflopD, prevClock, clockSync,  this._fetchFlipflopD.inputs.Pre.value, this._fetchFlipflopD.inputs.Clr.value)
-        Flipflop.doRecalcValueForSyncComponent(this._decodeFlipflopD, prevClock, clockSync,  this._decodeFlipflopD.inputs.Pre.value, this._decodeFlipflopD.inputs.Clr.value)
-        Flipflop.doRecalcValueForSyncComponent(this._executeFlipflopD, prevClock, clockSync,  this._executeFlipflopD.inputs.Pre.value, this._executeFlipflopD.inputs.Clr.value)
-
-        // FETCH Stage
-        const isa = this.inputValues(this.inputs.Isa)
-        // Needs to revert all inputs to be compatible with choosen ISA
-        this.setInputValues(this._instructionRegister.inputs.D, isa, true)
-        Flipflop.doRecalcValueForSyncComponent(this._instructionRegister, prevClock, clockSync,  this._instructionRegister.inputs.Pre.value, this._instructionRegister.inputs.Clr.value)
-
-        // DECCODE Stage
-        const opCodeValue = this.getOutputValues(this._instructionRegister.outputs.Q).slice(0, 4).reverse()
-        const opCodeIndex = displayValuesFromArray(opCodeValue, true)[1]
-        const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
-
-        this._operandsValue = this.getOutputValues(this._instructionRegister.outputs.Q).slice(4, 8).reverse()
-
-        /*
-        this._ALU.inputs.Mode.value = opCodeValue[2]
-        this._ALU.inputs.Op[2].value = opCodeValue[1]
-        this._ALU.inputs.Op[1].value = !opCodeValue[3]
-        this._ALU.inputs.Op[0].value = opCodeValue[0]
-        */
-
-        const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
-        const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
-        const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
-
-        const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
-
-        /*
-        const commonInstructionMuxSelect = !opCodeValue[3] && !opCodeValue[2]
-        this._instructionMux.inputs.S[1].value = commonInstructionMuxSelect && opCodeValue[1]
-        this._instructionMux.inputs.S[0].value = (commonInstructionMuxSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2])
-        */
-
-        const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
-        const _operandsDataSelectValue = [(_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]), _operandsDataCommonSelect && opCodeValue[1]]
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
-        _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 0 : _operandsDataSelectValueIndex
-
-        //this.setInputValues(this._ALU.inputs.A, this.getOutputValues(this._accumulatorRegister.outputs.Q).reverse())
-        //this.setInputValues(this._ALU.inputs.B, this.inputValues(this.inputs.Din).reverse())
-        const _ALUoutputs = doALUOp(_ALUop, this.getOutputValues(this._accumulatorRegister.outputs.Q).reverse(), this.inputValues(this.inputs.Din).reverse(), false)
-        /*
-        this.setInputValues(this._instructionMux.inputs.I[3], this._operandsValue)
-        this.setInputValues(this._instructionMux.inputs.I[2], this.inputValues(this.inputs.Din))
-        //this.setInputValues(this._instructionMux.inputs.I[1], this.getOutputValues(this._ALU.outputs.S).reverse())
-        this.setInputValues(this._instructionMux.inputs.I[1], _ALUoutputs.s.reverse())
-        this.setInputValues(this._instructionMux.inputs.I[0], this.getOutputValues(this._accumulatorRegister.outputs.Q))
-        */
-
-        let _operandsData : LogicValue[]
-        if (_operandsDataSelectValueIndex === 0) {
-            _operandsData = this.getOutputValues(this._accumulatorRegister.outputs.Q)
-        } else if (_operandsDataSelectValueIndex === 1) {
-            _operandsData = _ALUoutputs.s.reverse()
-        } else if (_operandsDataSelectValueIndex === 2) {
-            _operandsData = this.inputValues(this.inputs.Din)
-        } else if (_operandsDataSelectValueIndex === 3) {
-            _operandsData = this._operandsValue
-        } else {
-            _operandsData = this.getOutputValues(this._accumulatorRegister.outputs.Q)
-        }
-
-        this.setInputValues(this._accumulatorRegister.inputs.D, _operandsData)
-
-        //this._flagsRegister.inputs.D[1].value = this._ALU.outputs.Cout.value
-        this._flagsRegister.inputs.D[1].value = _ALUoutputs.cout
-        this._flagsRegister.inputs.D[0].value = this.allZeros(_operandsData)
-
-        const c = this._flagsRegister.outputs.Q[1].value
-        const z = this._flagsRegister.outputs.Q[0].value
-
-        const jumpControl = opCodeValue[2] && !opCodeValue[3]
-        this._noJump = !(((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && jumpControl)
-        this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
-
-
-        this._virtualHaltSignalFlipflopD.inputD = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
-
-        Flipflop.doRecalcValueForSyncComponent(this._accumulatorRegister, prevClock, clockSync,  this._accumulatorRegister.inputs.Pre.value, this._accumulatorRegister.inputs.Clr.value)
-        Flipflop.doRecalcValueForSyncComponent(this._flagsRegister, prevClock, clockSync,  this._flagsRegister.inputs.Pre.value, this._flagsRegister.inputs.Clr.value)
-        Flipflop.doRecalcValueForSyncComponent(this._specialVoidProgramCounterFlipflopD, prevClock, clockSync,  this._specialVoidProgramCounterFlipflopD.inputs.Pre.value, this._specialVoidProgramCounterFlipflopD.inputs.Clr.value)
-        //Flipflop.doRecalcValueForSyncComponent(this._haltSignalFlipflopD, prevClock, clockSync,  this._haltSignalFlipflopD.inputs.Pre.value, this._haltSignalFlipflopD.inputs.Clr.value)
-        this._virtualHaltSignalFlipflopD.recalcVirtualValue()
-
-        // EXECUTE STAGE
-        const ramwesyncvalue = this._enablePipeline ? clockSync : clockSync && this._decodeFlipflopD.outputs.Q.value
-
-        const opCode = isHighImpedance(opCodeValue) ? "?" : this.opCode
-        const operands = this.operands
-
-        if (this._enablePipeline) {
-            if (Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
-                //console.log("clock : ",clockSync, " prevlck : ", prevClock, " change : ",clockSync)
-                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
-            }
-        } else {
-            if (!Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
-                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
-            }
-        }
-
-        if (isUnknown(opCodeName)) {
-            return {
-                isaadr: ArrayFillWith(Unknown, this.numAddressInstructionBits).reverse(),
-                dadr: ArrayFillWith(Unknown, this.numDataBits).reverse(),
-                dout: ArrayFillWith(Unknown, this.numDataBits).reverse(),
-                ramwesync: Unknown,
-                ramwe: Unknown,
-                resetsync: Unknown,
-                sync: Unknown,
-                z: Unknown,
-                v: Unknown,
-                cout: Unknown,
-                runningstate: Unknown,
-            }
-        }
-
-        return {
-            isaadr: this.getOutputValues(this._programCounterRegister.outputs.Q).reverse(),
-            dadr: this._operandsValue.reverse(),
-            dout: this.getOutputValues(this._accumulatorRegister.outputs.Q).reverse(),
-            ramwesync: ramwesyncvalue,
-            ramwe: ramwevalue,
-            resetsync: clrSignal,
-            sync: clockSync,
-            z: this._flagsRegister.outputs.Q[0].value,
-            v: false,
-            cout: this._flagsRegister.outputs.Q[1].value,
-            runningstate: runningState,
-        }
-
-    }
-
-    public override propagateValue(newValue: CPUBaseValue) {
-        this.outputValues(this.outputs.Isaadr , newValue.isaadr)
-        this.outputValues(this.outputs.Dadr , newValue.dadr)
-        this.outputValues(this.outputs.Dout , newValue.dout)
-        this.outputs.RAMweSync.value = newValue.ramwesync
-        this.outputs.RAMwe.value = newValue.ramwe
-        this.outputs.ResetSync.value = newValue.resetsync
-        this.outputs.Sync.value = newValue.sync
-        this.outputs.Z.value = newValue.z
-        //this.outputs.Z.value = allZeros(newValue.dout)
-        this.outputs.V.value = newValue.v
-        this.outputs.Cout.value = newValue.cout
-        this.outputs.RunningState.value = newValue.runningstate
-    }
-
-    public override makeTooltip() {
-        const opCode = this.opCode
-        const stage = this.stage
-        const s = S.Components.CPU.tooltip
-        const opCodeDesc = isUnknown(opCode) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOpCode.fullName(opCode)
-        return tooltipContent(s.title,
-            mods(
-                div(`${s.CurrentlyCarriesOut} ${opCodeDesc}.`)
-            )
-        )
-    }
-
     protected override doDrawGenericCaption(g: GraphicsRendering, ctx: DrawContextExt) {
         if (this._directAddressingMode) {
             const fontSize = 11
@@ -1231,12 +1031,30 @@ export class CPU extends CPUBase<CPURepr> {
             g.fillText("Adressage direct", ...valueCenter)
         }
     }
-    /*
-        public makeStateAfterClock(): LogicValue[] {
-            return this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ)
-            return this.inputValues(this.inputs.Din).map(LogicValue.filterHighZ)
-        }
-    */
+
+    public get opCode(): CPUOpCode | Unknown {
+        //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
+        const opCodeValues = this._virtualInstructionRegister.inputsD.slice(0,4)
+        //opValues.push(this.inputs.Mode.value)
+        const opCodeIndex = displayValuesFromArray(opCodeValues, true)[1]
+        // TO DO
+        //return isUnknown(opCodeIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodes)[opCodeIndex]
+        return isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
+    }
+
+    public get operands(): LogicValue[] {
+        return this._virtualInstructionRegister.inputsD.slice(4,8)
+    }
+
+    public get cycle(): number {
+        const cycleValue = displayValuesFromArray(this._virtualOperationStageCounter.outputsQ, false)[1]
+        return isUnknown(cycleValue) ? 0 : cycleValue
+    }
+
+    public get stage(): CPUStage {
+        const stageIndex = this.cycle
+        return CPUStages[stageIndex % 3]
+    }
 
     public shiftOpCodeOperandsInStages(previousOpCodeOperandsInStages: any, cpuStage: CPUStage, opCode: string, operands: LogicValue[], isPipelineEnabled: boolean) {
         //console.log(previousOpCodeOperandsInStages)

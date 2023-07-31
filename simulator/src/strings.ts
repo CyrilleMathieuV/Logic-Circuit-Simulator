@@ -377,8 +377,6 @@ const Strings_fr = {
                 "DECODE": "blue",
                 "EXECUTE": "orange",
             },
-            InputCinDesc: "retenue d’entrée",
-            OutputCoutDesc: "retenue de sortie",
             tooltip: {
                 title: "Unité centrale (CPU)",
                 CurrentlyCarriesOut: "Effectue actuellement",
@@ -1159,8 +1157,6 @@ const Strings_en: Strings = {
                 "DECODE": "blue",
                 "EXECUTE": "orange",
             },
-            InputCinDesc: "input carry",
-            OutputCoutDesc: "output carry",
             tooltip: {
                 title: "Central Processing Unit (CPU)",
                 CurrentlyCarriesOut: "Currently carries out",
