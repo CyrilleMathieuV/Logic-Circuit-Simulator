@@ -708,9 +708,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualProgramCounterRegister.inputClr = clrSignal
         if (this._enablePipeline) {
             this._virtualPreviousProgramCounterRegister.inputClr = clrSignal
-        }
-
-        if (!this._enablePipeline) {
+        } else {
             this._virtualFetchFlipflopD.inputPre = clrSignal
             this._virtualDecodeFlipflopD.inputClr = clrSignal
             this._virtualExecuteFlipflopD.inputClr = clrSignal
@@ -816,6 +814,8 @@ export class CPU extends CPUBase<CPURepr> {
         // EXECUTE STAGE
 
         // PROGRAM COUNTER LOGIC
+        this._virtualProgramCounterRegister.inputInc = noJump
+
         //console.log(noJump)
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
         //console.log(this._backwardJump)
@@ -835,15 +835,10 @@ export class CPU extends CPUBase<CPURepr> {
             }
         }
 
-        this._virtualProgramCounterRegister.inputInc = noJump
-
-        if (this._enablePipeline) {
-            this._virtualPreviousProgramCounterRegister.inputsD = this._virtualProgramCounterRegister.outputsQ
-        }
-
         if (this._enablePipeline) {
             this._virtualProgramCounterRegister.inputClock = clockSync
             this._virtualProgramCounterRegister.recalcVirtualValue()
+            this._virtualPreviousProgramCounterRegister.inputsD = this._virtualProgramCounterRegister.outputsQ
             this._virtualPreviousProgramCounterRegister.inputClock = clockSync
             this._virtualPreviousProgramCounterRegister.recalcVirtualValue()
         } else {
