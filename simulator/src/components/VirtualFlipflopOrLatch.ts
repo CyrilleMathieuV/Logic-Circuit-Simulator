@@ -83,6 +83,20 @@ export abstract class VirtualFlipflop extends VirtualFlipflopOrLatch implements 
         if (!VirtualFlipflop.isVirtualClockTrigger(comp.trigger, prevClock, clock)) {
             return { isInInvalidState: false, newState: comp.value }
         } else {
+/*
+            if (prevClock) {
+                if (!clock) {
+                    console.log("Falling")
+                    console.log("! ", comp.value)
+                }
+            }
+            if (clock) {
+                if (prevClock) {
+                    console.log("Rising")
+                    console.log("* ", comp.value)
+                }
+            }
+*/
             return { isInInvalidState: false, newState: comp.makeVirtualStateAfterClock() }
         }
     }
@@ -95,6 +109,9 @@ export abstract class VirtualFlipflop extends VirtualFlipflopOrLatch implements 
     public doRecalcVirtualValue(): VirtualFlipflopOrLatchValue {
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputClock
+        if (prevClock != clock) {
+            console.log("%")
+        }
         const { isInInvalidState, newState } =
             VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
         this._isInInvalidState = isInInvalidState
@@ -114,15 +131,15 @@ export abstract class VirtualFlipflop extends VirtualFlipflopOrLatch implements 
         this.doSetVirtualValue(this.doRecalcVirtualValue(), false)
     }
 
-    public makeVirtualInvalidState(): [LogicValue, LogicValue] {
+    public makeVirtualInvalidState(): VirtualFlipflopOrLatchValue {
         return [false, false]
     }
 
-    public makeVirtualStateFromMainValue(val: LogicValue): [LogicValue, LogicValue] {
+    public makeVirtualStateFromMainValue(val: LogicValue): VirtualFlipflopOrLatchValue {
         return [val, LogicValue.invert(val)]
     }
 
-    public makeVirtualStateAfterClock(): [LogicValue, LogicValue] {
+    public makeVirtualStateAfterClock(): VirtualFlipflopOrLatchValue {
         //return this.makeVirtualStateFromMainValue(LogicValue.filterHighZ(this.doRecalcValueAfterClock()))
         return this.makeVirtualStateFromMainValue(this.doRecalcValueAfterClock())
     }

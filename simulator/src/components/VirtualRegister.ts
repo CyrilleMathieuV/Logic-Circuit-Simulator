@@ -95,7 +95,7 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         //this._isCounter = isCounter
     }
 
-    public getVirtualValuesFromArray(values: readonly LogicValue[]): number | Unknown {
+    public getVirtualValueFromArray(values: readonly LogicValue[]): number | Unknown {
         // lowest significant bit is the first bit
         let binaryStringRep = ""
         let hasUnset = false
@@ -128,7 +128,7 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
             }
 
             // inc or dec
-            const val = this.getVirtualValuesFromArray(this.inputsD)
+            const val = this.getVirtualValueFromArray(this.inputsD)
             if (isUnknown(val)) {
                 return ArrayFillWith(Unknown, this.numBits)
             }
@@ -154,17 +154,14 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         }
 
         // else, just a regular load from D
-        //return this.inputsD.map(LogicValue.filterHighZ)
-        return this.inputsD
+        return this.inputsD.map(LogicValue.filterHighZ)
     }
 
     public doRecalcVirtualValue(): LogicValue[] {
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputClock
         const { isInInvalidState, newState } =
-            VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock,
-                this.inputPre,
-                this.inputClr)
+            VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
         this._isInInvalidState = isInInvalidState
         return newState
     }
@@ -208,5 +205,14 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
             const j = reverse ? num - i - 1 : i
             inputs[i] = values[j]
         }
+    }
+
+    public doRecalcVirtualValueIntoDoRecalcValue() {
+        const prevClock = this._lastClock
+        const clock = this._lastClock = this.inputClock
+        const { isInInvalidState, newState } =
+            VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
+        this._isInInvalidState = isInInvalidState
+        this.propagateVirtualValue(newState)
     }
 }
