@@ -167,6 +167,8 @@ export class Clock extends InputBase<ClockRepr> {
         const s = S.Components.Clock.contextMenu
 
         const periodPresets: [number, string][] = [
+            [10, "10 ms (100 Hz)"],
+            [50, "50 ms (20 Hz)"],
             [100, "100 ms (10 Hz)"],
             [125, "125 ms (8 Hz)"],
             [250, "250 ms (4 Hz)"],

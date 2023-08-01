@@ -565,13 +565,16 @@ export class CPU extends CPUBase<CPURepr> {
     protected _virtualRunStopFlipflopD : VirtualFlipflopD
 
     protected _virtualInstructionRegister : VirtualRegister
+
     protected _virtualAccumulatorRegister : VirtualRegister
     protected _virtualFlagsRegister: VirtualRegister
+
+    protected _virtualBufferDataAddressRegister: VirtualRegister
 
     protected _virtualProgramCounterRegister : VirtualRegister
     protected _virtualPreviousProgramCounterRegister : VirtualRegister
 
-    protected _virtualSpecialVoidProgramCounterFlipflopD : VirtualFlipflopD
+    //protected _virtualSpecialVoidProgramCounterFlipflopD : VirtualFlipflopD
 
     protected _virtualFetchFlipflopD : VirtualFlipflopD
     protected _virtualDecodeFlipflopD : VirtualFlipflopD
@@ -597,13 +600,16 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualHaltSignalFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
         this._virtualInstructionRegister = new VirtualRegister(this.numInstructionBits, EdgeTrigger.falling)
+
         this._virtualAccumulatorRegister = new VirtualRegister(this.numDataBits, EdgeTrigger.falling)
         this._virtualFlagsRegister = new VirtualRegister(4, EdgeTrigger.falling)
+
+        this._virtualBufferDataAddressRegister = new VirtualRegister(this.numDataBits, EdgeTrigger.falling)
 
         this. _virtualProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
         this. _virtualPreviousProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
 
-        this._virtualSpecialVoidProgramCounterFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+        //this._virtualSpecialVoidProgramCounterFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
         this._virtualFetchFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
         this._virtualDecodeFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
@@ -778,11 +784,11 @@ export class CPU extends CPUBase<CPURepr> {
             _operandsData = this._virtualAccumulatorRegister.inputsD
         }
 
-        const _stableOperandsData = _operandsData.slice()
-
-        //console.log(this._virtualAccumulatorRegister.outputsQ)
-
         this._virtualAccumulatorRegister.inputsD = _operandsData
+
+        if (this._enablePipeline) {
+            this._virtualBufferDataAddressRegister.inputsD = this._operandsValue
+        }
 
         this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
         this._virtualFlagsRegister.inputsD[0] = this.allZeros(_operandsData)
@@ -803,6 +809,8 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualFlagsRegister.recalcVirtualValue()
             this._virtualHaltSignalFlipflopD.inputClock = clockSync
             this._virtualHaltSignalFlipflopD.recalcVirtualValue()
+            this._virtualBufferDataAddressRegister.inputClock = clockSync
+            this._virtualBufferDataAddressRegister.recalcVirtualValue()
         } else {
             this._virtualAccumulatorRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
             this._virtualAccumulatorRegister.recalcVirtualValue()
@@ -904,7 +912,7 @@ export class CPU extends CPUBase<CPURepr> {
         } else {
             newState = {
                 isaadr: this._virtualProgramCounterRegister.outputsQ,
-                dadr: this._operandsValue,
+                dadr: this._enablePipeline ? this._virtualBufferDataAddressRegister.outputsQ : this._operandsValue,
                 dout: this._virtualAccumulatorRegister.outputsQ,
                 ramwesync: ramwesyncvalue,
                 ramwe: ramwevalue,
