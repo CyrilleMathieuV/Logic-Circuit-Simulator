@@ -10,6 +10,7 @@ import {
 } from "../utils"
 import {Counter} from "./Counter";
 import {VirtualFlipflop,VirtualSyncComponent} from "./VirtualFlipflopOrLatch";
+import {displayValuesFromArray} from "../drawutils";
 
 export type VirtualRegisterBaseValue = LogicValue[]
 
@@ -116,19 +117,19 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
     }
 
     public makeVirtualStateAfterClock(): LogicValue[] {
-        const inc = this.inputInc ?? false
-        const dec = this.inputDec ?? false
+        const inc = this.inputInc
+        const dec = this.inputDec
         if (isUnknown(inc) || isUnknown(dec) || isHighImpedance(inc) || isHighImpedance(dec)) {
             return ArrayFillWith(false, this.numBits)
         }
         if (inc || dec) {
             if (inc && dec) {
                 // no change
-                return (this.numBits > 1) ? this.inputsD : [this.inputsD[0], this.inputsD[0]]
+                return this.value
             }
 
             // inc or dec
-            const val = this.getVirtualValueFromArray(this.inputsD)
+            const [__, val] = displayValuesFromArray(this.value, false)
             if (isUnknown(val)) {
                 return ArrayFillWith(Unknown, this.numBits)
             }
@@ -138,6 +139,9 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
                 // increment
                 newVal = val + 1
                 if (newVal >= 2 ** this.numBits) {
+                    if (this._saturating) {
+                        return ArrayFillWith(true, this.numBits)
+                    }
                     return ArrayFillWith(false, this.numBits)
                 }
             } else {

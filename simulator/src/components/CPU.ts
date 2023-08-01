@@ -739,18 +739,6 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualInstructionRegister.inputClock = clockSync
             this._virtualInstructionRegister.recalcVirtualValue()
         } else {
-            /*
-            this._virtualDecodeFlipflopD.inputD = this._virtualFetchFlipflopD.outputQ
-            this._virtualExecuteFlipflopD.inputD = this._virtualDecodeFlipflopD.outputQ
-            this._virtualFetchFlipflopD.inputD = this._virtualExecuteFlipflopD.outputQ
-
-            this._virtualFetchFlipflopD.inputClock = clockSync
-            //this._virtualFetchFlipflopD.recalcVirtualValue()
-            this._virtualDecodeFlipflopD.inputClock = clockSync
-            //this._virtualDecodeFlipflopD.recalcVirtualValue()
-            this._virtualExecuteFlipflopD.inputClock = clockSync
-            //this._virtualExecuteFlipflopD.recalcVirtualValue()
-*/
             this._virtualInstructionRegister.inputClock= clockSync && this._virtualFetchFlipflopD.outputQ
             this._virtualInstructionRegister.recalcVirtualValue()
         }
@@ -759,8 +747,6 @@ export class CPU extends CPUBase<CPURepr> {
         const opCodeValue = this._virtualInstructionRegister.outputsQ.slice(0, 4).reverse()
         const opCodeIndex = displayValuesFromArray(opCodeValue, false)[1]
         const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
-
-        this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8)
 
         const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
         const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
@@ -772,17 +758,22 @@ export class CPU extends CPUBase<CPURepr> {
         const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
         const _operandsDataSelectValue = [(_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]), _operandsDataCommonSelect && opCodeValue[1]]
         let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
+
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 0 : _operandsDataSelectValueIndex
 
-        const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din), false)
+        this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
+
+        const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
 
         let _operandsData : LogicValue[]
         if (_operandsDataSelectValueIndex === 0) {
             _operandsData = this._virtualAccumulatorRegister.outputsQ
         } else if (_operandsDataSelectValueIndex === 1) {
-            _operandsData = _ALUoutputs.s.reverse()
+            //console.log(_ALUop)
+            _operandsData = _ALUoutputs.s
         } else if (_operandsDataSelectValueIndex === 2) {
-            _operandsData = this.inputValues(this.inputs.Din)
+            _operandsData = this.inputValues(this.inputs.Din).reverse()
+            //console.log(_operandsData)
         } else if (_operandsDataSelectValueIndex === 3) {
             _operandsData = this._operandsValue
         } else {
@@ -793,10 +784,10 @@ export class CPU extends CPUBase<CPURepr> {
 
         //console.log(this._virtualAccumulatorRegister.outputsQ)
 
-        this._virtualAccumulatorRegister.inputsD = _stableOperandsData
+        this._virtualAccumulatorRegister.inputsD = _operandsData
 
         this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
-        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_stableOperandsData)
+        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_operandsData)
 
         const c = this._virtualFlagsRegister.outputsQ[1]
         const z = this._virtualFlagsRegister.outputsQ[0]
@@ -807,8 +798,6 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._virtualHaltSignalFlipflopD.inputD = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
 
-        //this._virtualHaltSignalFlipflopD.recalcVirtualValue()
-
         if (this._enablePipeline) {
             this._virtualAccumulatorRegister.inputClock = clockSync
             this._virtualAccumulatorRegister.recalcVirtualValue()
@@ -817,18 +806,6 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualHaltSignalFlipflopD.inputClock = clockSync
             this._virtualHaltSignalFlipflopD.recalcVirtualValue()
         } else {
-            /*
-            this._virtualDecodeFlipflopD.inputD = this._virtualFetchFlipflopD.outputQ
-            this._virtualExecuteFlipflopD.inputD = this._virtualDecodeFlipflopD.outputQ
-            this._virtualFetchFlipflopD.inputD = this._virtualExecuteFlipflopD.outputQ
-
-            this._virtualFetchFlipflopD.inputClock = clockSync
-            //this._virtualFetchFlipflopD.recalcVirtualValue()
-            this._virtualDecodeFlipflopD.inputClock = clockSync
-            //this._virtualDecodeFlipflopD.recalcVirtualValue()
-            this._virtualExecuteFlipflopD.inputClock = clockSync
-            //this._virtualExecuteFlipflopD.recalcVirtualValue()
-*/
             this._virtualAccumulatorRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
             this._virtualAccumulatorRegister.recalcVirtualValue()
             this._virtualFlagsRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
@@ -836,7 +813,6 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualHaltSignalFlipflopD.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
             this._virtualHaltSignalFlipflopD.recalcVirtualValue()
         }
-
         // EXECUTE STAGE
 
         // PROGRAM COUNTER LOGIC
@@ -846,15 +822,17 @@ export class CPU extends CPUBase<CPURepr> {
         const _programCounterALUinputA = this._enablePipeline ? (!noJump ? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ) : this._virtualProgramCounterRegister.outputsQ
         //console.log(_programCounterALUinputA)
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
-        // const BinputValueProgramCounterALU = this._operandsValue.slice()
-        const _programCounterALUinputB = _stableOperandsData
-        if (this._directAddressingMode) {
-            if (!noJump) {
-                this._virtualProgramCounterRegister.inputsD = ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits, false)
+        const _programCounterALUinputB = this._operandsValue.slice()
+        ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits, false)
+        if (!noJump) {
+            if (this._directAddressingMode) {
+                this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
+            } else {
+                //console.log(_programCounterALUinputB)
+                const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, false)
+                //console.log(_programCounterALUoutputs.s)
+                this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
             }
-        } else {
-            const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, true)
-            this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
         }
 
         this._virtualProgramCounterRegister.inputInc = noJump
@@ -931,7 +909,7 @@ export class CPU extends CPUBase<CPURepr> {
         } else {
             newState = {
                 isaadr: this._virtualProgramCounterRegister.outputsQ,
-                dadr: _stableOperandsData,
+                dadr: this._operandsValue,
                 dout: this._virtualAccumulatorRegister.outputsQ,
                 ramwesync: ramwesyncvalue,
                 ramwe: ramwevalue,
@@ -948,8 +926,8 @@ export class CPU extends CPUBase<CPURepr> {
     }
 
     public override propagateValue(newValue: CPUValue) {
-        this.outputValues(this.outputs.Isaadr , newValue.isaadr)
-        this.outputValues(this.outputs.Dadr , newValue.dadr)
+        this.outputValues(this.outputs.Isaadr , newValue.isaadr, true)
+        this.outputValues(this.outputs.Dadr , newValue.dadr, true)
         this.outputValues(this.outputs.Dout , newValue.dout)
         this.outputs.RAMweSync.value = newValue.ramwesync
         this.outputs.RAMwe.value = newValue.ramwe
