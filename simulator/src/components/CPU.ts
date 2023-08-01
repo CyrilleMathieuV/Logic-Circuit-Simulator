@@ -570,6 +570,7 @@ export class CPU extends CPUBase<CPURepr> {
     protected _virtualFlagsRegister: VirtualRegister
 
     protected _virtualBufferDataAddressRegister: VirtualRegister
+    protected _virtualBufferRAMWEFlipflopD: VirtualFlipflopD
 
     protected _virtualProgramCounterRegister : VirtualRegister
     protected _virtualPreviousProgramCounterRegister : VirtualRegister
@@ -605,6 +606,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualFlagsRegister = new VirtualRegister(4, EdgeTrigger.falling)
 
         this._virtualBufferDataAddressRegister = new VirtualRegister(this.numDataBits, EdgeTrigger.falling)
+        this._virtualBufferRAMWEFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
         this. _virtualProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
         this. _virtualPreviousProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
@@ -736,8 +738,14 @@ export class CPU extends CPUBase<CPURepr> {
         // FETCH Stage
         const isa = this.inputValues(this.inputs.Isa)
         // Needs to revert all inputs to be compatible with choosen ISA
-        this._virtualInstructionRegister.inputsD = isa.reverse()
+        const isa_FETCH = isa.reverse()
+        this._virtualInstructionRegister.inputsD = isa_FETCH
 
+        const isa_FETCH_opCodeValue = isa_FETCH.slice(0, 4).reverse()
+        const isa_FETCH_opCodeIndex = displayValuesFromArray(isa_FETCH_opCodeValue, false)[1]
+        const isa_FETCH_opCodeName = isUnknown(isa_FETCH_opCodeIndex) ? Unknown : CPUOpCodes[isa_FETCH_opCodeIndex]
+
+        const isa_FETCH_operands = isa_FETCH.slice(4, 8).reverse()
 
         if (this._enablePipeline) {
             this._virtualInstructionRegister.inputClock = clockSync
@@ -745,6 +753,17 @@ export class CPU extends CPUBase<CPURepr> {
         } else {
             this._virtualInstructionRegister.inputClock= clockSync && this._virtualFetchFlipflopD.outputQ
             this._virtualInstructionRegister.recalcVirtualValue()
+        }
+
+        if (this._enablePipeline) {
+            if (!Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
+                console.log("clock : ",clockSync, " prevlck : ", prevClock, " change : ",clockSync)
+                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, isa_FETCH_opCodeName, isa_FETCH_operands, this._enablePipeline)
+            }
+        } else {
+            if (!Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
+                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, isa_FETCH_opCodeName, isa_FETCH_operands, this._enablePipeline)
+            }
         }
 
         // DECCODE Stage
@@ -758,6 +777,8 @@ export class CPU extends CPUBase<CPURepr> {
         //console.log(ALUOps[_ALUopIndex])
 
         const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
+
+        this._virtualBufferRAMWEFlipflopD.inputD = ramwevalue
 
         const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
         const _operandsDataSelectValue = [(_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]), _operandsDataCommonSelect && opCodeValue[1]]
@@ -811,6 +832,8 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualHaltSignalFlipflopD.recalcVirtualValue()
             this._virtualBufferDataAddressRegister.inputClock = clockSync
             this._virtualBufferDataAddressRegister.recalcVirtualValue()
+            this._virtualBufferRAMWEFlipflopD.inputClock = clockSync
+            this._virtualBufferRAMWEFlipflopD.recalcVirtualValue()
         } else {
             this._virtualAccumulatorRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
             this._virtualAccumulatorRegister.recalcVirtualValue()
@@ -877,19 +900,9 @@ export class CPU extends CPUBase<CPURepr> {
 
         const ramwesyncvalue = this._enablePipeline ? clockSync : clockSync && this._virtualDecodeFlipflopD.outputQ
 
-        const opCode = isHighImpedance(opCodeValue) ? "?" : this.opCode
-        const operands = this.operands
+        //const opCode = isHighImpedance(opCodeValue) ? "?" : this.opCode
+        //const operands = this.operands
 
-        if (this._enablePipeline) {
-            if (Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
-                //console.log("clock : ",clockSync, " prevlck : ", prevClock, " change : ",clockSync)
-                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
-            }
-        } else {
-            if (!Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
-                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCode, operands, this._enablePipeline)
-            }
-        }
 
         const false_ = false as LogicValue
 
@@ -915,7 +928,7 @@ export class CPU extends CPUBase<CPURepr> {
                 dadr: this._enablePipeline ? this._virtualBufferDataAddressRegister.outputsQ : this._operandsValue,
                 dout: this._virtualAccumulatorRegister.outputsQ,
                 ramwesync: ramwesyncvalue,
-                ramwe: ramwevalue,
+                ramwe: this._enablePipeline ? this._virtualBufferRAMWEFlipflopD.outputQ : ramwevalue,
                 resetsync: clrSignal,
                 sync: clockSync,
                 z: this._virtualFlagsRegister.outputsQ[0],

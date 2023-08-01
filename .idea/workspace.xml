@@ -14,7 +14,6 @@
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Clock.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Clock.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -301,14 +300,6 @@
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
     </task>
-    <task id="LOCAL-00047" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690470077596</created>
-      <option name="number" value="00047" />
-      <option name="presentableId" value="LOCAL-00047" />
-      <option name="project" value="LOCAL" />
-      <updated>1690470077596</updated>
-    </task>
     <task id="LOCAL-00048" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
       <created>1690470188828</created>
@@ -549,7 +540,15 @@
       <option name="project" value="LOCAL" />
       <updated>1690902508160</updated>
     </task>
-    <option name="localTasksCounter" value="78" />
+    <task id="LOCAL-00078" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1690908642252</created>
+      <option name="number" value="00078" />
+      <option name="presentableId" value="LOCAL-00078" />
+      <option name="project" value="LOCAL" />
+      <updated>1690908642252</updated>
+    </task>
+    <option name="localTasksCounter" value="79" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
