@@ -109,9 +109,6 @@ export abstract class VirtualFlipflop extends VirtualFlipflopOrLatch implements 
     public doRecalcVirtualValue(): VirtualFlipflopOrLatchValue {
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputClock
-        if (prevClock != clock) {
-            console.log("%")
-        }
         const { isInInvalidState, newState } =
             VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
         this._isInInvalidState = isInInvalidState

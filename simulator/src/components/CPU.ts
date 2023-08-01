@@ -609,6 +609,9 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualDecodeFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
         this._virtualExecuteFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
+        this._virtualFetchFlipflopD.inputPre = true
+        this._virtualFetchFlipflopD.recalcVirtualValue()
+
         this._virtualOperationStageCounter = new VirtualCounter(16, EdgeTrigger.falling, 10)
     }
 
@@ -839,7 +842,9 @@ export class CPU extends CPUBase<CPURepr> {
         // PROGRAM COUNTER LOGIC
         //console.log(noJump)
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
-        const _programCounterALUinputA = this._enablePipeline ? noJump ? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
+        //console.log(this._backwardJump)
+        const _programCounterALUinputA = this._enablePipeline ? (!noJump ? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ) : this._virtualProgramCounterRegister.outputsQ
+        //console.log(_programCounterALUinputA)
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         // const BinputValueProgramCounterALU = this._operandsValue.slice()
         const _programCounterALUinputB = _stableOperandsData
@@ -851,6 +856,8 @@ export class CPU extends CPUBase<CPURepr> {
             const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, true)
             this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
         }
+
+        this._virtualProgramCounterRegister.inputInc = noJump
 
         if (this._enablePipeline) {
             this._virtualPreviousProgramCounterRegister.inputsD = this._virtualProgramCounterRegister.outputsQ
