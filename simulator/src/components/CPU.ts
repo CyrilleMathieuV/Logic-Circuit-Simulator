@@ -716,23 +716,14 @@ export class CPU extends CPUBase<CPURepr> {
     }
     */
     protected doRecalcValue(): CPUBaseValue {
-        const prevClock = this._lastClock
-        const clockSpeed = this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
-        const clockSync = this._lastClock = (this._virtualRunStopFlipflopD.outputQ̅? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
-        const newState = this.doRecalcValueForSyncComponent(this._trigger, prevClock, clockSync, this.value)
-        return newState
-    }
-
-    public doRecalcValueForSyncComponent(trigger: EdgeTrigger, prevClock: LogicValue, clockSync: LogicValue, value: CPUBaseValue): CPUBaseValue {
-        /*
+       /*
         BE CAREFUL WITH .reverse()
         IT AFFECTS THE OBJECT !!!
          */
         // RUN CONTROL LOGIC
-        //const prevClock = this._lastClock
-        //const clockSpeed = this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
-        //const clockSync = this._lastClock = (this._virtualRunStopFlipflopD.outputQ̅? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
-        //const clockSync = (this._virtualRunStopFlipflopD.outputQ̅? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
+        const prevClock = this._lastClock
+        const clockSpeed = this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
+        const clockSync = this._lastClock = (this._virtualRunStopFlipflopD.outputQ̅? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
         const clrSignal = this.inputs.Reset.value && this._virtualRunStopFlipflopD.outputQ̅
 
         const runningState = this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value && !this._virtualRunStopFlipflopD.outputQ̅: this._virtualRunStopFlipflopD.outputQ
