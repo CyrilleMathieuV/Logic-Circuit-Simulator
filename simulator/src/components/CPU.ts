@@ -798,6 +798,11 @@ export class CPU extends CPUBase<CPURepr> {
             }
         }
 
+        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
+            console.log(this.cycle)
+            this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, isa_FETCH_opCodeName, isa_FETCH_operands, this._enablePipeline)
+        }
+
         // no pipelined mode must forward instruction to decode
         if (!this._enablePipeline) {
             this._virtualInstructionRegister.inputClock= clockSync && this._virtualFetchFlipflopD.outputQ
@@ -840,11 +845,6 @@ export class CPU extends CPUBase<CPURepr> {
             _operandsData = this._operandsValue
         } else {
             _operandsData = this._virtualAccumulatorRegister.inputsD
-        }
-
-        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
-            console.log(this.cycle)
-            this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCodeName, _operandsData, this._enablePipeline)
         }
 
         this._virtualAccumulatorRegister.inputsD = _operandsData
@@ -1259,15 +1259,14 @@ export class CPU extends CPUBase<CPURepr> {
 
     public shiftOpCodeOperandsInStages(previousOpCodeOperandsInStages: any, cpuStage: CPUStage, opCode: string, operands: LogicValue[], isPipelineEnabled: boolean) {
         //console.log(previousOpCodeOperandsInStages)
-        let opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
-        //if (isPipelineEnabled) {
-            //
+        let opCodeOperandsInStages = previousOpCodeOperandsInStages
+        if (isPipelineEnabled) {
+            opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
             opCodeOperandsInStages["DECODE"] = previousOpCodeOperandsInStages["FETCH"]
             opCodeOperandsInStages["EXECUTE"] = previousOpCodeOperandsInStages["DECODE"]
-            opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
-        //
-        //    opCodeOperandsInStages[cpuStage] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
-        //}
+        } else {
+            opCodeOperandsInStages[cpuStage] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
+        }
         return opCodeOperandsInStages
     }
 
