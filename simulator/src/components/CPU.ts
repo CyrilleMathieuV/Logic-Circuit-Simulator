@@ -1079,8 +1079,6 @@ export class CPU extends CPUBase<CPURepr> {
             g.font = "11px sans-serif"
 
             // bottom inputs
-            const isVertical = Orientation.isVertical(this.orient)
-            const carryHOffsetF = isVertical ? 0 : 1
             drawLabel(ctx, this.orient, "Din", "s", this.inputs.Din, bottom)
             drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom, undefined, true)
