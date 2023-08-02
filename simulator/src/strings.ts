@@ -388,7 +388,7 @@ const Strings_fr = {
                 toggleShowOperands: "Afficher les opérandes",
                 toggleShowStage: "Afficher l'étape",
                 toggleEnablePipeline: "Activer le pipeline",
-                toggleShowClockCycle: "Afficher le dycle",
+                toggleShowClockCycle: "Afficher le cycle",
                 toggleDirectAddressingMode: "Adressage direct",
                 //ParamUseExtendedOpCode: "Utiliser opérations étendues",
             },
