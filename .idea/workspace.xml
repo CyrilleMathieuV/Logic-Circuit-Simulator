@@ -10,6 +10,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN begins to implement CPU">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/VirtualCalculable.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/VirtualCalculable.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/VirtualComponent.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/VirtualComponent.ts" afterDir="false" />
     </list>
@@ -172,7 +173,7 @@
       <workItem from="1690822182064" duration="10875000" />
       <workItem from="1690863532110" duration="32315000" />
       <workItem from="1690919319667" duration="4349000" />
-      <workItem from="1690943354476" duration="19948000" />
+      <workItem from="1690943354476" duration="24229000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -299,14 +300,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00054" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690554094960</created>
-      <option name="number" value="00054" />
-      <option name="presentableId" value="LOCAL-00054" />
-      <option name="project" value="LOCAL" />
-      <updated>1690554094960</updated>
     </task>
     <task id="LOCAL-00055" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -548,7 +541,15 @@
       <option name="project" value="LOCAL" />
       <updated>1690961183665</updated>
     </task>
-    <option name="localTasksCounter" value="85" />
+    <task id="LOCAL-00085" summary="CMN begins to implement CPU">
+      <option name="closed" value="true" />
+      <created>1690963646863</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1690963646863</updated>
+    </task>
+    <option name="localTasksCounter" value="86" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

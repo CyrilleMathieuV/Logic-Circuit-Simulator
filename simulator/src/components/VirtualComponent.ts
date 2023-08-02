@@ -1,7 +1,17 @@
 import * as t from "io-ts"
+import type { DefAndParams } from "../ComponentMenu"
+import JSON5 from "json5"
+import { DrawParams, LogicEditor } from "../LogicEditor"
+import { COLOR_BACKGROUND, COLOR_GROUP_SPAN, DrawingRect, GRID_STEP, drawClockInput, drawComponentName, drawLabel, drawWireLineToComponent, isTrivialNodeName, shouldShowNode, useCompact } from "../drawutils"
 import { ArrayFillUsing, ArrayOrDirect, EdgeTrigger, Expand, FixedArrayMap, HasField, HighImpedance, InteractionResult, LogicValue, LogicValueRepr, Mode, Unknown, brand, deepEquals, isArray, isBoolean, isNumber, isRecord, isString, mergeWhereDefined, toLogicValueRepr, typeOrUndefined, validateJson } from "../utils"
-import { VirtualCalculableParent, VirtualCalculable, PositionSupportRepr } from "./VirtualCalculable"
+import {
+    VirtualCalculableParent,
+    VirtualCalculable,
+    PositionSupportRepr,
+    VirtualCalculableSaved,
+} from "./VirtualCalculable"
 import { VirtualNode, VirtualNodeBase, VirtualNodeIn, VirtualNodeOut } from "./VirtualNode"
+import {Component} from "./Component";
 
 
 type VirtualNodeSeqRepr<TFullVirtualNodeRepr> =
@@ -222,7 +232,7 @@ export abstract class VirtualComponentBase<
     TOutputVirtualNodes extends NamedVirtualNodes<VirtualNodeOut> = VirtualNodesOut<TRepr>,
     THasIn extends boolean = IsNonEmpty<TInputVirtualNodes>,
     THasOut extends boolean = IsNonEmpty<TOutputVirtualNodes>, // in-out VirtualNode presence
-> extends VirtualCalculable {
+> extends VirtualCalculableSaved {
 
     public readonly def: InstantiatedVirtualComponentDef<TRepr, TValue>
     private _state!: VirtualComponentState
@@ -994,7 +1004,7 @@ export class VirtualComponentDef<
 
     public make<TVirtualComp extends VirtualComponent>(parent: VirtualCalculable): TVirtualComp {
         const comp = new this.impl(parent)
-        parent.virtualComponents.add(comp)
+        parent.parent.virtualComponents.add(comp)
         return comp as TVirtualComp
     }
 
@@ -1004,7 +1014,7 @@ export class VirtualComponentDef<
             return undefined
         }
         const comp = new this.impl(parent, validated)
-        parent.virtualComponents.add(comp)
+        parent.parent.virtualComponents.add(comp)
         return comp
     }
 }
@@ -1127,7 +1137,7 @@ export class ParametrizedVirtualComponentDef<
     public readonly aults: TValueDefaults & TParams
     public readonly repr: t.Decoder<Record<string, unknown>, TRepr>
 
-    public impl: (new (parent: VirtualCalculable, params: TResolvedParams, saved?: TRepr) => VirtualComponent & TResolvedParams) = undefined as any
+    public impl: (new (parent: VirtualCalculableParent, params: TResolvedParams, saved?: TRepr) => VirtualComponent & TResolvedParams) = undefined as any
 
     public constructor(
         public readonly type: string,
@@ -1162,7 +1172,7 @@ export class ParametrizedVirtualComponentDef<
         }, this]
     }
 
-    public make<TVirtualComp extends VirtualComponent>(parent: VirtualCalculable, params?: TParams): TVirtualComp {
+    public make<TVirtualComp extends VirtualComponent>(parent: VirtualCalculableParent, params?: TParams): TVirtualComp {
         const fullParams = params === undefined ? this.defaultParams : mergeWhereDefined(this.defaultParams, params)
         const resolvedParams = this.doValidate(fullParams, undefined)
         const comp = new this.impl(parent, resolvedParams)
@@ -1170,7 +1180,7 @@ export class ParametrizedVirtualComponentDef<
         return comp as unknown as TVirtualComp
     }
 
-    public makeFromJSON(parent: VirtualCalculable, data: Record<string, unknown>): VirtualComponent | undefined {
+    public makeFromJSON(parent: VirtualCalculableParent, data: Record<string, unknown>): VirtualComponent | undefined {
         const validated = validateJson(data, this.repr, this.impl!.name ?? "VirtualComponent")
         if (validated === undefined) {
             return undefined

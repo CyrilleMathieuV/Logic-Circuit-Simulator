@@ -7,6 +7,10 @@ import { S } from "../strings"
 import { Expand, FixedArray, InteractionResult, Mode, RichStringEnum, typeOrUndefined } from "../utils"
 import { VirtualComponentBase } from "./VirtualComponent"
 import { VirtualWireManager } from "./VirtualWire";
+import { RedrawManager } from "../RedrawRecalcManager";
+import { MoveManager } from "../MoveManager";
+import { UndoManager } from "../UndoManager";
+import {Orientation} from "./Drawable";
 
 export interface VirtualCalculableParent {
 
@@ -31,18 +35,6 @@ export abstract class VirtualCalculable {
 
     protected constructor(parent: VirtualCalculableParent, saved?: PositionSupportRepr) {
         this.parent = parent
-
-        // using null and not undefined to prevent subclasses from
-        // unintentionally skipping the parameter
-
-        if (saved !== undefined) {
-            // restoring from saved object
-            this.doSetValidatedId(saved.ref)
-        } else {
-            // creating new object
-            const editor = this.parent.editor
-        }
-
         this.setNeedsRedraw("newly created")
     }
 
@@ -59,23 +51,17 @@ export abstract class VirtualCalculable {
 
     protected setNeedsRedraw(reason: string) {
     }
-    
+
+    public get drawZIndex(): DrawZIndex {
+        return 1
+    }
+
     public toString(): string {
         return `${this.constructor.name}(${this.toStringDetails()})`
     }
 
     protected toStringDetails(): string {
         return ""
-    }
-
-    protected toJSONBase(): PositionSupportRepr {
-        return {
-            ref: this.ref,
-        }
-    }
-
-    public get drawZIndex(): DrawZIndex {
-        return 1
     }
     
     private runSetIdDialog() {
@@ -117,6 +103,30 @@ export abstract class VirtualCalculable {
                 }
             }
             break
+        }
+    }
+}
+
+export abstract class VirtualCalculableSaved extends  VirtualCalculable{
+
+    protected constructor(parent: VirtualCalculableParent, saved?: PositionSupportRepr) {
+        super(parent)
+
+        // using null and not undefined to prevent subclasses from
+        // unintentionally skipping the parameter
+
+        if (saved !== undefined) {
+            // restoring from saved object
+            this.doSetValidatedId(saved.ref)
+        } else {
+            // creating new object
+            const editor = this.parent.editor
+        }
+    }
+
+    protected toJSONBase(): PositionSupportRepr {
+        return {
+            ref: this.ref,
         }
     }
 }
