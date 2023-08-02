@@ -566,7 +566,8 @@ export type CPUParams = ResolvedParams<typeof CPUDef>
 export class CPU extends CPUBase<CPURepr> {
     public readonly numInstructionBits: number
     private _directAddressingMode = CPUDef.aults.directAddressingMode
-    //private _trigger: EdgeTrigger = CPUDef.aults.trigger
+
+    protected _mustGetFetchInstructionAgain : boolean
 
     protected _virtualRunStopFlipflopD : VirtualFlipflopD
 
@@ -601,6 +602,8 @@ export class CPU extends CPUBase<CPURepr> {
         this.numInstructionBits = params.numInstructionBits
         this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
         this._trigger = saved?.trigger ?? CPUDef.aults.trigger
+
+        this._mustGetFetchInstructionAgain = true
 
         this._virtualRunStopFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
         // this._virtualRunStopFlipflopD.inputClr = true
@@ -728,10 +731,13 @@ export class CPU extends CPUBase<CPURepr> {
 
         const runningState = this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value && !this._virtualRunStopFlipflopD.outputQ̅: this._virtualRunStopFlipflopD.outputQ
         //console.log((this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅)
+
         this._virtualRunStopFlipflopD.inputD = this._virtualRunStopFlipflopD.outputQ̅
         //console.log(this._virtualHaltSignalFlipflopD.outputQ && clockSync)
         this._virtualRunStopFlipflopD.inputClock = (this._virtualHaltSignalFlipflopD.outputQ && clockSync) || this.inputs.RunStop.value
-/*
+        this._virtualRunStopFlipflopD.recalcVirtualValue()
+
+        /*
         if (VirtualFlipflop.isVirtualClockTrigger(this._virtualRunStopFlipflopD.trigger, prevClock, clockSync)) {
             if (prevClock) {
                 if (!clockSync) {
@@ -768,15 +774,14 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._virtualOperationStageCounter.inputClr = clrSignal
 
-        this._virtualRunStopFlipflopD.recalcVirtualValue()
-
         // FETCH Stage
+
         const isa = this.inputValues(this.inputs.Isa)
+
         //const isa = this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ)
         //console.log(this._virtualFetchFlipflopD.outputQ)
         // Needs to revert all inputs to be compatible with choosen ISA
         const isa_FETCH = isa.reverse()
-        console.log(this.inputs.Isa)
         console.log(this.getOperandsNumberWithRadix(isa_FETCH, 2))
         // naive approach !
         // this._virtualInstructionRegister.inputsD = isa_FETCH
@@ -804,6 +809,7 @@ export class CPU extends CPUBase<CPURepr> {
         if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
             console.log(cycle, "-", stage, " * ", this.getOperandsNumberWithRadix(isa_FETCH, 2))
             console.log("before ",this._opCodeOperandsInStages)
+            //this._mustGetFetchInstructionAgain = true
             if (this._enablePipeline) {
                 this._opCodeOperandsInStages["EXECUTE"] = this._opCodeOperandsInStages["DECODE"]
                 this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["FETCH"]
@@ -820,6 +826,10 @@ export class CPU extends CPUBase<CPURepr> {
             }
             console.log("after", this._opCodeOperandsInStages)
         }
+
+        // We must get it again, but why ?
+        this._opCodeOperandsInStages["FETCH"] = isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2)
+
 
         // no pipelined mode must forward instruction to decode
         if (!this._enablePipeline) {
@@ -1150,7 +1160,7 @@ export class CPU extends CPUBase<CPURepr> {
 
             const counter = displayValuesFromArray(this._virtualOperationStageCounter.outputsQ, false)[1]
             const stringRep = formatWithRadix(counter, 10, 16, false)
-            const stage = (counter == "?") ? 0 : CPUStages[counter % 3]
+            const stage = (counter == "?") ? 0 : CPUStages[(counter - 1) % 3]
 
             if (this._showStage) {
                 for (let eachStage of CPUStages) {
