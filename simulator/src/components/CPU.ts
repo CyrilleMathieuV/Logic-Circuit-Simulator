@@ -45,7 +45,8 @@ import {
     Orientation,
 } from "./Drawable"
 import {
-    FlipflopOrLatch,
+    Flipflop,
+    FlipflopOrLatch, SyncComponent,
 } from "./FlipflopOrLatch";
 import { ALUOps, doALUOp } from "./ALU"
 import { VirtualFlipflopD } from "./VirtualFlipflopD";
@@ -270,9 +271,8 @@ export abstract class CPUBase<
     public readonly numDataBits: number
     public readonly numAddressDataBits: number
 
-    protected _trigger: EdgeTrigger = CPUDef.aults.trigger
+    protected _trigger: EdgeTrigger
     protected _isInInvalidState = false
-
     protected _lastClock: LogicValue = Unknown
     //public readonly usesExtendedOpCode: boolean
 
@@ -521,7 +521,7 @@ export const CPUDef =
         valueDefaults: {
             ...CPUBaseDef.valueDefaults,
             directAddressingMode: false,
-            //trigger: EdgeTrigger.falling,
+            trigger: EdgeTrigger.falling,
         },
         params: {
             addressInstructionBits: CPUBaseDef.params.addressInstructionBits,
@@ -600,7 +600,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         this.numInstructionBits = params.numInstructionBits
         this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
-        // this._trigger = saved?.trigger ?? CPUDef.aults.trigger
+        this._trigger = saved?.trigger ?? CPUDef.aults.trigger
 
         this._virtualRunStopFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
         // this._virtualRunStopFlipflopD.inputClr = true
@@ -660,7 +660,7 @@ export class CPU extends CPUBase<CPURepr> {
         // this._virtualOperationStageCounter.inputClr = true
         // this._virtualOperationStageCounter.recalcVirtualValue()
 
-
+        this._lastClock = Unknown
     }
 
     public toJSON() {
@@ -668,7 +668,7 @@ export class CPU extends CPUBase<CPURepr> {
             instructionBits: this.numInstructionBits === CPUDef.aults.instructionBits ? undefined : this.numInstructionBits,
             ...this.toJSONBase(),
             directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
-            //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
+            trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
 
@@ -681,7 +681,7 @@ export class CPU extends CPUBase<CPURepr> {
         this.setNeedsRedraw("directAddressingMode changed")
     }
 
-    public isClockTrigger(trigger: EdgeTrigger, prevClock: LogicValue, clock: LogicValue): boolean {
+    public static isClockTrigger(trigger: EdgeTrigger, prevClock: LogicValue, clock: LogicValue): boolean {
         return (trigger === EdgeTrigger.rising && prevClock === false && clock === true)
             || (trigger === EdgeTrigger.falling && prevClock === true && clock === false)
     }
@@ -706,15 +706,32 @@ export class CPU extends CPUBase<CPURepr> {
                 return result as CPUBaseValue
         }
     */
+    /*
+    public static doRecalcValueForSyncComponent(trigger: EdgeTrigger, prevClock: LogicValue, clock: LogicValue, value: CPUBaseValue): CPUBaseValue {
+        if (!CPU.isClockTrigger(trigger, prevClock, clock)) {
+            return value
+        } else {
+            return this.makeStateAfterClock()
+        }
+    }
+    */
     protected doRecalcValue(): CPUBaseValue {
+        const prevClock = this._lastClock
+        const clockSpeed = this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
+        const clockSync = this._lastClock = (this._virtualRunStopFlipflopD.outputQ̅? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
+        const newState = this.doRecalcValueForSyncComponent(this._trigger, prevClock, clockSync, this.value)
+        return newState
+    }
+
+    public doRecalcValueForSyncComponent(trigger: EdgeTrigger, prevClock: LogicValue, clockSync: LogicValue, value: CPUBaseValue): CPUBaseValue {
         /*
         BE CAREFUL WITH .reverse()
         IT AFFECTS THE OBJECT !!!
          */
         // RUN CONTROL LOGIC
-        const prevClock = this._lastClock
-        const clockSpeed = this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
-        const clockSync = this._lastClock = (this._virtualRunStopFlipflopD.outputQ̅? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
+        //const prevClock = this._lastClock
+        //const clockSpeed = this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
+        //const clockSync = this._lastClock = (this._virtualRunStopFlipflopD.outputQ̅? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
         //const clockSync = (this._virtualRunStopFlipflopD.outputQ̅? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
         const clrSignal = this.inputs.Reset.value && this._virtualRunStopFlipflopD.outputQ̅
 
@@ -764,9 +781,15 @@ export class CPU extends CPUBase<CPURepr> {
 
         // FETCH Stage
         const isa = this.inputValues(this.inputs.Isa)
+        //const isa = this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ)
+        //console.log(this._virtualFetchFlipflopD.outputQ)
         // Needs to revert all inputs to be compatible with choosen ISA
         const isa_FETCH = isa.reverse()
-        this._virtualInstructionRegister.inputsD = isa_FETCH
+        // console.log(isa_FETCH)
+        // naive approach !
+        // this._virtualInstructionRegister.inputsD = isa_FETCH
+        VirtualRegister.setInputValues(this._virtualInstructionRegister.inputsD, isa_FETCH)
+        // console.log("*",this._virtualInstructionRegister.inputsD)
 
         const isa_FETCH_opCodeValue = isa_FETCH.slice(0, 4).reverse()
         const isa_FETCH_opCodeIndex = displayValuesFromArray(isa_FETCH_opCodeValue, false)[1]
@@ -774,22 +797,13 @@ export class CPU extends CPUBase<CPURepr> {
 
         const isa_FETCH_operands = isa_FETCH.slice(4, 8).reverse()
 
-        if (clrSignal) {
-            this._lastClock = Unknown
-            this._opCodeOperandsInStages = {FETCH: isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2), DECODE: "", EXECUTE: ""}
-        }
-/*
-        if (this._enablePipeline) {
-
-        } else {
-            if (!Flipflop.isClockTrigger(this._trigger, prevClock, clockSync)) {
-                this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, isa_FETCH_opCodeName, isa_FETCH_operands, this._enablePipeline)
-            }
-        }
-*/
-        if (this.isClockTrigger(this._trigger, prevClock, clockSync)) {
-            console.log("clock : ",clockSync, " prevlck : ", prevClock, " change : ",clockSync)
+        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
             this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, isa_FETCH_opCodeName, isa_FETCH_operands, this._enablePipeline)
+        } else {
+            if (clrSignal || this.cycle == 0) {
+                //this._lastClock = Unknown
+                this._opCodeOperandsInStages = {FETCH: isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2), DECODE: "", EXECUTE: ""}
+            }
         }
 
         if (!this._enablePipeline) {
@@ -805,7 +819,6 @@ export class CPU extends CPUBase<CPURepr> {
         const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
         const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
         const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
-        //console.log(ALUOps[_ALUopIndex])
 
         const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
 
@@ -825,7 +838,7 @@ export class CPU extends CPUBase<CPURepr> {
         if (_operandsDataSelectValueIndex === 0) {
             _operandsData = this._virtualAccumulatorRegister.outputsQ
         } else if (_operandsDataSelectValueIndex === 1) {
-            //console.log(_ALUop)
+            //console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
             _operandsData = _ALUoutputs.s
         } else if (_operandsDataSelectValueIndex === 2) {
             _operandsData = this.inputValues(this.inputs.Din).reverse()
@@ -898,14 +911,16 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         if (this._enablePipeline) {
+            this._virtualInstructionRegister.inputClock = clockSync
+            this._virtualInstructionRegister.recalcVirtualValue()
+
             this._virtualProgramCounterRegister.inputClock = clockSync
             this._virtualProgramCounterRegister.recalcVirtualValue()
             this._virtualPreviousProgramCounterRegister.inputsD = this._virtualProgramCounterRegister.outputsQ
             this._virtualPreviousProgramCounterRegister.inputClock = clockSync
             this._virtualPreviousProgramCounterRegister.recalcVirtualValue()
 
-            this._virtualInstructionRegister.inputClock = clockSync
-            this._virtualInstructionRegister.recalcVirtualValue()
+
         } else {
             const _virtualFetchFlipflopDoutputQ = this._virtualFetchFlipflopD.outputQ
             const _virtualDecodeFlipflopDoutputQ = this._virtualDecodeFlipflopD.outputQ

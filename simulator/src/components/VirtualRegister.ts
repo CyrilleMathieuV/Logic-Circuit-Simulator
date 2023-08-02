@@ -11,6 +11,7 @@ import {
 import {Counter} from "./Counter";
 import {VirtualFlipflop,VirtualSyncComponent} from "./VirtualFlipflopOrLatch";
 import {displayValuesFromArray} from "../drawutils";
+import {NodeIn} from "./Node";
 
 export type VirtualRegisterBaseValue = LogicValue[]
 
@@ -192,8 +193,15 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         return input
     }
 
-    public static setInputValue(input : LogicValue, value: LogicValue) {
-        input = value
+    public static setInputValues(input : LogicValue[], values: LogicValue[], reverse = false) {
+        const num = input.length
+        if (values.length !== num) {
+            throw new Error(`inputValues: expected ${num} values, got ${values.length}`)
+        }
+        for (let i = 0; i < num; i++) {
+            const j = reverse ? num - i - 1 : i
+            input[i] = values[j]
+        }
     }
 
     protected getVirtualInputsValues(inputs: LogicValue[]): LogicValue[] {
