@@ -16,21 +16,19 @@ import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import {
     ArrayClampOrPad,
-    ArrayFillWith, deepEquals,
-    EdgeTrigger, HighImpedance,
+    ArrayFillWith,
+    EdgeTrigger,
     isHighImpedance,
     isUnknown,
-    LogicValue, LogicValueRepr, toLogicValue,
+    LogicValue,
     typeOrUndefined,
-    Unknown, wordFromBinaryOrHexRepr,
+    Unknown,
 } from "../utils"
 import {
-    ComponentBase,
-    defineAbstractComponent,
     defineAbstractParametrizedComponent,
     defineParametrizedComponent, ExtractParamDefs, ExtractParams,
     groupHorizontal,
-    groupVertical, InstantiatedComponentDef, NodeGroup, NodesIn, NodesOut,
+    groupVertical, NodesIn, NodesOut,
     param,
     ParametrizedComponentBase,
     Repr,
@@ -46,14 +44,12 @@ import {
     Orientation,
 } from "./Drawable"
 import {
-    Flipflop,
-    FlipflopOrLatch, FlipflopOrLatchDef, FlipflopOrLatchValue,
+    FlipflopOrLatch,
 } from "./FlipflopOrLatch";
 import { ALUOps, doALUOp } from "./ALU"
 import { VirtualFlipflopD } from "./VirtualFlipflopD";
 import { VirtualRegister } from "./VirtualRegister";
 import { VirtualCounter } from "./VirtualCounter";
-import {VirtualFlipflop} from "./VirtualFlipflopOrLatch";
 
 
 export const CPUOpCodes = [
