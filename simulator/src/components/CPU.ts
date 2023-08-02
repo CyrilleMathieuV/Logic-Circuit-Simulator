@@ -15,9 +15,10 @@ import {
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import {
+    allBooleans,
     ArrayClampOrPad,
-    ArrayFillWith,
-    EdgeTrigger,
+    ArrayFillWith, binaryStringRepr,
+    EdgeTrigger, hexStringRepr, isAllZeros,
     isHighImpedance,
     isUnknown,
     LogicValue,
@@ -50,6 +51,7 @@ import { ALUOps, doALUOp } from "./ALU"
 import { VirtualFlipflopD } from "./VirtualFlipflopD";
 import { VirtualRegister } from "./VirtualRegister";
 import { VirtualCounter } from "./VirtualCounter";
+import {VirtualComponent} from "./VirtualComponent";
 
 
 export const CPUOpCodes = [
@@ -493,6 +495,14 @@ export abstract class CPUBase<
             }
         }
         return true
+    }
+
+    private innerStateRepr<TrimEnd extends boolean>(innerComponent : VirtualComponent, trimEnd : TrimEnd): TrimEnd extends false ? string : string | undefined {
+        const result: string[] = []
+        if (trimEnd) {
+            let numToSkip = 0
+        }
+        return result as any
     }
 
 }

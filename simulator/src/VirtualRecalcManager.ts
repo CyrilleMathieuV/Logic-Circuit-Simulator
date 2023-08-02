@@ -6,12 +6,12 @@ export class VirtualRecalcManager {
     private _recalcQueueVirtual: Array<[VirtualComponent, boolean]> = []
     public debug = false
 
-    public enqueueForPropagateVirtual(virtcomp: VirtualComponent) {
+    public enqueueForPropagate(virtcomp: VirtualComponent) {
         this._propagateQueueVirtual.push(virtcomp)
         this.log("Enqueued for propagate: " + virtcomp)
     }
 
-    public enqueueForRecalcVirtual(virtcomp: VirtualComponent, forcePropagate: boolean) {
+    public enqueueForRecalc(virtcomp: VirtualComponent, forcePropagate: boolean) {
         this._recalcQueueVirtual.push([virtcomp, forcePropagate])
         this.log("Enqueued for recalc: " + virtcomp)
     }
@@ -66,7 +66,7 @@ export class VirtualRecalcManager {
             this.log(`  RECALC (${recalcQueue.length}) – ` + recalcQueue.map((c) => c.toString()).join("; "))
             for (const [virtcomp, forcePropagate] of recalcQueue) {
                 try {
-                    virtcomp.recalcVirtualValue(forcePropagate)
+                    virtcomp.recalcValue(forcePropagate)
                 } catch (e) {
                     console.error("Error while recalculating value of " + virtcomp, e)
                 }
