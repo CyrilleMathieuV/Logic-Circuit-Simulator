@@ -6,9 +6,7 @@ import { VirtualRecalcManager } from "../VirtualRecalcManager"
 import { S } from "../strings"
 import { Expand, FixedArray, InteractionResult, Mode, RichStringEnum, typeOrUndefined } from "../utils"
 import { VirtualComponentBase } from "./VirtualComponent"
-import { type WireManager } from "./Wire"
 import { VirtualWireManager } from "./VirtualWire";
-import {Orientation} from "./Drawable";
 
 export interface VirtualCalculableParent {
 
@@ -24,13 +22,27 @@ export interface VirtualCalculableParent {
     readonly recalcMgr: VirtualRecalcManager
 }
 
+// for compact JSON repr, pos is an array
+
 export abstract class VirtualCalculable {
 
     public readonly parent: VirtualCalculableParent
     private _ref: string | undefined = undefined
 
-    protected constructor(parent: VirtualCalculableParent) {
+    protected constructor(parent: VirtualCalculableParent, saved?: PositionSupportRepr) {
         this.parent = parent
+
+        // using null and not undefined to prevent subclasses from
+        // unintentionally skipping the parameter
+
+        if (saved !== undefined) {
+            // restoring from saved object
+            this.doSetValidatedId(saved.ref)
+        } else {
+            // creating new object
+            const editor = this.parent.editor
+        }
+
         this.setNeedsRedraw("newly created")
     }
 

@@ -847,7 +847,6 @@ export abstract class ParametrizedVirtualComponentBase<
 
         const newComp = this.replaceWithNewParams({ [paramName]: newParamValue } as Partial<TParams>)
         if (newComp !== undefined) {
-            this.parent.editor.eventMgr.setCurrentMouseOverComp(newComp)
         }
     }
 
