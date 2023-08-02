@@ -960,7 +960,7 @@ export type InstantiatedVirtualComponentDef<
     idPrefix: string | ((self: any) => string),
     VirtualNodeRecs: InOutRecs,
     initialValue: (saved: TRepr | undefined) => TValue,
-    makeFromJSON: (parent: VirtualCalculable, data: Record<string, unknown>) => VirtualComponent | undefined,
+    makeFromJSON: (parent: VirtualCalculableParent, data: Record<string, unknown>) => VirtualComponent | undefined,
 }
 
 export class VirtualComponentDef<
@@ -976,7 +976,7 @@ export class VirtualComponentDef<
     public readonly VirtualNodeRecs: TInOutRecs
     public readonly repr: t.Decoder<Record<string, unknown>, TRepr>
 
-    public impl: (new (parent: VirtualCalculable, saved?: TRepr) => VirtualComponent) = undefined as any
+    public impl: (new (parent: VirtualCalculableParent, saved?: TRepr) => VirtualComponent) = undefined as any
 
     public constructor(
         public readonly type: string,
@@ -1002,19 +1002,19 @@ export class VirtualComponentDef<
         return this._initialValue(saved, this.aults)
     }
 
-    public make<TVirtualComp extends VirtualComponent>(parent: VirtualCalculable): TVirtualComp {
+    public make<TVirtualComp extends VirtualComponent>(parent: VirtualCalculableParent): TVirtualComp {
         const comp = new this.impl(parent)
-        parent.parent.virtualComponents.add(comp)
+        parent.virtualComponents.add(comp)
         return comp as TVirtualComp
     }
 
-    public makeFromJSON(parent: VirtualCalculable, data: Record<string, unknown>): VirtualComponent | undefined {
+    public makeFromJSON(parent: VirtualCalculableParent, data: Record<string, unknown>): VirtualComponent | undefined {
         const validated = validateJson(data, this.repr, this.impl!.name ?? "VirtualComponent")
         if (validated === undefined) {
             return undefined
         }
         const comp = new this.impl(parent, validated)
-        parent.parent.virtualComponents.add(comp)
+        parent.virtualComponents.add(comp)
         return comp
     }
 }
