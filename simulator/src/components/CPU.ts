@@ -204,8 +204,9 @@ export const CPUBaseDef =
                     ResetSync: [inputX, 5, "e", "Reset sync"],
                     Sync: [inputX, 7, "e", "Sync"],
                     Z: [inputX, 9, "e", "Z (Zero)"],
-                    V: [inputX, 11, "e", "V (oVerflow)"],
-                    Cout: [inputX, 13, "e", `Cout`],
+                    //V: [inputX, 11, "e", "V (oVerflow)"],
+                    Cout: [inputX, 11, "e", `Cout`],
+                    HaltSignal: [inputX, 13, "e", `Halt`],
                     RunningState: [inputX, 15, "e", "Run state"],
                 },
             }
@@ -222,8 +223,9 @@ export const CPUBaseDef =
                 resetsync: false_,
                 sync: false_,
                 z: false_,
-                v: false_,
+                //v: false_,
                 cout: false_,
+                haltsignal: false,
                 runningstate: false_,
             }
             let initialState
@@ -239,8 +241,9 @@ export const CPUBaseDef =
                     resetsync: false_,
                     sync: false_,
                     z: false_,
-                    v: false_,
+                    //v: false_,
                     cout: false_,
+                    haltsignal: false,
                     runningstate: false_,
                 }
             }
@@ -336,8 +339,9 @@ export abstract class CPUBase<
             resetsync: false_,
             sync: false_,
             z: false_,
-            v: false_,
+            //v: false_,
             cout: false_,
+            haltsignal: false_,
             runningstate: false_
         }
         return newState as CPUBaseValue
@@ -354,8 +358,9 @@ export abstract class CPUBase<
             resetsync: val,
             sync: val,
             z: val,
-            v: val,
+            //v: val,
             cout: val,
+            haltsignal: val,
             runningstate: val
         }
         return newState as CPUBaseValue
@@ -486,11 +491,11 @@ export abstract class CPUBase<
     }
 
     public allZeros(vals: LogicValue[]): LogicValue {
-        for (const v of vals) {
-            if (isUnknown(v) || isHighImpedance(v)) {
+        for (const val of vals) {
+            if (isUnknown(val) || isHighImpedance(val)) {
                 return Unknown
             }
-            if (v === true) {
+            if (val === true) {
                 return false
             }
         }
@@ -576,8 +581,8 @@ export class CPU extends CPUBase<CPURepr> {
     protected _virtualAccumulatorRegister : VirtualRegister
     protected _virtualFlagsRegister: VirtualRegister
 
-    protected _virtualBufferDataAddressRegister: VirtualRegister
-    protected _virtualBufferRAMWEFlipflopD: VirtualFlipflopD
+ //   protected _virtualBufferDataAddressRegister: VirtualRegister
+ //   protected _virtualBufferRAMWEFlipflopD: VirtualFlipflopD
 
     protected _virtualProgramCounterRegister : VirtualRegister
     protected _virtualPreviousProgramCounterRegister : VirtualRegister
@@ -635,8 +640,8 @@ export class CPU extends CPUBase<CPURepr> {
         // this._virtualFlagsRegister.inputClr = true
         // this._virtualFlagsRegister.recalcVirtualValue()
 
-        this._virtualBufferDataAddressRegister = new VirtualRegister(this.numDataBits, EdgeTrigger.falling)
-        this._virtualBufferRAMWEFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+    //    this._virtualBufferDataAddressRegister = new VirtualRegister(this.numDataBits, EdgeTrigger.falling)
+     //   this._virtualBufferRAMWEFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
         this. _virtualProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
         // this. _virtualProgramCounterRegister.inputClr = true
@@ -702,8 +707,9 @@ export class CPU extends CPUBase<CPURepr> {
                     resetsync: false_,
                     sync: false_,
                     z: false_,
-                    v: false_,
+                    //v: false_,
                     cout: false_,
+                    haltsignal: false_,
                     runningstate: false_
                 }
                 return result as CPUBaseValue
@@ -735,6 +741,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualRunStopFlipflopD.inputD = this._virtualRunStopFlipflopD.outputQ̅
         //console.log(this._virtualHaltSignalFlipflopD.outputQ && clockSync)
         this._virtualRunStopFlipflopD.inputClock = (this._virtualHaltSignalFlipflopD.outputQ && clockSync) || this.inputs.RunStop.value
+
         this._virtualRunStopFlipflopD.recalcVirtualValue()
 
         /*
@@ -755,6 +762,8 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualRunStopFlipflopD.propagateVirtualValue([newValue, !newValue])
         }
 */
+
+        // CLR Button
 
         this._virtualRunStopFlipflopD.inputClr = clrSignal
         this._virtualHaltSignalFlipflopD.inputClr = clrSignal
@@ -848,7 +857,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
 
-        this._virtualBufferRAMWEFlipflopD.inputD = ramwevalue
+        //this._virtualBufferRAMWEFlipflopD.inputD = ramwevalue
 
         const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
         const _operandsDataSelectValue = [(_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]), _operandsDataCommonSelect && opCodeValue[1]]
@@ -877,9 +886,9 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._virtualAccumulatorRegister.inputsD = _operandsData
 
-        if (this._enablePipeline) {
-            this._virtualBufferDataAddressRegister.inputsD = this._operandsValue
-        }
+        //if (this._enablePipeline) {
+           // this._virtualBufferDataAddressRegister.inputsD = this._operandsValue
+        //}
 
         this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
         this._virtualFlagsRegister.inputsD[0] = this.allZeros(_operandsData)
@@ -920,7 +929,7 @@ export class CPU extends CPUBase<CPURepr> {
         //console.log(noJump)
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
         //console.log(this._backwardJump)
-        const _programCounterALUinputA = this._enablePipeline ? (!this._noJump ? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ) : this._virtualProgramCounterRegister.outputsQ
+        const _programCounterALUinputA = this._enablePipeline ? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
         //console.log(_programCounterALUinputA)
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const _programCounterALUinputB = this._operandsValue.slice()
@@ -954,8 +963,6 @@ export class CPU extends CPUBase<CPURepr> {
             const _virtualDecodeFlipflopDoutputQ = this._virtualDecodeFlipflopD.outputQ
             const _virtualExecuteFlipflopDoutputQ = this._virtualExecuteFlipflopD.outputQ
 
-            //console.log("*",_virtualFetchFlipflopDoutputQ, _virtualDecodeFlipflopDoutputQ, _virtualExecuteFlipflopDoutputQ)
-
             this._virtualFetchFlipflopD.inputD = _virtualExecuteFlipflopDoutputQ
             this._virtualFetchFlipflopD.inputClock = clockSync
             this._virtualFetchFlipflopD.recalcVirtualValue()
@@ -968,10 +975,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualExecuteFlipflopD.inputClock = clockSync
             this._virtualExecuteFlipflopD.recalcVirtualValue()
 
-            //console.log(this._virtualFetchFlipflopD.outputQ, this._virtualDecodeFlipflopD.outputQ, this._virtualExecuteFlipflopD.outputQ)
-
             this._virtualProgramCounterRegister.inputClock  = clockSync && this._virtualExecuteFlipflopD.outputQ
-            //console.log(this._virtualProgramCounterRegister.outputsQ)
             this._virtualProgramCounterRegister.recalcVirtualValue()
         }
 
@@ -996,8 +1000,9 @@ export class CPU extends CPUBase<CPURepr> {
                 resetsync: false_,
                 sync: false_,
                 z: false_,
-                v: false_,
+                //v: false_,
                 cout: false_,
+                haltsignal: false,
                 runningstate: false_
             }
         } else {
@@ -1010,8 +1015,9 @@ export class CPU extends CPUBase<CPURepr> {
                 resetsync: clrSignal,
                 sync: clockSync,
                 z: this._virtualFlagsRegister.outputsQ[0],
-                v: false_,
+                //v: false_,
                 cout: this._virtualFlagsRegister.outputsQ[1],
+                haltsignal: this._virtualHaltSignalFlipflopD.outputQ,
                 runningstate: runningState,
             }
         }
@@ -1029,8 +1035,9 @@ export class CPU extends CPUBase<CPURepr> {
         this.outputs.Sync.value = newValue.sync
         this.outputs.Z.value = newValue.z
         //this.outputs.Z.value = allZeros(newValue.dout)
-        this.outputs.V.value = newValue.v
+        //this.outputs.V.value = newValue.v
         this.outputs.Cout.value = newValue.cout
+        this.outputs.HaltSignal.value = newValue.haltsignal
         this.outputs.RunningState.value = newValue.runningstate
     }
 /*
@@ -1100,8 +1107,9 @@ export class CPU extends CPUBase<CPURepr> {
         drawWireLineToComponent(g, this.outputs.RAMweSync, right, this.outputs.RAMweSync.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.RAMwe, right, this.outputs.RAMwe.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.Z, right, this.outputs.Z.posYInParentTransform)
-        drawWireLineToComponent(g, this.outputs.V, right, this.outputs.V.posYInParentTransform)
+        //drawWireLineToComponent(g, this.outputs.V, right, this.outputs.V.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.Cout, right, this.outputs.Cout.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.HaltSignal, right, this.outputs.HaltSignal.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.RunningState, right, this.outputs.RunningState.posYInParentTransform)
 
         // outline
@@ -1154,8 +1162,9 @@ export class CPU extends CPUBase<CPURepr> {
             drawLabel(ctx, this.orient, "RAM WE", "e", right, this.outputs.RAMwe, undefined, true)
             drawLabel(ctx, this.orient, "Sync", "e", right, this.outputs.Sync, undefined, true)
             drawLabel(ctx, this.orient, "Z", "e", right, this.outputs.Z, undefined, true)
-            drawLabel(ctx, this.orient, "V", "e", right, this.outputs.V, undefined, true)
+            //drawLabel(ctx, this.orient, "V", "e", right, this.outputs.V, undefined, true)
             drawLabel(ctx, this.orient, "Cout", "e", right, this.outputs.Cout, undefined, true)
+            drawLabel(ctx, this.orient, "Halt", "e", right, this.outputs.HaltSignal, undefined, true)
             drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState, undefined, true)
 
             const counter = displayValuesFromArray(this._virtualOperationStageCounter.outputsQ, false)[1]
