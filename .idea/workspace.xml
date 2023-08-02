@@ -9,12 +9,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN begins to implement CPU">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
-    </list>
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN first full and fucntionnal CPU with virtual components" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -179,7 +174,7 @@
       <workItem from="1690988432104" duration="2964000" />
       <workItem from="1690991411809" duration="29000" />
       <workItem from="1690993427382" duration="1502000" />
-      <workItem from="1690997706346" duration="2663000" />
+      <workItem from="1690997706346" duration="3215000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -306,14 +301,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00065" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690742372977</created>
-      <option name="number" value="00065" />
-      <option name="presentableId" value="LOCAL-00065" />
-      <option name="project" value="LOCAL" />
-      <updated>1690742372978</updated>
     </task>
     <task id="LOCAL-00066" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -555,7 +542,15 @@
       <option name="project" value="LOCAL" />
       <updated>1690997719258</updated>
     </task>
-    <option name="localTasksCounter" value="96" />
+    <task id="LOCAL-00096" summary="CMN first full and fucntionnal CPU with virtual components">
+      <option name="closed" value="true" />
+      <created>1691012437649</created>
+      <option name="number" value="00096" />
+      <option name="presentableId" value="LOCAL-00096" />
+      <option name="project" value="LOCAL" />
+      <updated>1691012437649</updated>
+    </task>
+    <option name="localTasksCounter" value="97" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -591,6 +586,7 @@
     <MESSAGE value="Update workspace.xml" />
     <MESSAGE value="JFP major updates on components" />
     <MESSAGE value="CMN begins to implement CPU" />
-    <option name="LAST_COMMIT_MESSAGE" value="CMN begins to implement CPU" />
+    <MESSAGE value="CMN first full and fucntionnal CPU with virtual components" />
+    <option name="LAST_COMMIT_MESSAGE" value="CMN first full and fucntionnal CPU with virtual components" />
   </component>
 </project>
