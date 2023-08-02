@@ -166,10 +166,10 @@ export const VirtualComponentNameRepr = typeOrUndefined(
     ])
 )
 
-export type VirtualNodeOutDesc = readonly [fullName?: string]
-export type VirtualNodeInDesc = readonly [fullName?: string]
+export type VirtualNodeOutDesc = readonly [fullName: string]
+export type VirtualNodeInDesc = readonly [fullName: string]
 export type VirtualNodeDesc = VirtualNodeOutDesc | VirtualNodeInDesc
-export type VirtualNodeDescInGroup = readonly [shortNameOverride?: string]
+export type VirtualNodeDescInGroup = readonly [shortNameOverride: string]
 export type VirtualNodeGroupDesc<D extends VirtualNodeDesc> = ReadonlyArray<D>
 export type VirtualNodeGroupMultiDesc<D extends VirtualNodeDesc> = ReadonlyArray<VirtualNodeGroupDesc<D>>
 export type VirtualNodeRec<D extends VirtualNodeDesc> = Record<string, D | VirtualNodeGroupDesc<D> | VirtualNodeGroupMultiDesc<D>>
@@ -381,6 +381,7 @@ export abstract class VirtualComponentBase<
         const VirtualNodes: Record<string, TVirtualNode | ReadonlyArray<TVirtualNode> | ReadonlyArray<ReadonlyArray<TVirtualNode>>> = {}
         const allVirtualNodes: TVirtualNode[] = []
         const VirtualNodeGroups: Map<string, VirtualNodeGroup<TVirtualNode>> = new Map()
+// TO DO
 /*
         if (VirtualNodeRec !== undefined) {
             const makeVirtualNode = (group: VirtualNodeGroup<TVirtualNode> | undefined, shortName: string, desc: TDesc) => {
@@ -432,7 +433,7 @@ export abstract class VirtualComponentBase<
                 }
             }
         }
- */
+*/
         VirtualNodes._all = allVirtualNodes
         return [VirtualNodes, VirtualNodeGroups]
     }
@@ -871,7 +872,13 @@ export abstract class ParametrizedVirtualComponentBase<
 export function group<const TDescArr extends readonly VirtualNodeDescInGroup[]>(VirtualNodes: TDescArr) {
     return FixedArrayMap(VirtualNodes, ([name]) => [name] as const)
 }
-
+/*
+export function groupVirtual(num: number) {
+    return group("e",
+        ArrayFillUsing(i => num, [0, i])
+    )
+}
+*/
 //
 // Repr and friends
 //
