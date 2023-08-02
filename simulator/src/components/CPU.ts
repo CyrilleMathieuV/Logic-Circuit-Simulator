@@ -788,15 +788,17 @@ export class CPU extends CPUBase<CPURepr> {
 
         const isa_FETCH_operands = isa_FETCH.slice(4, 8).reverse()
 
-        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
-            this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, isa_FETCH_opCodeName, isa_FETCH_operands, this._enablePipeline)
-        } else {
-            if (clrSignal || this.cycle == 0) {
-                //this._lastClock = Unknown
-                this._opCodeOperandsInStages = {FETCH: isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2), DECODE: "", EXECUTE: ""}
+
+        if (clrSignal || this.cycle == 0) {
+            //this._lastClock = Unknown
+            this._opCodeOperandsInStages = {
+                FETCH: isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2),
+                DECODE: "",
+                EXECUTE: ""
             }
         }
 
+        // no pipelined mode must forward instruction to decode
         if (!this._enablePipeline) {
             this._virtualInstructionRegister.inputClock= clockSync && this._virtualFetchFlipflopD.outputQ
             this._virtualInstructionRegister.recalcVirtualValue()
@@ -838,6 +840,11 @@ export class CPU extends CPUBase<CPURepr> {
             _operandsData = this._operandsValue
         } else {
             _operandsData = this._virtualAccumulatorRegister.inputsD
+        }
+
+        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
+            console.log(this.cycle)
+            this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, opCodeName, _operandsData, this._enablePipeline)
         }
 
         this._virtualAccumulatorRegister.inputsD = _operandsData
@@ -895,8 +902,12 @@ export class CPU extends CPUBase<CPURepr> {
                 this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
             } else {
                 //console.log(_programCounterALUinputB)
-                const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, false)
+                let _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, false)
                 //console.log(_programCounterALUoutputs.s)
+                // We must go back of one step cylcle
+                if (this._enablePipeline) {
+                    _programCounterALUoutputs = doALUOp("A-1", _programCounterALUoutputs.s, _programCounterALUinputB, false)
+                }
                 this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
             }
         }
@@ -910,8 +921,6 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualPreviousProgramCounterRegister.inputsD = this._virtualProgramCounterRegister.outputsQ
             this._virtualPreviousProgramCounterRegister.inputClock = clockSync
             this._virtualPreviousProgramCounterRegister.recalcVirtualValue()
-
-
         } else {
             const _virtualFetchFlipflopDoutputQ = this._virtualFetchFlipflopD.outputQ
             const _virtualDecodeFlipflopDoutputQ = this._virtualDecodeFlipflopD.outputQ
