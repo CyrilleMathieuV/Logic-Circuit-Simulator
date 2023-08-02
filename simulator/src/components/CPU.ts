@@ -788,8 +788,10 @@ export class CPU extends CPUBase<CPURepr> {
 
         const isa_FETCH_operands = isa_FETCH.slice(4, 8).reverse()
 
+        const cycle = this.cycle
+        const stage = this._enablePipeline ? [(cycle - 1) % 3] : [cycle - 1) % 3]
 
-        if (clrSignal || this.cycle == 0) {
+        if (clrSignal || cycle == 0) {
             //this._lastClock = Unknown
             this._opCodeOperandsInStages = {
                 FETCH: isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2),
@@ -799,8 +801,8 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
-            console.log(this.cycle)
-            this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, this.stage, isa_FETCH_opCodeName, isa_FETCH_operands, this._enablePipeline)
+            console.log(this.getOperandsNumberWithRadix(isa_FETCH, 2))
+            this._opCodeOperandsInStages = this.shiftOpCodeOperandsInStages(this._opCodeOperandsInStages, cycle, stage, isa_FETCH_opCodeName, isa_FETCH_operands, this._enablePipeline)
         }
 
         // no pipelined mode must forward instruction to decode
@@ -1253,21 +1255,28 @@ export class CPU extends CPUBase<CPURepr> {
     }
 
     public get stage(): CPUStage {
-        const stageIndex = this.cycle
-        return CPUStages[stageIndex % 3]
+        let cycleValue = this.cycle
+        return CPUStages[cycleValue % 3]
     }
 
-    public shiftOpCodeOperandsInStages(previousOpCodeOperandsInStages: any, cpuStage: CPUStage, opCode: string, operands: LogicValue[], isPipelineEnabled: boolean) {
+    public shiftOpCodeOperandsInStages(previousOpCodeOperandsInStages: any, cycle: number, cpuStage: CPUStage, opCode: string, operands: LogicValue[], isPipelineEnabled: boolean) {
         //console.log(previousOpCodeOperandsInStages)
-        let opCodeOperandsInStages = previousOpCodeOperandsInStages
-        if (isPipelineEnabled) {
-            opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
-            opCodeOperandsInStages["DECODE"] = previousOpCodeOperandsInStages["FETCH"]
-            opCodeOperandsInStages["EXECUTE"] = previousOpCodeOperandsInStages["DECODE"]
-        } else {
-            opCodeOperandsInStages[cpuStage] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
-        }
-        return opCodeOperandsInStages
+        let opCodeOperandsInStages = { FETCH: "", DECODE : "", EXECUTE : "" }
+            console.log(previousOpCodeOperandsInStages, "*", cpuStage)
+            if (isPipelineEnabled) {
+                opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
+                opCodeOperandsInStages["DECODE"] = previousOpCodeOperandsInStages["FETCH"]
+                opCodeOperandsInStages["EXECUTE"] = previousOpCodeOperandsInStages["DECODE"]
+            } else {
+                if (cpuStage != "EXECUTE") {
+                    opCodeOperandsInStages["DECODE"] = previousOpCodeOperandsInStages["FETCH"]
+                    opCodeOperandsInStages["EXECUTE"] = previousOpCodeOperandsInStages["DECODE"]
+                } else {
+                    opCodeOperandsInStages["FETCH"] = opCode + "+" + this.getOperandsNumberWithRadix(operands, 2)
+                }
+            }
+            console.log(opCode, "  ", opCodeOperandsInStages, "*", cpuStage)
+            return opCodeOperandsInStages
     }
 
     protected override makeCPUSpecificContextMenuItems(): MenuItems {
