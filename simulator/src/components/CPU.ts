@@ -791,7 +791,7 @@ export class CPU extends CPUBase<CPURepr> {
         //console.log(this._virtualFetchFlipflopD.outputQ)
         // Needs to revert all inputs to be compatible with choosen ISA
         const isa_FETCH = isa.reverse()
-        console.log(this.getOperandsNumberWithRadix(isa_FETCH, 2))
+        //console.log(this.getOperandsNumberWithRadix(isa_FETCH, 2))
         // naive approach !
         // this._virtualInstructionRegister.inputsD = isa_FETCH
         VirtualRegister.setInputValues(this._virtualInstructionRegister.inputsD, isa_FETCH)
@@ -858,9 +858,13 @@ export class CPU extends CPUBase<CPURepr> {
         const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
 
         //this._virtualBufferRAMWEFlipflopD.inputD = ramwevalue
-
+/*
+ISA5
         const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
-        const _operandsDataSelectValue = [(_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]), _operandsDataCommonSelect && opCodeValue[1]]
+        const _operandsDataSelectValue = [
+            (_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]),
+            _operandsDataCommonSelect && opCodeValue[1]
+        ]
         let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 0 : _operandsDataSelectValueIndex
@@ -881,8 +885,39 @@ export class CPU extends CPUBase<CPURepr> {
         } else if (_operandsDataSelectValueIndex === 3) {
             _operandsData = this._operandsValue
         } else {
-            _operandsData = this._virtualAccumulatorRegister.inputsD
+            _operandsData = this._virtualAccumulatorRegister.outputsQ
         }
+
+*/
+        //ISA 6
+        //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
+        const _operandsDataSelectValue = [
+            (!opCodeValue[3] && opCodeValue[2]) || (!opCodeValue[3] && !opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[2] && opCodeValue[1]),
+            (opCodeValue[3] && opCodeValue[2]) || (opCodeValue[3] && !opCodeValue[0]) || (!opCodeValue[2] && !opCodeValue[1] && opCodeValue[0]) || (!opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0])
+        ]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
+
+        _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
+
+        this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
+
+        const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
+        console.log(_operandsDataSelectValueIndex)
+        let _operandsData : LogicValue[]
+        if (_operandsDataSelectValueIndex === 0) {
+            _operandsData = this._operandsValue
+        } else if (_operandsDataSelectValueIndex === 1) {
+            //console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
+            _operandsData = this._virtualAccumulatorRegister.outputsQ
+        } else if (_operandsDataSelectValueIndex === 2) {
+            _operandsData = _ALUoutputs.s
+            //console.log(_operandsData)
+        } else if (_operandsDataSelectValueIndex === 3) {
+            _operandsData = this.inputValues(this.inputs.Din).reverse()
+        } else {
+            _operandsData = this._virtualAccumulatorRegister.outputsQ
+        }
+
 
         this._virtualAccumulatorRegister.inputsD = _operandsData
 
