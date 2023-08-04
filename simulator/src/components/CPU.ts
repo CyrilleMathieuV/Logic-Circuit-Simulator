@@ -187,12 +187,12 @@ export const CPUBaseDef =
 
             return {
                 ins: {
-                    Reset: [-15, inputY, "s", "Reset CPU", { prefersSpike: true }],
-                    ManStep: [-13, inputY, "s","Man STEP", { prefersSpike: true }],
-                    Speed: [-11, inputY, "s", "Select Clock"],
-                    ClockS: [-9, inputY, "s", "Slow Clock", { isClock: true }],
-                    ClockF: [-7, inputY, "s", "Fast Clock", { isClock: true }],
-                    RunStop: [-5, inputY, "s", "Run/Stop", { prefersSpike: true }],
+                    RunStop: [-15, inputY, "s", "Run/Stop", { prefersSpike: true }],
+                    Reset: [-13, inputY, "s", "Reset CPU", { prefersSpike: true }],
+                    ManStep: [-11, inputY, "s","Man STEP", { prefersSpike: true }],
+                    Speed: [-9, inputY, "s", "Select Clock"],
+                    ClockS: [-7, inputY, "s", "Slow Clock", { isClock: true }],
+                    ClockF: [-5, inputY, "s", "Fast Clock", { isClock: true }],
                     //Mode: opCodeMode,
                 },
                 outs: {
@@ -311,21 +311,8 @@ export abstract class CPUBase<
 
         this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
-    /*
-        public doRecalcValue(): CPUBaseValue {
-            const prevClock = this._lastClock
-            const clockSpeed =  this.inputs.Speed.value? this.inputs.ClockF.value : this.inputs.ClockS.value
-            //const clock = this._lastClock = this._virtualRunStopFlipflopD.outputQ̅  ? this.inputs.ManStep.value && this._virtualHaltSignalFlipflopD.outputQ̅  : clockSpeed
-            const clock = this._lastClock = this._lastClock
-            const { isInInvalidState, newState } =
-                Flipflop.doRecalcValueForSyncComponent(this, prevClock, clock, Unknown, this.inputs.Reset)
-            this._isInInvalidState = isInInvalidState
-            return newState as CPUBaseValue
-        }
 
-     */
-
-    //protected abstract override doRecalcValue(): CPUBaseValue
+    protected abstract override doRecalcValue(): CPUBaseValue
 
     public makeInvalidState(): CPUBaseValue {
         const false_ = false as LogicValue
@@ -366,7 +353,7 @@ export abstract class CPUBase<
         return newState as CPUBaseValue
     }
 
-    //public abstract makeStateAfterClock(): [LogicValue[], LogicValue[], LogicValue[], LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue]
+    //protected abstract makeStateAfterClock(): CPUBaseValue
 
     public get trigger() {
         return this._trigger
@@ -393,7 +380,7 @@ export abstract class CPUBase<
         }
     }
 
-    protected override propagateValue(newValue: CPUBaseValue) {    }
+    protected override propagateValue(newValue: CPUBaseValue) {}
 
     private doSetShowStage(ShowStage: boolean) {
         this._showStage = ShowStage
@@ -581,9 +568,6 @@ export class CPU extends CPUBase<CPURepr> {
     protected _virtualAccumulatorRegister : VirtualRegister
     protected _virtualFlagsRegister: VirtualRegister
 
- //   protected _virtualBufferDataAddressRegister: VirtualRegister
- //   protected _virtualBufferRAMWEFlipflopD: VirtualFlipflopD
-
     protected _virtualProgramCounterRegister : VirtualRegister
     protected _virtualPreviousProgramCounterRegister : VirtualRegister
 
@@ -639,9 +623,6 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualFlagsRegister = new VirtualRegister(4, EdgeTrigger.falling)
         // this._virtualFlagsRegister.inputClr = true
         // this._virtualFlagsRegister.recalcVirtualValue()
-
-    //    this._virtualBufferDataAddressRegister = new VirtualRegister(this.numDataBits, EdgeTrigger.falling)
-     //   this._virtualBufferRAMWEFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
         this. _virtualProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
         // this. _virtualProgramCounterRegister.inputClr = true
@@ -856,9 +837,7 @@ export class CPU extends CPUBase<CPURepr> {
         const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
 
         const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
-
-        //this._virtualBufferRAMWEFlipflopD.inputD = ramwevalue
-/*
+        /*
 ISA5
         const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
         const _operandsDataSelectValue = [
@@ -889,7 +868,7 @@ ISA5
         }
 
 */
-        //ISA 6
+        // ISA 6
         //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
         const _operandsDataSelectValue = [
             (!opCodeValue[3] && opCodeValue[2]) || (!opCodeValue[3] && !opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[2] && opCodeValue[1]),
@@ -918,12 +897,7 @@ ISA5
             _operandsData = this._virtualAccumulatorRegister.outputsQ
         }
 
-
         this._virtualAccumulatorRegister.inputsD = _operandsData
-
-        //if (this._enablePipeline) {
-           // this._virtualBufferDataAddressRegister.inputsD = this._operandsValue
-        //}
 
         this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
         this._virtualFlagsRegister.inputsD[0] = this.allZeros(_operandsData)
@@ -944,10 +918,6 @@ ISA5
             this._virtualFlagsRegister.recalcVirtualValue()
             this._virtualHaltSignalFlipflopD.inputClock = clockSync
             this._virtualHaltSignalFlipflopD.recalcVirtualValue()
-            //this._virtualBufferDataAddressRegister.inputClock = clockSync
-            //this._virtualBufferDataAddressRegister.recalcVirtualValue()
-            //this._virtualBufferRAMWEFlipflopD.inputClock = clockSync
-            //this._virtualBufferRAMWEFlipflopD.recalcVirtualValue()
         } else {
             this._virtualAccumulatorRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
             this._virtualAccumulatorRegister.recalcVirtualValue()
@@ -1120,12 +1090,12 @@ ISA5
         for (const input of this.inputs.Din) {
             drawWireLineToComponent(g, input, input.posXInParentTransform, bottom)
         }
+        drawWireLineToComponent(g, this.inputs.RunStop, this.inputs.RunStop.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.Reset, this.inputs.Reset.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.ManStep, this.inputs.ManStep.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.Speed, this.inputs.Speed.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.ClockS, this.inputs.ClockS.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.ClockF, this.inputs.ClockF.posXInParentTransform, bottom)
-        drawWireLineToComponent(g, this.inputs.RunStop, this.inputs.RunStop.posXInParentTransform, bottom)
 
         // outputs
         for (const output of this.outputs.Isaadr) {
@@ -1176,12 +1146,12 @@ ISA5
 
             // bottom inputs
             drawLabel(ctx, this.orient, "Din", "s", this.inputs.Din, bottom)
+            drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Speed", "s", this.inputs.Speed, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Clock S", "s", this.inputs.ClockS, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom, undefined, true)
-            drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom, undefined, true)
 
             // top outputs
             drawLabel(ctx, this.orient, "IsaAdr", "n", this.outputs.Isaadr, top)
