@@ -203,6 +203,7 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
         embedIframe: HTMLTextAreaElement,
         embedWebcomp: HTMLTextAreaElement,
         embedMarkdown: HTMLTextAreaElement,
+        CPUAssemblerEditor: HTMLDivElement,
     }
     public optionsHtml: {
         showGateTypesCheckbox: HTMLInputElement,
@@ -250,6 +251,8 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
             embedIframe: this.elemWithId("embedIframe"),
             embedWebcomp: this.elemWithId("embedWebcomp"),
             embedMarkdown: this.elemWithId("embedMarkdown"),
+
+            CPUAssemblerEditor: this.elemWithId("CPUAssemblerEditor"),
         }
         this.html = html
         dialogPolyfill.registerDialog(html.embedDialog)
