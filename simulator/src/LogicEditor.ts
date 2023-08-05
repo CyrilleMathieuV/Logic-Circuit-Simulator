@@ -203,7 +203,7 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
         embedIframe: HTMLTextAreaElement,
         embedWebcomp: HTMLTextAreaElement,
         embedMarkdown: HTMLTextAreaElement,
-        CPUAssemblerEditor: HTMLDivElement,
+        CPUAssemblerEditor: HTMLElement,
     }
     public optionsHtml: {
         showGateTypesCheckbox: HTMLInputElement,
