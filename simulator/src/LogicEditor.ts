@@ -41,6 +41,7 @@ import { Modifier, a, attr, attrBuilder, cls, div, emptyMod, href, input, label,
 import { inlineIconSvgFor, isIconName, makeIcon } from "./images"
 import { DefaultLang, S, getLang, isLang, setLang } from "./strings"
 import { InBrowser, KeysOfByType, RichStringEnum, UIDisplay, copyToClipboard, formatString, getURLParameter, isArray, isEmbeddedInIframe, isFalsyString, isString, isTruthyString, onVisible, pasteFromClipboard, setDisplay, setVisible, showModal, toggleVisible } from "./utils"
+import {AssemblerEditor, AssemblerEditorEventManager} from "./AssemblerEditor";
 
 
 
@@ -135,6 +136,8 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
     public readonly eventMgr = new UIEventManager(this)
     public readonly timeline = new Timeline(this)
 
+    public readonly assemblerEventMgr = new AssemblerEditorEventManager(this)
+
     // passed to an editor root when active
     public readonly editTools: EditTools = {
         moveMgr: new MoveManager(this),
@@ -179,6 +182,8 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
     private _highlightedItems: HighlightedItems | undefined = undefined
     private _nextAnimationFrameHandle: number | null = null
 
+    private _assemblerEditor: AssemblerEditor | undefined = undefined
+
     private _editorRoot: DrawableParent = this
     public get editorRoot() { return this._editorRoot }
 
@@ -203,7 +208,7 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
         embedIframe: HTMLTextAreaElement,
         embedWebcomp: HTMLTextAreaElement,
         embedMarkdown: HTMLTextAreaElement,
-        CPUAssemblerEditor: HTMLElement,
+        assemblerEditor: HTMLElement,
     }
     public optionsHtml: {
         showGateTypesCheckbox: HTMLInputElement,
@@ -252,7 +257,7 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
             embedWebcomp: this.elemWithId("embedWebcomp"),
             embedMarkdown: this.elemWithId("embedMarkdown"),
 
-            CPUAssemblerEditor: this.elemWithId("CPUAssemblerEditor"),
+            assemblerEditor: this.elemWithId("assemblerEditor"),
         }
         this.html = html
         dialogPolyfill.registerDialog(html.embedDialog)
@@ -634,6 +639,8 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
         this._menu = new ComponentMenu(this.html.leftToolbar, this._options.showOnly)
         this._messageBar = new MessageBar(this)
 
+        this._assemblerEditor = new AssemblerEditor(this)
+
         // TODO move this to the Def of LabelRect to be cleaner
         const groupButton = this.html.leftToolbar.querySelector("button.sim-component-button[data-type=rect]")
         if (groupButton === null) {
@@ -662,6 +669,8 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
         this.eventMgr.registerButtonListenersOn(this._menu.allFixedButtons(), false)
 
         this.html.rightResetButton.addEventListener("click", this.wrapHandler(this.resetCircuit.bind(this)))
+
+        //this.assemblerEventMgr.registerAssemblerEditorListenersOn(this._assemblerEditor)
 
         const showModeChange = this._maxInstanceMode >= Mode.FULL
         if (showModeChange) {
