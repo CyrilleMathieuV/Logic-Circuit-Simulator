@@ -565,8 +565,32 @@ svg text {
   border-radius: .5em;
   padding: 10px;
   cursor: move;
+  color: transparent;
 }
 
-.over.linecode {
+.over {
   border: 3px dotted #666;
+  background-color: #d39e00;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-gap: 20px;
+}
+
+.flag {
+  max-width: 33%;
+}
+
+.opcode {
+  max-width: 33%;
+}
+
+.operand {
+  max-width: 33%;
+}
+
+.flaginput {
+  number: 8;
 }

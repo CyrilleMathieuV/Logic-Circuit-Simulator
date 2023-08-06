@@ -2,11 +2,14 @@ import {LogicEditor, MouseAction} from "./LogicEditor"
 import {InteractionResult, setActive, TimeoutHandle} from "./utils"
 import {Instance as PopperInstance} from "@popperjs/core/lib/types"
 import {EditorSelection} from "./UIEventManager"
+import {CPUOpCode, CPUOpCodes} from './components/CPU'
 import {Drawable} from "./components/Drawable"
 import {IconName, inlineIconSvgFor} from "./images"
 import {button, cls, emptyMod, i, Modifier, raw, span, title} from "./htmlgen"
 
-
+// sources
+// https://web.dev/drag-and-drop/
+// https://coder-coder.com/display-divs-side-by-side/
 
 //export type InstructionKey = Strings["Flag"]["OpCode"]["Operand"]
 
@@ -38,12 +41,77 @@ export class AssemblerEditor {
          */
         this._dragSrcEl = this.editor.root.getElementById("instructionList")
         // Very important to get events
+        this.initiateLineContent()
         this.setListener()
+        this.generateSourceCode()
     }
 
     public setActiveLines() {
         this.getLinesList().forEach(item => {
             setActive(item, true)
+        })
+    }
+
+    private initiateLineContent() {
+        const opCodes = CPUOpCodes
+        this.getLinesList().forEach(item => {
+            const nodeDivGrid = document.createElement("div")
+            const noeDivGridId = "Grid" + item.innerText
+            nodeDivGrid.setAttribute("id", noeDivGridId)
+            nodeDivGrid.setAttribute("class", "grid-container")
+            item.appendChild(nodeDivGrid)
+
+            const selectDivGrid = this.editor.root.getElementById(noeDivGridId) as HTMLSelectElement
+
+            const nodeDivFlag  = document.createElement("div")
+            const nodeDivFlagId = "Flag" + item.innerText
+            nodeDivFlag.setAttribute("id", nodeDivFlagId)
+            nodeDivFlag.setAttribute("class", "flag")
+            selectDivGrid.appendChild(nodeDivFlag)
+
+            const nodeDivOpCode  = document.createElement("div")
+            const nodeDivOpCodeId = "OpCode" + item.innerText
+            nodeDivOpCode.setAttribute("id", nodeDivOpCodeId)
+            nodeDivOpCode.setAttribute("class", "opCode")
+            selectDivGrid.appendChild(nodeDivOpCode)
+
+            const nodeDivOperand  = document.createElement("div")
+            const nodeDivOperandId = "Flag" + item.innerText
+            nodeDivOperand.setAttribute("id", nodeDivOperandId)
+            nodeDivOperand.setAttribute("class", "operand")
+            selectDivGrid.appendChild(nodeDivOperand)
+
+            const nodeInputFlag = document.createElement("input")
+            const nodeInputFlagId = "flag" + item.innerText
+            nodeInputFlag.setAttribute("id", nodeInputFlagId)
+            nodeInputFlag.setAttribute("class", "flaginput")
+            nodeDivFlag.appendChild(nodeInputFlag)
+
+            const nodeSelectOpCode = document.createElement("select")
+            const nodeSelectOpCodeId = "opCodes" + item.innerText
+            nodeSelectOpCode.setAttribute("id", nodeSelectOpCodeId)
+            nodeDivOpCode.appendChild(nodeSelectOpCode)
+
+            const selectElementOpCode = this.editor.root.getElementById(nodeSelectOpCodeId) as HTMLSelectElement
+            for (let opCode of opCodes) {
+                const nodeOptionOpCode = document.createElement("option")
+                nodeOptionOpCode.setAttribute("label", opCode)
+                nodeOptionOpCode.setAttribute("value", opCode)
+                selectElementOpCode.appendChild(nodeOptionOpCode)
+            }
+
+            const nodeSelectOperand = document.createElement("select")
+            const nodeSelectOperandId = "operands" + item.innerText
+            nodeSelectOperand.setAttribute("id", nodeSelectOperandId)
+            nodeDivOperand.appendChild(nodeSelectOperand)
+
+            const selectElementOperand = this.editor.root.getElementById(nodeSelectOperandId) as HTMLSelectElement
+            for (let i = 0; i < 16; i++) {
+                const nodeOptionOperand = document.createElement("option")
+                nodeOptionOperand.setAttribute("label", i.toString())
+                nodeOptionOperand.setAttribute("value", i.toString())
+                selectElementOperand.appendChild(nodeOptionOperand)
+            }
         })
     }
 
@@ -73,7 +141,7 @@ export class AssemblerEditor {
 
     public getLinesList() {
         // We must get nodes from this.editor.root !!!
-        const lineList = this.editor.root.querySelectorAll(".program .linecode") as NodeListOf<HTMLElement>
+        const lineList = this.editor.root.querySelectorAll(".linecode") as NodeListOf<HTMLElement>
         return lineList
     }
 
@@ -85,15 +153,15 @@ export class AssemblerEditor {
             evt.dataTransfer.effectAllowed = 'move'
             evt.dataTransfer.setData('text/html', elem.innerHTML)
         }
-        //elem.style.setProperty("backgroundColor", "red")
-        //elem.style.backgroundColor = "blue"
         return dragSrcEl
     }
 
     private handleDragEnd(evt: DragEvent, elem: HTMLElement) {
         elem.style.opacity = "1"
-        //elem.style.setProperty("backgroundColor", "blue")
-        //elem.style.backgroundColor = "red"
+
+        this.getLinesList().forEach(item => {
+            item.classList.remove('over')
+        })
     }
 
     private handleDragOver(evt: DragEvent) {
@@ -119,6 +187,16 @@ export class AssemblerEditor {
             }
         }
         return false
+    }
+
+    private generateSourceCode() {
+        let sourceCode = ""
+        this.getLinesList().forEach(item => {
+            console.log("*")
+        })
+        const lis = this.editor.root.getElementById("instructionList")
+            //.getElementsByTagName('li')
+        console.log(lis);
     }
 }
 
