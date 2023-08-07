@@ -9,15 +9,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN begin to implement Assembler Editor">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/css/LogicEditor.css" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/css/LogicEditor.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/htmlgen.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/htmlgen.ts" afterDir="false" />
-    </list>
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -193,7 +185,7 @@
       <workItem from="1691255603867" duration="18155000" />
       <workItem from="1691277482937" duration="114000" />
       <workItem from="1691320858265" duration="15738000" />
-      <workItem from="1691339172878" duration="50463000" />
+      <workItem from="1691339172878" duration="50758000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -320,14 +312,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00073" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690838964867</created>
-      <option name="number" value="00073" />
-      <option name="presentableId" value="LOCAL-00073" />
-      <option name="project" value="LOCAL" />
-      <updated>1690838964867</updated>
     </task>
     <task id="LOCAL-00074" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -569,7 +553,15 @@
       <option name="project" value="LOCAL" />
       <updated>1691355842324</updated>
     </task>
-    <option name="localTasksCounter" value="104" />
+    <task id="LOCAL-00104" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)">
+      <option name="closed" value="true" />
+      <created>1691449402172</created>
+      <option name="number" value="00104" />
+      <option name="presentableId" value="LOCAL-00104" />
+      <option name="project" value="LOCAL" />
+      <updated>1691449402172</updated>
+    </task>
+    <option name="localTasksCounter" value="105" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -622,6 +614,7 @@
     <MESSAGE value="CMN begins to implement CPU" />
     <MESSAGE value="CMN first full and fucntionnal CPU with virtual components" />
     <MESSAGE value="CMN begin to implement Assembler Editor" />
-    <option name="LAST_COMMIT_MESSAGE" value="CMN begin to implement Assembler Editor" />
+    <MESSAGE value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
+    <option name="LAST_COMMIT_MESSAGE" value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
   </component>
 </project>
