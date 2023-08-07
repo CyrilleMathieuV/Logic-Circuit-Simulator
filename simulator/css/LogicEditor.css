@@ -557,6 +557,7 @@ svg text {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 10px;
+  font-family: monospace;
 }
 
 .linecode {
@@ -565,7 +566,16 @@ svg text {
   border-radius: .5em;
   padding: 10px;
   cursor: move;
-  color: transparent;
+}
+
+.hint {
+  border: 3px dotted #ffc49a;
+  background: #feffb4;
+}
+
+.active {
+  border: 3px solid #ffa5a5;
+  background: #ffe7e7;
 }
 
 .over {
@@ -575,22 +585,27 @@ svg text {
 
 .grid-container {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 0.5fr 1fr 1fr 0.2fr;
   grid-gap: 20px;
 }
 
-.flag {
+.labeldiv {
   max-width: 33%;
 }
 
-.opcode {
+.opcodediv {
   max-width: 33%;
 }
 
-.operand {
+.operanddiv {
   max-width: 33%;
 }
 
 .flaginput {
   number: 8;
+}
+
+sourceCode{
+  color: #ffffff;
+  background-color: #117a8b;
 }

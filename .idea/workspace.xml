@@ -16,6 +16,7 @@
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/htmlgen.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/htmlgen.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -192,7 +193,7 @@
       <workItem from="1691255603867" duration="18155000" />
       <workItem from="1691277482937" duration="114000" />
       <workItem from="1691320858265" duration="15738000" />
-      <workItem from="1691339172878" duration="8781000" />
+      <workItem from="1691339172878" duration="50463000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -319,14 +320,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00072" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690838197037</created>
-      <option name="number" value="00072" />
-      <option name="presentableId" value="LOCAL-00072" />
-      <option name="project" value="LOCAL" />
-      <updated>1690838197037</updated>
     </task>
     <task id="LOCAL-00073" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -568,7 +561,15 @@
       <option name="project" value="LOCAL" />
       <updated>1691338644142</updated>
     </task>
-    <option name="localTasksCounter" value="103" />
+    <task id="LOCAL-00103" summary="CMN begin to implement Assembler Editor">
+      <option name="closed" value="true" />
+      <created>1691355842323</created>
+      <option name="number" value="00103" />
+      <option name="presentableId" value="LOCAL-00103" />
+      <option name="project" value="LOCAL" />
+      <updated>1691355842324</updated>
+    </task>
+    <option name="localTasksCounter" value="104" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

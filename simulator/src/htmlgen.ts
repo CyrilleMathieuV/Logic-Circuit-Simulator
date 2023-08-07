@@ -149,6 +149,9 @@ export const src = attrBuilder("src")
 export const draggable = attrBuilder("draggable")("true")
 export const br = raw('<br>')
 
+export const id = attrBuilder("id")
+export const value = attrBuilder("value")
+export const selected = attrBuilder("selected")("true")
 
 // Common Modifier-generating helpers
 

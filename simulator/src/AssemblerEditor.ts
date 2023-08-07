@@ -1,21 +1,57 @@
-import {LogicEditor, MouseAction} from "./LogicEditor"
-import {InteractionResult, setActive, TimeoutHandle} from "./utils"
-import {Instance as PopperInstance} from "@popperjs/core/lib/types"
-import {EditorSelection} from "./UIEventManager"
-import {CPUOpCode, CPUOpCodes} from './components/CPU'
+import { LogicEditor, MouseAction } from "./LogicEditor"
+import { InteractionResult, setActive, TimeoutHandle } from "./utils"
+import { Instance as PopperInstance } from "@popperjs/core/lib/types"
+import { EditorSelection } from "./UIEventManager"
+import { CPUOpCode, CPUOpCodes } from "./components/CPU"
 import {Drawable} from "./components/Drawable"
 import {IconName, inlineIconSvgFor} from "./images"
-import {button, cls, emptyMod, i, Modifier, raw, span, title} from "./htmlgen"
+import {
+    button,
+    cls,
+    emptyMod,
+    i,
+    Modifier,
+    raw,
+    span,
+    title,
+    li,
+    div,
+    ol,
+    select,
+    option,
+    label,
+    value,
+    style,
+    draggable,
+    id, applyModifiersTo, input, applyModifierTo, selected,
+} from "./htmlgen"
+import {ComponentList} from "./ComponentList"
 
 // sources
 // https://web.dev/drag-and-drop/
 // https://coder-coder.com/display-divs-side-by-side/
+// https://www.encodedna.com/javascript/how-to-get-all-li-elements-in-ul-using-javascript.htm
+// https://www.tutorialspoint.com/why-addeventlistener-to-select-element-does-not-work-in-javascript
+// https://stackoverflow.com/questions/4590311/set-option-selected-attribute-from-dynamic-created-option
+// https://stackoverflow.com/questions/71975669/change-input-field-value-stores-in-local-storage-using-javascript
+// https://stackoverflow.com/questions/26946235/pure-javascript-listen-to-input-value-change
+// https://koenwoortman.com/javascript-remove-li-elements-from-ul/
+// https://code-boxx.com/drag-drop-sortable-list-javascript/
+// https://stackoverflow.com/questions/9939760/how-do-i-convert-an-integer-to-binary-in-javascript
+// https://stackoverflow.com/questions/9939760/how-do-i-convert-an-integer-to-binary-in-javascript
 
-//export type InstructionKey = Strings["Flag"]["OpCode"]["Operand"]
+//export type InstructionKey = Strings["Label"]["OpCode"]["Operand"]
 
 type HtmlSection = {
     header: HTMLDivElement
     lines: HTMLUListElement[]
+    control: HTMLDivElement
+}
+
+type Instruction = {
+    label: string
+    opCode: string
+    operand: string
 }
 
 export class AssemblerEditor {
@@ -23,7 +59,15 @@ export class AssemblerEditor {
     //public readonly _program: HTMLUListElement
     //public readonly _htmlLine: HTMLElement[]
 
-    private _dragSrcEl : HTMLElement | null = null
+    public readonly instructions : Instruction[]
+
+    //private readonly root: HTMLDivElement
+    private readonly program: HTMLOListElement
+    //private readonly addInstructionButton: HTMLButtonElement
+
+    private _dragSrcEl : HTMLLIElement | null = null
+    private _addLineButton : HTMLButtonElement
+    private _sourceCodeDiv : HTMLDivElement
 
     public constructor(editor: LogicEditor) {
         this.editor = editor
@@ -39,128 +83,203 @@ export class AssemblerEditor {
                 }
 
          */
-        this._dragSrcEl = this.editor.root.getElementById("instructionList")
+
+
+
+        this.instructions = []
+        //this.addInstructionButton = button()
+        this._dragSrcEl = this.editor.root.getElementById("instructionList") as HTMLLIElement
+
+        this.program = ol(cls("program"),id("instructionList")).render()
+        //this.root = div(cls("assembler"),style("flex:none width: 300px padding: 3px 5px display: flex"), this.program).render()
+        editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.program)
+        this._sourceCodeDiv = div(cls("sourceCode")).render()
+        editor.html.assemblerEditor.appendChild(this._sourceCodeDiv)
+        this._addLineButton = button(i(cls("svgicon"), raw(inlineIconSvgFor("add"))),).render()
+        this._addLineButton.addEventListener("click", this.editor.wrapHandler((handler) => {
+            this.addInstruction()
+        }))
+        editor.html.assemblerEditor.appendChild(this._addLineButton)
         // Very important to get events
-        this.initiateLineContent()
-        this.setListener()
+        this.addInstruction()
+        //this.initiateLineContent()
+        //this.setListener()
         this.generateSourceCode()
     }
 
-    public setActiveLines() {
-        this.getLinesList().forEach(item => {
+    public setActiveLines(selector: string) {
+        this.getLinesList(selector).forEach(item  => {
             setActive(item, true)
         })
     }
 
-    private initiateLineContent() {
+    private initiateInstructionsList() {
+
+    }
+
+    private deleteInstruction(line: HTMLLIElement) {
+        if (line.parentNode != null) {
+            line.parentNode.removeChild(line)
+        }
+        this.generateSourceCode()
+    }
+
+    private addInstruction() {
         const opCodes = CPUOpCodes
-        this.getLinesList().forEach(item => {
-            const nodeDivGrid = document.createElement("div")
-            const noeDivGridId = "Grid" + item.innerText
-            nodeDivGrid.setAttribute("id", noeDivGridId)
-            nodeDivGrid.setAttribute("class", "grid-container")
-            item.appendChild(nodeDivGrid)
 
-            const selectDivGrid = this.editor.root.getElementById(noeDivGridId) as HTMLSelectElement
+        const labelInput = input(
+            cls("label"),
+            //id(`label${lineNumber.toString()}`)
+        ).render()
+        const labelInputDiv = div(
+            cls("labelDiv"),
+            //id(`divLabelInput${lineNumber.toString()}`),
+            labelInput
+        ).render()
 
-            const nodeDivFlag  = document.createElement("div")
-            const nodeDivFlagId = "Flag" + item.innerText
-            nodeDivFlag.setAttribute("id", nodeDivFlagId)
-            nodeDivFlag.setAttribute("class", "flag")
-            selectDivGrid.appendChild(nodeDivFlag)
+        const opCodeSelect = select(
+            //id(`opcodes${lineNumber.toString()}`)
+            cls("opcode"),
+        ).render()
+        for (let opCode of opCodes) {
+            option(opCode, value(opCode)).applyTo(opCodeSelect)
+        }
+        const opCodeDiv = div(
+            //id(`opcode${lineNumber.toString()}`),
+            cls("opCodeDiv"),
+            opCodeSelect
+        ).render()
 
-            const nodeDivOpCode  = document.createElement("div")
-            const nodeDivOpCodeId = "OpCode" + item.innerText
-            nodeDivOpCode.setAttribute("id", nodeDivOpCodeId)
-            nodeDivOpCode.setAttribute("class", "opCode")
-            selectDivGrid.appendChild(nodeDivOpCode)
+        const operandSelect = select(
+            cls("operand"),
+            //id(`operands${lineNumber.toString()}`)
+        ).render()
+        for (let i = 0; i < 16; i++) {
+            option(i.toString(), value(i.toString())).applyTo(operandSelect)
+        }
+        const operandDiv = div(
+            //id(`operand${lineNumber.toString()}`),
+            cls("operandDiv"),
+            operandSelect
+        ).render()
 
-            const nodeDivOperand  = document.createElement("div")
-            const nodeDivOperandId = "Flag" + item.innerText
-            nodeDivOperand.setAttribute("id", nodeDivOperandId)
-            nodeDivOperand.setAttribute("class", "operand")
-            selectDivGrid.appendChild(nodeDivOperand)
+        const deleteButton = button(
+                i(cls("svgicon"),
+                    raw(inlineIconSvgFor("trash"))),
+            ).render()
 
-            const nodeInputFlag = document.createElement("input")
-            const nodeInputFlagId = "flag" + item.innerText
-            nodeInputFlag.setAttribute("id", nodeInputFlagId)
-            nodeInputFlag.setAttribute("class", "flaginput")
-            nodeDivFlag.appendChild(nodeInputFlag)
+        const lineDiv = div(
+            cls("grid-container"),
+            //draggable,
+            //id(`grid${lineNumber.toString()}`),
+            labelInputDiv,
+            opCodeDiv,
+            operandDiv,
+            deleteButton,
+        ).render()
 
-            const nodeSelectOpCode = document.createElement("select")
-            const nodeSelectOpCodeId = "opCodes" + item.innerText
-            nodeSelectOpCode.setAttribute("id", nodeSelectOpCodeId)
-            nodeDivOpCode.appendChild(nodeSelectOpCode)
+        const line = li(
+            cls("linecode"),
+            draggable,
+            //id(`line${lineNumber.toString()}`),
+            lineDiv
+        ).render()
 
-            const selectElementOpCode = this.editor.root.getElementById(nodeSelectOpCodeId) as HTMLSelectElement
-            for (let opCode of opCodes) {
-                const nodeOptionOpCode = document.createElement("option")
-                nodeOptionOpCode.setAttribute("label", opCode)
-                nodeOptionOpCode.setAttribute("value", opCode)
-                selectElementOpCode.appendChild(nodeOptionOpCode)
-            }
+        deleteButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            this.deleteInstruction(line)
+        }))
 
-            const nodeSelectOperand = document.createElement("select")
-            const nodeSelectOperandId = "operands" + item.innerText
-            nodeSelectOperand.setAttribute("id", nodeSelectOperandId)
-            nodeDivOperand.appendChild(nodeSelectOperand)
+        labelInput.addEventListener('input', this.editor.wrapHandler((handler) => {
+            localStorage.setItem(`opcodes${line.value.toString()}`, labelInput.value)
+            const labelValue = localStorage.getItem(`opcodes${line.value.toString()}`)
+            applyModifierTo(labelInput, value(labelValue))
+            //const labelValue = localStorage.getItem(labelInput.id)
+            //console.log(labelValue)
+        }))
+        /*
+        labelInput.addEventListener('dragend', this.editor.wrapHandler((handler) => {
+            const labelValue = localStorage.getItem(labelInput.id)
+            console.log(labelValue)
+            //labelInput.setAttribute("innerText", (labelValue != null)? labelValue : "")
+            applyModifierTo(labelInput, value(labelValue))
+        }))
+        */
+        opCodeSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
+            applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected)
+            this.generateSourceCode()
+        }))
 
-            const selectElementOperand = this.editor.root.getElementById(nodeSelectOperandId) as HTMLSelectElement
-            for (let i = 0; i < 16; i++) {
-                const nodeOptionOperand = document.createElement("option")
-                nodeOptionOperand.setAttribute("label", i.toString())
-                nodeOptionOperand.setAttribute("value", i.toString())
-                selectElementOperand.appendChild(nodeOptionOperand)
-            }
-        })
+        opCodeSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
+            applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected)
+            this.generateSourceCode()
+            //console.log("You selected: ", selectOpCode.value)
+            //selectOpCode.value
+        }))
+
+        operandSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
+            applyModifierTo(operandSelect.options[operandSelect.options.selectedIndex], selected)
+            this.generateSourceCode()
+        }))
+
+        operandSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
+            applyModifierTo(operandSelect.options[operandSelect.options.selectedIndex], selected)
+            console.log("You selected: ", operandSelect.value)
+            this.generateSourceCode()
+            //selectOperand.value
+        }))
+
+        line.addEventListener("dragstart", this.editor.wrapHandler((handler) => {
+            this.handleDragStart(handler, line)
+            //console.log("s",this._dragSrcEl)
+        }))
+        line.addEventListener("dragend", this.editor.wrapHandler((handler) => {
+            this.handleDragEnd(handler, line)
+        }))
+        line.addEventListener("dragover", this.editor.wrapHandler((handler) => {
+            this.handleDragOver(handler)
+        }))
+        line.addEventListener("dragenter", this.editor.wrapHandler((handler) => {
+            this.handleDragEnter(handler, line)
+        }))
+        line.addEventListener("dragleave", this.editor.wrapHandler((handler) => {
+            this.handleDragLeave(handler, line)
+        }))
+        line.addEventListener("drop", this.editor.wrapHandler((handler) => {
+            this.handleDrop(handler, line, labelInput)
+        }))
+        this.generateSourceCode()
+        this.program.appendChild(line)
     }
 
-    private setListener() {
-        //this.setActiveLines()
-        this.getLinesList().forEach(item => {
-            item.addEventListener("dragstart", this.editor.wrapHandler((handler) => {
-                this._dragSrcEl = this.handleDragStart(handler, item)
-            }))
-            item.addEventListener("dragend", this.editor.wrapHandler((handler) => {
-                this.handleDragEnd(handler, item)
-            }))
-            item.addEventListener("dragover", this.editor.wrapHandler((handler) => {
-                this.handleDragOver(handler)
-            }))
-            item.addEventListener("dragenter", this.editor.wrapHandler((handler) => {
-                this.handleDragEnter(handler, item)
-            }))
-            item.addEventListener("dragleave", this.editor.wrapHandler((handler) => {
-                this.handleDragLeave(handler, item)
-            }))
-            item.addEventListener("drop", this.editor.wrapHandler((handler) => {
-                this.handleDrop(handler, item)
-            }))
-        })
-    }
-
-    public getLinesList() {
+    public getLinesList(selector: string) {
         // We must get nodes from this.editor.root !!!
-        const lineList = this.editor.root.querySelectorAll(".linecode") as NodeListOf<HTMLElement>
+        const lineList = this.editor.root.querySelectorAll(selector) as NodeListOf<HTMLElement>
         return lineList
     }
 
-    private handleDragStart(evt: DragEvent, elem: HTMLElement) {
+    private handleDragStart(evt: DragEvent, elem: HTMLLIElement) {
         elem.style.opacity = "0.4"
-
-        const dragSrcEl = elem
+        this._dragSrcEl = elem
+        /*
         if (evt.dataTransfer !== null) {
             evt.dataTransfer.effectAllowed = 'move'
             evt.dataTransfer.setData('text/html', elem.innerHTML)
         }
-        return dragSrcEl
+        */
+        this.getLinesList(".linecode").forEach(item => {
+            if (this._dragSrcEl != item) {
+                item.classList.add('hint')
+            }
+        })
     }
 
-    private handleDragEnd(evt: DragEvent, elem: HTMLElement) {
+    private handleDragEnd(evt: DragEvent, elem: HTMLLIElement) {
         elem.style.opacity = "1"
+        //applyModifierTo(labelInput, value(labelValue))
 
-        this.getLinesList().forEach(item => {
-            item.classList.remove('over')
+        this.getLinesList(".linecode").forEach(item => {
+            item.classList.remove("hint")
+            item.classList.remove("active")
         })
     }
 
@@ -169,34 +288,60 @@ export class AssemblerEditor {
         return false
     }
 
-    private handleDragEnter (evt: DragEvent, elem: HTMLElement) {
-        elem.classList.add('over')
+    private handleDragEnter (evt: DragEvent, elem: HTMLLIElement) {
+        elem.classList.add("active")
     }
 
-    private handleDragLeave (evt: DragEvent, elem: HTMLElement) {
-        elem.classList.remove('over')
+    private handleDragLeave (evt: DragEvent, elem: HTMLLIElement) {
+        elem.classList.remove("active")
     }
 
-    private handleDrop(evt: DragEvent, elem: HTMLElement) {
+    private handleDrop(evt: DragEvent, elem: HTMLLIElement, labelInput: HTMLInputElement) {
         evt.stopPropagation()
-        const dragSrcEl = this._dragSrcEl
-        if (evt.dataTransfer !== null && dragSrcEl !== null) {
-            if (dragSrcEl !== elem) {
-                dragSrcEl.innerHTML = elem.innerHTML
-                elem.innerHTML = evt.dataTransfer.getData('text/html')
+        if (elem != this._dragSrcEl) {
+            let currentpos = 0, droppedpos = 0;
+            this.getLinesList(".linecode").forEach(item => {
+                let itemasli = item as HTMLLIElement
+                if (elem == item) {
+                    currentpos = elem.value
+                } else {
+                    droppedpos = itemasli.value;
+                }
+            })
+            if (elem.parentNode != null && this._dragSrcEl != null) {
+                if (currentpos < droppedpos) {
+                    elem.parentNode.insertBefore(this._dragSrcEl, elem.nextSibling);
+                } else {
+                    elem.parentNode.insertBefore(this._dragSrcEl, elem);
+                }
             }
         }
+        this.generateSourceCode()
         return false
     }
 
     private generateSourceCode() {
-        let sourceCode = ""
-        this.getLinesList().forEach(item => {
-            console.log("*")
+        let sourceCodeLines : string[] = []
+        this.getLinesList(".linecode").forEach(item => {
+            const _opcode = item.querySelector(".opcode") as HTMLSelectElement
+            const _operand = item.querySelector(".operand") as HTMLSelectElement
+            sourceCodeLines.push(this.createBinaryString(_opcode.options.selectedIndex >>> 0, 4) + this.createBinaryString(_operand.options.selectedIndex >>> 0,4))
         })
-        const lis = this.editor.root.getElementById("instructionList")
-            //.getElementsByTagName('li')
-        console.log(lis);
+        const sourceCode = sourceCodeLines.join(" ")
+        this._sourceCodeDiv.innerText = sourceCode
+        console.log(sourceCode)
+    }
+
+    public  createBinaryString (nMask: number, nBit: number) {
+        // nMask must be between -2^nBit and 2^nBit - 1
+        let aMask: number[] = []
+        let nShifted = nMask
+        for (let nFlag = 0; nFlag < nBit; nFlag++) {
+            aMask.push(nShifted % 2)
+            nShifted >>= 1
+        }
+        const sMask = aMask.reverse().join("")
+        return sMask
     }
 }
 
