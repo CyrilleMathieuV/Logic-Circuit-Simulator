@@ -1246,7 +1246,7 @@ ISA5
             if (this._showClockCycle) {
                 const fontSize = 20
                 const valueCenterDeltaY = Orientation.isVertical(this.orient) ? 120 : 90
-                const valueCenter = ctx.rotatePoint(this.inputs.Speed.posXInParentTransform + 10, this.inputs.Speed.posYInParentTransform - valueCenterDeltaY)
+                const valueCenter = ctx.rotatePoint(this.inputs.ManStep.posXInParentTransform + 10, this.inputs.ManStep.posYInParentTransform - valueCenterDeltaY)
 
                 g.fillStyle = COLOR_EMPTY
                 const frameWidth = 100 - fontSize / 2

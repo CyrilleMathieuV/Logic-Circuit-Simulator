@@ -554,39 +554,72 @@ svg text {
 
 /* CPUAssemblerEditor */
 .assembler {
+  background-color: rgb(239, 239, 239);
+  /*border-left: 1px solid lightgray;*/
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  margin: -3px 0 -3px -5px;
+  padding: 3px 5px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  width: 300px;
+  /*grid-template-columns: repeat(4, 1fr);*/
   gap: 10px;
+}
+
+.dark .assembler {
+  background-color: rgb(94, 94, 94);
+  border-left-color: #525252;
+}
+
+.assembler * {
   font-family: monospace;
 }
 
-.linecode {
-  border: 3px solid #666;
+.linecode  {
+  border: 1px solid #000;
   background-color: #ddd;
   border-radius: .5em;
   padding: 10px;
   cursor: move;
 }
 
+.linecodeDiv {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-gap: 10px;
+}
+
+.assembler #button {
+  width: 20px;
+}
+
+.label {
+  width: 50px
+  /*number: 5*/
+}
+
+.opcode {
+  width: 50px
+}
+
+.operand {
+  width: 50px
+}
+
 .hint {
-  border: 3px dotted #ffc49a;
+  border: 1px dotted #ffc49a;
   background: #feffb4;
 }
 
 .active {
-  border: 3px solid #ffa5a5;
+  border: 1px solid #ffa5a5;
   background: #ffe7e7;
 }
 
 .over {
-  border: 3px dotted #666;
+  border: 1px dotted #666;
   background-color: #d39e00;
-}
-
-.grid-container {
-  display: grid;
-  grid-template-columns: 0.5fr 1fr 1fr 0.2fr;
-  grid-gap: 20px;
 }
 
 .labeldiv {
@@ -599,10 +632,6 @@ svg text {
 
 .operanddiv {
   max-width: 33%;
-}
-
-.flaginput {
-  number: 8;
 }
 
 sourceCode{

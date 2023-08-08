@@ -9,7 +9,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/css/LogicEditor.css" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/css/LogicEditor.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -37,6 +45,7 @@
               <list>
                 <branch-info repo="$PROJECT_DIR$" source="withoutComponents" />
                 <branch-info repo="$PROJECT_DIR$" source="withVirtualComponents" />
+                <branch-info repo="$PROJECT_DIR$" source="withVirtualComponentsAndAssembler" />
               </list>
             </value>
           </entry>
@@ -186,6 +195,8 @@
       <workItem from="1691277482937" duration="114000" />
       <workItem from="1691320858265" duration="15738000" />
       <workItem from="1691339172878" duration="50758000" />
+      <workItem from="1691449602145" duration="83000" />
+      <workItem from="1691487220220" duration="27500000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -575,6 +586,11 @@
             <list>
               <RecentGroup>
                 <option name="FILTER_VALUES">
+                  <option value="withVirtualComponentsAndAssembler" />
+                </option>
+              </RecentGroup>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
                   <option value="withVirtualComponents" />
                 </option>
               </RecentGroup>
@@ -593,7 +609,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="withVirtualComponents" />
+                        <option value="withVirtualComponentsAndAssembler" />
                       </list>
                     </value>
                   </entry>
