@@ -430,6 +430,7 @@ export class AssemblerEditor {
             }
         }
         this.generateBrutSourceCode()
+        this.updateSelectOptionsForAddresses()
         return false
     }
 
