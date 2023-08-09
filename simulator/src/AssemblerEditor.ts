@@ -23,9 +23,10 @@ import {
     value,
     style,
     draggable,
-    id, applyModifiersTo, input, applyModifierTo, selected,
+    id, applyModifiersTo, input, applyModifierTo, selected, disabled, hidden
 } from "./htmlgen"
 import {ComponentList} from "./ComponentList"
+import {Node} from "./components/Node";
 
 // sources
 // https://web.dev/drag-and-drop/
@@ -63,6 +64,7 @@ type LineLabel = {
 
 const goToOpCode = ["GDW", "GUP", "JIZ", "JIC"] as string[]
 const goToUpOpCode = ["GUP"] as string[]
+const noOperantOpCode = ["NOP", "DEC", "HLT"] as string[]
 
 export class AssemblerEditor {
     public editor: LogicEditor
@@ -76,7 +78,7 @@ export class AssemblerEditor {
     //private readonly addInstructionButton: HTMLButtonElement
 
     private _dragSrcEl : HTMLLIElement | null = null
-    private _addLineButton : HTMLButtonElement
+    //private _addLineButton : HTMLButtonElement
     private _sourceCodeDiv : HTMLDivElement
 
     private _opcodes : typeof CPUOpCodes
@@ -137,8 +139,11 @@ export class AssemblerEditor {
         this.generateBrutSourceCode()
     }
 
-    private addInstruction(previousLinecodeLi) {
-        const lineNumber = this.getLineCodeNumber(previousLinecodeLi)
+    private addInstruction(previousLinecodeLi?: HTMLLIElement) {
+        let lineNumber = -1
+        if (previousLinecodeLi != undefined) {
+            lineNumber = this.getLineCodeNumber(previousLinecodeLi)
+        }
 
         const labelInput = input(
             cls("label"),
@@ -167,13 +172,15 @@ export class AssemblerEditor {
             cls("operand"),
             //id(`operands${lineNumber.toString()}`)
         ).render()
-        for (let i = 0; i < 16; i++) {
+        /*
+        for (let _i = 0; _i < 16; _i++) {
             option(
                 //cls(`operandvalue${lineNumber}`),
-                i.toString(),
-                value(i.toString())
+                _i.toString(),
+                value(_i.toString())
             ).applyTo(operandSelect)
         }
+        */
         const operandDiv = div(
             //id(`operand${lineNumber.toString()}`),
             cls("operandDiv"),
@@ -181,9 +188,9 @@ export class AssemblerEditor {
         ).render()
 
         const deleteButton = button(
-                i(cls("svgicon"),
-                    raw(inlineIconSvgFor("trash"))),
-            ).render()
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("trash"))),
+        ).render()
 
         const addButton = button(
             i(cls("svgicon"),
@@ -208,6 +215,8 @@ export class AssemblerEditor {
             //id(`line${lineNumber.toString()}`),
             linecodeDiv
         ).render()
+
+        this.computeOperand("NOP", linecodeLi, operandSelect)
 
         deleteButton.addEventListener('click', this.editor.wrapHandler((handler) => {
             this.removeInstruction(linecodeLi)
@@ -292,7 +301,9 @@ export class AssemblerEditor {
         this.generateBrutSourceCode()
     }
 
-    public getNodesList(selector: string) {
+
+
+    public getNodesList(selector: string) : NodeListOf<HTMLElement> {
         // We must get nodes from this.editor.root !!!
         const nodeList = this.editor.root.querySelectorAll(selector) as NodeListOf<HTMLElement>
         return nodeList
@@ -364,26 +375,28 @@ export class AssemblerEditor {
     private generateBrutSourceCode() {
         this._program = []
         this._lineLabels = []
-        this.getNodesList(".linecode").forEach(item => {
-            const itemLine = item as HTMLLIElement
+        if (this.getNodesList(".linecode") != null) {
+            this.getNodesList(".linecode").forEach(item => {
+                const itemLine = item as HTMLLIElement
 
-            const _label = itemLine.querySelector(".label") as HTMLInputElement
-            const _opcode = itemLine.querySelector(".opcode") as HTMLSelectElement
-            const _operand = itemLine.querySelector(".operand") as HTMLSelectElement
+                const _label = itemLine.querySelector(".label") as HTMLInputElement
+                const _opcode = itemLine.querySelector(".opcode") as HTMLSelectElement
+                const _operand = itemLine.querySelector(".operand") as HTMLSelectElement
 
-            const sourceCodeLine: Instruction  = {
-                labelName : (_label.value != "")? _label.value : (this._program.length + 1).toString(),
-                opCode : this._opcodes[_opcode.options.selectedIndex],
-                operand :_operand.options.selectedIndex.toString()
-            }
-            this._program.push(sourceCodeLine)
+                const sourceCodeLine: Instruction  = {
+                    labelName : (_label.value != "")? _label.value : (this._program.length + 1).toString(),
+                    opCode : this._opcodes[_opcode.options.selectedIndex],
+                    operand :_operand.options.selectedIndex.toString()
+                }
+                this._program.push(sourceCodeLine)
 
-            const lineLabel: LineLabel = {
-                labelName: sourceCodeLine.labelName,
-                lineNumber: this._program.length
-            }
-            this._lineLabels.push(lineLabel)
-        })
+                const lineLabel: LineLabel = {
+                    labelName: sourceCodeLine.labelName,
+                    lineNumber: this._program.length
+                }
+                this._lineLabels.push(lineLabel)
+            })
+        }
         //sourceCodeLines.label.push(this.createBinaryString(_opcode.options.selectedIndex, 4) + this.createBinaryString(_operand.options.selectedIndex,4))
         console.log(this._lineLabels)
     }
@@ -400,11 +413,19 @@ export class AssemblerEditor {
         })
     }
 
+    private removeAllChildren(parent: HTMLElement) {
+        if (parent.firstChild != null) {
+            while (parent.firstChild && parent.lastChild != null) {
+                parent.removeChild(parent.lastChild);
+            }
+        }
+    }
+
     private getLineCodeNumber(linecodeLi: HTMLLIElement) {
         let lineNumber = -1
         if (linecodeLi != null) {
             if (linecodeLi.parentElement != null) {
-            // The only way to get the index of the current line
+                // The only way to get the index of the current line
                 lineNumber = [...linecodeLi.parentElement.children].indexOf(linecodeLi)
             }
         }
@@ -415,54 +436,66 @@ export class AssemblerEditor {
         const lineNumber = this.getLineCodeNumber(linecodeLi)
 
         // We must remove options list of select
-        while (operandSelect.firstChild && operandSelect.lastChild != null) {
-            operandSelect.removeChild(operandSelect.lastChild);
+        if (operandSelect != null) {
+            operandSelect.removeAttribute("hidden")
+            this.removeAllChildren(operandSelect)
         }
-/*
-        console.log(operandsOfOperandSelect)
-        if (operandsOfOperandSelect != null) {
-            operandSelect.getElementsByTagName("#option").forEach(item => {
-                operandSelect.removeChild(item)
-            })
-        }
+        /*
+                console.log(operandsOfOperandSelect)
+                if (operandsOfOperandSelect != null) {
+                    operandSelect.getElementsByTagName("#option").forEach(item => {
+                        operandSelect.removeChild(item)
+                    })
+                }
 
- */
+         */
         if (goToOpCode.includes(opCode)) {
             if(goToUpOpCode.includes(opCode)) {
-                for (let i = ((lineNumber < 15)? lineNumber: 15); i > -1; i--) {
-                    console.log(i+1, " * ", this._lineLabels[i].lineNumber)
-                    if (this._lineLabels[i].labelName == (i + 1).toString()) {
+                for (let _i = ((lineNumber < 15)? lineNumber: 15); _i > -1; _i--) {
+                    if (this._lineLabels[_i].labelName == (_i + 1).toString()) {
                         option(
                             //cls(`.operandvalue${lineNumber.toString()}`),
-                            i.toString(),
-                            value(i.toString())
+                            "label " + _i.toString(),
+                            value(_i.toString()),
+                            disabled,
                         ).applyTo(operandSelect)
                     } else {
-                        option(cls("operandvalue"), this._lineLabels[i].labelName, value(this._lineLabels[i].labelName)).applyTo(operandSelect)
+                        option(cls("operandvalue"), this._lineLabels[_i].labelName, value(this._lineLabels[_i].labelName)).applyTo(operandSelect)
                     }
                 }
             }
             else {
-                for (let i = 0; i < this._program.length - lineNumber; i++) {
-                    console.log(i+1, " * ", this._lineLabels[i].lineNumber)
-                    if (this._lineLabels[i].labelName == (i + 1).toString()) {
+                for (let _i = 0; _i < this._program.length - lineNumber; _i++) {
+                    if (this._lineLabels[_i].labelName == (_i + 1).toString()) {
                         option(
                             //cls(`.operandvalue${lineNumber.toString()}`),
-                            i.toString(),
-                            value(i.toString())
+                            "label " + _i.toString(),
+                            value(_i.toString()),
+                            disabled,
                         ).applyTo(operandSelect)
                     } else {
-                        option(cls("operandvalue"), this._lineLabels[i].labelName, value(this._lineLabels[i].labelName)).applyTo(operandSelect)
+                        option(cls("operandvalue"), this._lineLabels[_i].labelName, value(this._lineLabels[_i].labelName)).applyTo(operandSelect)
                     }
                 }
             }
         } else {
-            for (let i = 0; i < 16; i++) {
+            if (!noOperantOpCode.includes(opCode)) {
+                for (let _i = 0; _i < 16; _i++) {
+                    option(
+                        //cls(`.operandvalue${lineNumber.toString()}`),
+                        _i.toString(),
+                        value(_i.toString())
+                    ).applyTo(operandSelect)
+                }
+            } else {
                 option(
                     //cls(`.operandvalue${lineNumber.toString()}`),
-                    i.toString(),
-                    value(i.toString())
+                    "0",
+                    value("0"),
+                    disabled,
+                    hidden,
                 ).applyTo(operandSelect)
+                applyModifierTo(operandSelect, hidden)
             }
         }
     }

@@ -152,6 +152,8 @@ export const br = raw('<br>')
 export const id = attrBuilder("id")
 export const value = attrBuilder("value")
 export const selected = attrBuilder("selected")("true")
+export const disabled = attrBuilder("disabled")("true")
+export const hidden = attrBuilder("hidden")("hidden")
 
 // Common Modifier-generating helpers
 
