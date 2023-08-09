@@ -114,11 +114,11 @@ export class AssemblerEditor {
 
 
 
-        this.programOl = ol(cls(""), id("instructionList")).render()
+        this.programOl = ol(cls(""), id("instructionList"),style("position: absolute; top: 0px; width: 370px;")).render()
 
         this.headerDiv = div(cls("header"), style("position: absolute; left: 0; width: 100%; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
         this.controlDiv = div(cls("control"), style("position: absolute; left: 0; top: 30px; width: 100%; width: 300px; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
-        this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 80%; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
+        this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 390px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
         this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.headerDiv, this.controlDiv, this.programDiv).render()
 

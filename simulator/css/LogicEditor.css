@@ -561,7 +561,7 @@ svg text {
   align-items: stretch;
   margin: -3px 0 -3px -5px;
   padding: 3px 5px;
-  width: 500px;
+  width: 440px;
   height: 100%;
   /*grid-template-columns: repeat(4, 1fr);*/
   gap: 10px;
@@ -604,20 +604,20 @@ svg text {
 }
 
 .label {
-  width: 100px
+  width: 75px
   /*number: 5*/
 }
 
 .opcode {
-  width: 50px
+  width: 55px
 }
 
 .operand {
-  width: 50px
+  width: 80px
 }
 
 .hint {
-  border: 1px dotted #ffc49a;
+  border: 4px dotted #ffc49a;
   background: #feffb4;
 }
 
