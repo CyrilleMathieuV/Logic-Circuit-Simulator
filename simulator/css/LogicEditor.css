@@ -561,7 +561,8 @@ svg text {
   align-items: stretch;
   margin: -3px 0 -3px -5px;
   padding: 3px 5px;
-  width: 400px;
+  width: 500px;
+  height: 100%;
   /*grid-template-columns: repeat(4, 1fr);*/
   gap: 10px;
 }
@@ -580,7 +581,7 @@ svg text {
 }
 
 .program {
-  overflow-y: auto;
+  overflow-y: visible;
   overflow-x: hidden;
 }
 

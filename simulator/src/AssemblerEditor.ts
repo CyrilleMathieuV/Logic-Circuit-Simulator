@@ -75,9 +75,10 @@ export class AssemblerEditor {
 
 
     private readonly mainDiv: HTMLDivElement
-    private readonly control: HTMLDivElement
-    private readonly header: HTMLDivElement
-    private readonly program: HTMLOListElement
+    private readonly controlDiv: HTMLDivElement
+    private readonly headerDiv: HTMLDivElement
+    private readonly programDiv: HTMLDivElement
+    private readonly programOl: HTMLOListElement
     //private readonly addInstructionButton: HTMLButtonElement
 
     private _dragSrcEl : HTMLLIElement | null = null
@@ -113,12 +114,13 @@ export class AssemblerEditor {
 
 
 
+        this.programOl = ol(cls(""), id("instructionList")).render()
 
-        this.header = div(cls("header"), style("flex:none; height: 30px; padding: 3px 5px; display: flex; align-items: stretch;")).render()
-        this.control = div(cls("control"), style("flex:none; height: 30px; padding: 3px 5px; display: flex; align-items: stretch;")).render()
-        this.program = ol(cls("program"), id("instructionList")).render()
+        this.headerDiv = div(cls("header"), style("position: absolute; left: 0; width: 100%; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
+        this.controlDiv = div(cls("control"), style("position: absolute; left: 0; top: 30px; width: 100%; width: 300px; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
+        this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 80%; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
-        this.mainDiv = div(cls("assembler"), this.header, this.control, this.program).render()
+        this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.headerDiv, this.controlDiv, this.programDiv).render()
 
 
         editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.mainDiv)
@@ -324,16 +326,16 @@ export class AssemblerEditor {
         }))
 
         if (lineNumber < 0) {
-            this.program.appendChild(linecodeLi)
+            this.programOl.appendChild(linecodeLi)
         } else {
             if (aboveCurrentLinecode != undefined) {
                 if (aboveCurrentLinecode) {
-                    this.program.insertBefore(linecodeLi, this.program.childNodes[lineNumber])
+                    this.programOl.insertBefore(linecodeLi, this.programOl.childNodes[lineNumber])
                 } else {
-                    if (this.program.nextSibling != null) {
-                        this.program.nextSibling.insertBefore(linecodeLi, this.program.childNodes[lineNumber])
+                    if (this.programOl.nextSibling != null) {
+                        this.programOl.nextSibling.insertBefore(linecodeLi, this.programOl.childNodes[lineNumber])
                     } else {
-                        this.program.appendChild(linecodeLi)
+                        this.programOl.appendChild(linecodeLi)
                     }
                 }
             }
@@ -447,12 +449,13 @@ export class AssemblerEditor {
                     operand :_operand.options.selectedIndex.toString()
                 }
                 this._program.push(sourceCodeLine)
+
                 if (sourceCodeLine.labelName != undefined) {
                     this._lineLabels[this._program.length] = sourceCodeLine.labelName
                 }
             })
         }
-        console.log(this._lineLabels)
+        //console.log(this._lineLabels)
         //sourceCodeLines.label.push(this.createBinaryString(_opcode.options.selectedIndex, 4) + this.createBinaryString(_operand.options.selectedIndex,4))
         //.log(this._lineLabels)
     }
@@ -488,7 +491,7 @@ export class AssemblerEditor {
 
     private computeOperand(opCode: string, linecodeLi: HTMLLIElement, operandSelect: HTMLSelectElement) {
         const lineNumber = this.getLineCodeNumber(linecodeLi)
-
+        //console.log(lineNumber)
         // We must remove options list of select
         if (operandSelect != null) {
             applyModifierTo(operandSelect, style("visibility: visible"))
@@ -505,32 +508,34 @@ export class AssemblerEditor {
          */
         if ((goToOpCode.includes(opCode))) {
             if(goToUpOpCode.includes(opCode)) {
-                for (let _i = 0; _i < ((lineNumber < 15)? lineNumber : 15); _i++) {
-                    if (this._lineLabels[_i + 1] == (_i + 1).toString()) {
+                for (let _i = ((lineNumber < 15)? lineNumber : 15); _i > -1 ; _i--) {
+                    if (this._lineLabels[lineNumber - _i + 1] == (lineNumber - _i + 1).toString()) {
+                        console.log(lineNumber - _i + 1," = ",this._lineLabels[lineNumber - _i + 1])
                         option(
                             //cls(`.operandvalue${lineNumber.toString()}`),
                             "label " + (lineNumber - _i + 1).toString(),
-                            value(_i.toString()),
+                            value((lineNumber - _i + 1).toString()),
                             disabled,
                         ).applyTo(operandSelect)
                     } else {
-                        const labelText = this._lineLabels[_i + 1] as string
-                        option(cls("operandvalue"), labelText, value(this._lineLabels[_i + 1])).applyTo(operandSelect)
+                        console.log("*",this._lineLabels[lineNumber - _i + 1])
+                        const labelText = this._lineLabels[lineNumber - _i + 1]
+                        option(cls("operandvalue"), labelText, value(labelText)).applyTo(operandSelect)
                     }
                 }
             }
             else {
-                for (let _i = 0; _i < (((this._program.length  - lineNumber) < 15)? this._program.length - lineNumber : 16); _i++) {
-                    if (this._lineLabels[_i + 1] == (_i + 1).toString()) {
+                for (let _i = 0; _i < (((this._program.length  - lineNumber) < 16)? this._program.length - lineNumber : 16); _i++) {
+                    if (this._lineLabels[_i + 1 + lineNumber] == (_i + 1 + lineNumber).toString()) {
                         option(
                             //cls(`.operandvalue${lineNumber.toString()}`),
                             "label " + (lineNumber + _i + 1).toString(),
-                            value(_i.toString()),
+                            value((lineNumber - _i + 1).toString()),
                             disabled,
                         ).applyTo(operandSelect)
                     } else {
-                        const labelText = this._lineLabels[_i + 1] as string
-                        option(cls("operandvalue"), labelText, value(this._lineLabels[_i + 1])).applyTo(operandSelect)
+                        const labelText = this._lineLabels[_i + 1 + lineNumber]
+                        option(cls("operandvalue"), labelText, value(labelText)).applyTo(operandSelect)
                     }
                 }
             }
@@ -554,6 +559,7 @@ export class AssemblerEditor {
                 applyModifierTo(operandSelect, style("visibility: hidden"))
             }
         }
+        this.generateBrutSourceCode()
     }
 
     public  createBinaryString (nMask: number, nBit: number) {
