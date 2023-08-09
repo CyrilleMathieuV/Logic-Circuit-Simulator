@@ -367,6 +367,7 @@ export class AssemblerEditor {
         }
         applyModifierTo(labelInput, value(labelInputValue))
         this.generateBrutSourceCode()
+        this.updateSelectOptionsForAddresses()
     }
 
     private handleDragStart(evt: DragEvent, elem: HTMLLIElement) {
@@ -460,14 +461,23 @@ export class AssemblerEditor {
         //.log(this._lineLabels)
     }
 
-    private updateSelectOptionsForAddresses() {
-        this.getNodesList(".linecode").forEach(item => {
-            const itemLine = item as HTMLLIElement
 
-            const _label = itemLine.querySelector(".label") as HTMLInputElement
-            const _opcode = itemLine.querySelector(".opcode") as HTMLSelectElement
-            const _operand = itemLine.querySelector(".operand") as HTMLSelectElement
-        })
+    private updateSelectOptionsForAddresses() {
+        if (this.getNodesList(".linecode") != null) {
+            this.getNodesList(".linecode").forEach(item => {
+                if (item != null) {
+                    const itemLine = item as HTMLLIElement
+
+                    const _label = itemLine.querySelector(".label") as HTMLInputElement
+                    const _opcode = itemLine.querySelector(".opcode") as HTMLSelectElement
+                    const _operand = itemLine.querySelector(".operand") as HTMLSelectElement
+
+                    const opcode = this._opcodes[_opcode.options.selectedIndex]
+
+                    this.computeOperand(opcode, itemLine, _operand)
+                }
+            })
+        }
     }
 
     private removeAllChildren(parent: HTMLElement) {

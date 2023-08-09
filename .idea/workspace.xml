@@ -10,10 +10,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/css/LogicEditor.css" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/css/LogicEditor.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -197,7 +193,7 @@
       <workItem from="1691487220220" duration="27650000" />
       <workItem from="1691531633226" duration="17000" />
       <workItem from="1691550594901" duration="26951000" />
-      <workItem from="1691607103051" duration="3203000" />
+      <workItem from="1691607103051" duration="3629000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -324,14 +320,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00079" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690911236941</created>
-      <option name="number" value="00079" />
-      <option name="presentableId" value="LOCAL-00079" />
-      <option name="project" value="LOCAL" />
-      <updated>1690911236941</updated>
     </task>
     <task id="LOCAL-00080" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -573,7 +561,15 @@
       <option name="project" value="LOCAL" />
       <updated>1691599648345</updated>
     </task>
-    <option name="localTasksCounter" value="110" />
+    <task id="LOCAL-00110" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)">
+      <option name="closed" value="true" />
+      <created>1691610382088</created>
+      <option name="number" value="00110" />
+      <option name="presentableId" value="LOCAL-00110" />
+      <option name="project" value="LOCAL" />
+      <updated>1691610382089</updated>
+    </task>
+    <option name="localTasksCounter" value="111" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -632,7 +628,8 @@
     <MESSAGE value="CMN first full and fucntionnal CPU with virtual components" />
     <MESSAGE value="CMN begin to implement Assembler Editor" />
     <MESSAGE value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
-    <option name="LAST_COMMIT_MESSAGE" value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
+    <MESSAGE value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)" />
+    <option name="LAST_COMMIT_MESSAGE" value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
