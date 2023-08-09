@@ -10,11 +10,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)">
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/arrowcircledown.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/arrowcircleup.icon.svg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/css/LogicEditor.css" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/css/LogicEditor.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/htmlgen.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/htmlgen.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/images.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/images.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -196,7 +199,7 @@
       <workItem from="1691449602145" duration="83000" />
       <workItem from="1691487220220" duration="27650000" />
       <workItem from="1691531633226" duration="17000" />
-      <workItem from="1691550594901" duration="7154000" />
+      <workItem from="1691550594901" duration="22811000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -323,14 +326,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00077" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690902508160</created>
-      <option name="number" value="00077" />
-      <option name="presentableId" value="LOCAL-00077" />
-      <option name="project" value="LOCAL" />
-      <updated>1690902508160</updated>
     </task>
     <task id="LOCAL-00078" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -572,7 +567,15 @@
       <option name="project" value="LOCAL" />
       <updated>1691553911576</updated>
     </task>
-    <option name="localTasksCounter" value="108" />
+    <task id="LOCAL-00108" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)">
+      <option name="closed" value="true" />
+      <created>1691557853360</created>
+      <option name="number" value="00108" />
+      <option name="presentableId" value="LOCAL-00108" />
+      <option name="project" value="LOCAL" />
+      <updated>1691557853361</updated>
+    </task>
+    <option name="localTasksCounter" value="109" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -632,5 +635,17 @@
     <MESSAGE value="CMN begin to implement Assembler Editor" />
     <MESSAGE value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
     <option name="LAST_COMMIT_MESSAGE" value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/simulator/src/TopBar.ts</url>
+          <line>123</line>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

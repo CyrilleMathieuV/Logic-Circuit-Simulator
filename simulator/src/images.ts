@@ -8,6 +8,8 @@
 
 // icons
 import add from '../img/icons/add.icon.svg'; // @ts-ignore
+import arrowcircledown from '../img/icons/arrowcircledown.icon.svg'; // @ts-ignore
+import arrowcircleup from '../img/icons/arrowcircleup.icon.svg'; // @ts-ignore
 import bordercolor from '../img/icons/bordercolor.icon.svg'; // @ts-ignore
 import check from '../img/icons/check.icon.svg'; // @ts-ignore
 import close from '../img/icons/close.icon.svg'; // @ts-ignore
@@ -127,6 +129,8 @@ void 0 // dummy line to consume the last 'ts-ignore'
 
 const icons = {
     add,
+    arrowcircledown,
+    arrowcircleup,
     bordercolor,
     check,
     close,
