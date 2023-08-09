@@ -23,7 +23,7 @@ import {
     value,
     style,
     draggable,
-    id, applyModifiersTo, input, applyModifierTo, selected, disabled, hidden
+    id, applyModifiersTo, input, applyModifierTo, selected, disabled, hidden, maxlength,
 } from "./htmlgen"
 import {ComponentList} from "./ComponentList"
 import {Node} from "./components/Node";
@@ -38,11 +38,12 @@ import {Node} from "./components/Node";
 // https://stackoverflow.com/questions/26946235/pure-javascript-listen-to-input-value-change
 // https://koenwoortman.com/javascript-remove-li-elements-from-ul/
 // https://code-boxx.com/drag-drop-sortable-list-javascript/
-// https://stackoverflow.com/questions/9939760/how-do-i-convert-an-integer-to-binary-in-javascript
+// https://www.codingnepalweb.com/drag-and-drop-sortable-list-html-javascript/
 // https://stackoverflow.com/questions/9939760/how-do-i-convert-an-integer-to-binary-in-javascript
 // https://stackoverflow.com/questions/3955229/remove-all-child-elements-of-a-dom-node-in-javascript
 // https://stackoverflow.com/questions/8801787/get-index-of-clicked-element-using-pure-javascript
 // https://developer.mozilla.org/fr/docs/Web/API/Node/insertBefore
+// https://css-tricks.com/snippets/css/complete-guide-grid/#aa-grid-properties
 
 //export type InstructionKey = Strings["Label"]["OpCode"]["Operand"]
 
@@ -77,6 +78,10 @@ export class AssemblerEditor {
     private readonly mainDiv: HTMLDivElement
     private readonly controlDiv: HTMLDivElement
     private readonly headerDiv: HTMLDivElement
+    private readonly lineNumberHeaderDiv: HTMLDivElement
+    private readonly labelHeaderDiv: HTMLDivElement
+    private readonly labelOpCodeDiv: HTMLDivElement
+    private readonly labelOperandDiv: HTMLDivElement
     private readonly programDiv: HTMLDivElement
     private readonly programOl: HTMLOListElement
     //private readonly addInstructionButton: HTMLButtonElement
@@ -118,8 +123,20 @@ export class AssemblerEditor {
 
         this.programOl = ol(cls(""), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 370px;")).render()
 
-        this.controlDiv = div(cls("control"), style("position: absolute; left: 0; top: 30px; width: 100%; width: 300px; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
-        this.headerDiv = div(cls("header"), style("position: absolute; left: 0; width: 100%; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
+        this.lineNumberHeaderDiv = div(style("width: 10px; border-right: 1px black;"),"#").render()
+        this.labelHeaderDiv = div(style("width: 75px; border-right: 1px black;"),"# label").render()
+        this.labelOpCodeDiv = div(style("width: 55px"),"OpCode").render()
+        this.labelOperandDiv = div(style("width: 80px"),"Operand").render()
+
+        this.controlDiv = div(cls("controlprogram"), style("position: absolute; left: 0; top: 30px; width: 100%; width: 300px; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
+        this.headerDiv = div(
+            cls("headerprogram"),
+            style("position: absolute; left: 0; top: 30px; width: 100%; height: 30px;"),
+            this.lineNumberHeaderDiv,
+            this.labelHeaderDiv,
+            this.labelOpCodeDiv,
+            this.labelOperandDiv,
+        ).render()
         this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 390px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
         this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
@@ -170,6 +187,7 @@ export class AssemblerEditor {
 
         const labelInput = input(
             cls("label"),
+            maxlength("8"),
             //id(`label${lineNumber.toString()}`)
         ).render()
         const labelInputDiv = div(
@@ -240,6 +258,7 @@ export class AssemblerEditor {
 
         const linecodeLi = li(
             cls("linecode"),
+            style("color: #ffffff;"),
             //value(lineNumber),
             draggable,
             //id(`line${lineNumber.toString()}`),
@@ -360,9 +379,6 @@ export class AssemblerEditor {
         if (labelInputValue == "") {
             this._lineLabels[this.getLineCodeNumber(linecodeLi)] = this.getLineCodeNumber(linecodeLi).toString()
         } else {
-            if (labelInputValue.length > 13) {
-                labelInputValue.slice(0, 11)
-            }
             if (this._lineLabels.includes(labelInputValue)) {
                 applyModifierTo(labelInput, style("color: #ff0000;"))
             } else {
@@ -375,6 +391,7 @@ export class AssemblerEditor {
     }
 
     private handleDragStart(evt: DragEvent, elem: HTMLLIElement) {
+        //setTimeout(() => elem.classList.add("dragging"), 0)
         elem.style.opacity = "0.4"
         this._dragSrcEl = elem
         /*
@@ -393,7 +410,6 @@ export class AssemblerEditor {
     private handleDragEnd(evt: DragEvent, elem: HTMLLIElement) {
         elem.style.opacity = "1"
         //applyModifierTo(labelInput, value(labelValue))
-
         this.getNodesList(".linecode").forEach(item => {
             item.classList.remove("hint")
             item.classList.remove("active")
@@ -525,7 +541,6 @@ export class AssemblerEditor {
             if(goToUpOpCode.includes(opCode)) {
                 for (let _i = ((lineNumber < 15)? lineNumber : 15); _i > -1 ; _i--) {
                     if (this._lineLabels[lineNumber - _i + 1] == (lineNumber - _i + 1).toString()) {
-                        console.log(lineNumber - _i + 1," = ",this._lineLabels[lineNumber - _i + 1])
                         option(
                             //cls(`.operandvalue${lineNumber.toString()}`),
                             "label " + (lineNumber - _i + 1).toString(),
@@ -533,7 +548,6 @@ export class AssemblerEditor {
                             disabled,
                         ).applyTo(operandSelect)
                     } else {
-                        console.log("*",this._lineLabels[lineNumber - _i + 1])
                         const labelText = this._lineLabels[lineNumber - _i + 1]
                         option(cls("operandvalue"), labelText, value(labelText)).applyTo(operandSelect)
                     }
