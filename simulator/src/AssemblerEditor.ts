@@ -85,6 +85,8 @@ export class AssemblerEditor {
     //private _addLineButton : HTMLButtonElement
     //private sourceCodeDiv : HTMLDivElement
 
+    private _addressBusNumBits = 4
+
     private _opcodes : typeof CPUOpCodes
 
     private _program : Instruction[]
@@ -114,13 +116,13 @@ export class AssemblerEditor {
 
 
 
-        this.programOl = ol(cls(""), id("instructionList"),style("position: absolute; top: 0px; width: 370px;")).render()
+        this.programOl = ol(cls(""), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 370px;")).render()
 
-        this.headerDiv = div(cls("header"), style("position: absolute; left: 0; width: 100%; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
         this.controlDiv = div(cls("control"), style("position: absolute; left: 0; top: 30px; width: 100%; width: 300px; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
+        this.headerDiv = div(cls("header"), style("position: absolute; left: 0; width: 100%; height: 30px; padding: 3px 5px; display: block; align-items: stretch;")).render()
         this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 390px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
-        this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.headerDiv, this.controlDiv, this.programDiv).render()
+        this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
 
 
         editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.mainDiv)
@@ -160,6 +162,7 @@ export class AssemblerEditor {
     }
 
     private addInstruction(previousLinecodeLi?: HTMLLIElement, aboveCurrentLinecode?: boolean) {
+        if (this._program.length < 2 ** this._addressBusNumBits ) {
         let lineNumber = -1
         if (previousLinecodeLi != undefined) {
             lineNumber = this.getLineCodeNumber(previousLinecodeLi)
@@ -332,8 +335,8 @@ export class AssemblerEditor {
                 if (aboveCurrentLinecode) {
                     this.programOl.insertBefore(linecodeLi, this.programOl.childNodes[lineNumber])
                 } else {
-                    if (this.programOl.nextSibling != null) {
-                        this.programOl.nextSibling.insertBefore(linecodeLi, this.programOl.childNodes[lineNumber])
+                    if (this.programOl.childNodes[lineNumber].nextSibling != null) {
+                        this.programOl.insertBefore(linecodeLi, this.programOl.childNodes[lineNumber])
                     } else {
                         this.programOl.appendChild(linecodeLi)
                     }
@@ -342,6 +345,7 @@ export class AssemblerEditor {
 
         }
         this.generateBrutSourceCode()
+        }
     }
 
     public getNodesList(selector: string) : NodeListOf<HTMLElement> {
