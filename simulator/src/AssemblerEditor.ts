@@ -112,11 +112,11 @@ export class AssemblerEditor {
         editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.program)
         this._sourceCodeDiv = div(cls("sourceCode")).render()
         editor.html.assemblerEditor.appendChild(this._sourceCodeDiv)
-        this._addLineButton = button(i(cls("svgicon"), raw(inlineIconSvgFor("add"))),).render()
-        this._addLineButton.addEventListener("click", this.editor.wrapHandler((handler) => {
-            this.addInstruction()
-        }))
-        editor.html.assemblerEditor.appendChild(this._addLineButton)
+        //this._addLineButton = button(i(cls("svgicon"), raw(inlineIconSvgFor("add"))),).render()
+        //this._addLineButton.addEventListener("click", this.editor.wrapHandler((handler) => {
+        //    this.addInstruction()
+        //}))
+        //editor.html.assemblerEditor.appendChild(this._addLineButton)
         // Very important to get events
         this.addInstruction()
         //this.initiateLineContent()
@@ -130,15 +130,15 @@ export class AssemblerEditor {
         })
     }
 
-    private deleteInstruction(line: HTMLLIElement) {
-        if (line.parentNode != null) {
-            line.parentNode.removeChild(line)
+    private removeInstruction(linecodeLi: HTMLLIElement) {
+        if (linecodeLi.parentNode != null) {
+            linecodeLi.parentNode.removeChild(linecodeLi)
         }
         this.generateBrutSourceCode()
     }
 
-    private addInstruction() {
-        const lineNumber = this.program.getElementsByClassName("linecode").length + 1
+    private addInstruction(previousLinecodeLi) {
+        const lineNumber = this.getLineCodeNumber(previousLinecodeLi)
 
         const labelInput = input(
             cls("label"),
@@ -185,6 +185,11 @@ export class AssemblerEditor {
                     raw(inlineIconSvgFor("trash"))),
             ).render()
 
+        const addButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("add"))),
+        ).render()
+
         const linecodeDiv = div(
             cls("linecodeDiv"),
             //draggable,
@@ -193,9 +198,10 @@ export class AssemblerEditor {
             opCodeDiv,
             operandDiv,
             deleteButton,
+            addButton
         ).render()
 
-        const linecode = li(
+        const linecodeLi = li(
             cls("linecode"),
             //value(lineNumber),
             draggable,
@@ -204,13 +210,17 @@ export class AssemblerEditor {
         ).render()
 
         deleteButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-            this.deleteInstruction(linecode)
+            this.removeInstruction(linecodeLi)
+        }))
+
+        addButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            this.addInstruction(linecodeLi)
         }))
 
         labelInput.addEventListener('input', this.editor.wrapHandler((handler) => {
-            localStorage.setItem(`opcodes${linecode.value.toString()}`, labelInput.value)
-            const labelValue = localStorage.getItem(`opcodes${linecode.value.toString()}`)
-            applyModifierTo(labelInput, value(labelValue))
+            //localStorage.setItem(`opcodes${this.getLineCodeNumber(linecodeLi).toString()}`, labelInput.value)
+            //const labelValue = localStorage.getItem(`opcodes${this.getLineCodeNumber(linecodeLi).toString()}`)
+            applyModifierTo(labelInput, value(labelInput.value))
             this.generateBrutSourceCode()
             //const labelValue = localStorage.getItem(labelInput.id)
             //console.log(labelValue)
@@ -225,14 +235,14 @@ export class AssemblerEditor {
         */
         opCodeSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
             applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected)
-            this.computeOperand(opCodeSelect.value, linecode, operandSelect)
+            this.computeOperand(opCodeSelect.value, linecodeLi, operandSelect)
             this.generateBrutSourceCode()
         }))
 
         opCodeSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
             applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected)
-            console.log(linecode.value)
-            this.computeOperand(opCodeSelect.value, linecode, operandSelect)
+            console.log(linecodeLi.value)
+            this.computeOperand(opCodeSelect.value, linecodeLi, operandSelect)
             this.generateBrutSourceCode()
             //console.log("You selected: ", selectOpCode.value)
             //selectOpCode.value
@@ -250,37 +260,42 @@ export class AssemblerEditor {
             //selectOperand.value
         }))
 
-        linecode.addEventListener("click", this.editor.wrapHandler((handler) => {
-            applyModifierTo(linecode, selected)
+        linecodeLi.addEventListener("click", this.editor.wrapHandler((handler) => {
+            applyModifierTo(linecodeLi, selected)
             // TO DO FOR INSERTING ?
         }))
-        linecode.addEventListener("dragstart", this.editor.wrapHandler((handler) => {
-            this.handleDragStart(handler, linecode)
+        linecodeLi.addEventListener("dragstart", this.editor.wrapHandler((handler) => {
+            this.handleDragStart(handler, linecodeLi)
             //console.log("s",this._dragSrcEl)
         }))
-        linecode.addEventListener("dragend", this.editor.wrapHandler((handler) => {
-            this.handleDragEnd(handler, linecode)
+        linecodeLi.addEventListener("dragend", this.editor.wrapHandler((handler) => {
+            this.handleDragEnd(handler, linecodeLi)
         }))
-        linecode.addEventListener("dragover", this.editor.wrapHandler((handler) => {
+        linecodeLi.addEventListener("dragover", this.editor.wrapHandler((handler) => {
             this.handleDragOver(handler)
         }))
-        linecode.addEventListener("dragenter", this.editor.wrapHandler((handler) => {
-            this.handleDragEnter(handler, linecode)
+        linecodeLi.addEventListener("dragenter", this.editor.wrapHandler((handler) => {
+            this.handleDragEnter(handler, linecodeLi)
         }))
-        linecode.addEventListener("dragleave", this.editor.wrapHandler((handler) => {
-            this.handleDragLeave(handler, linecode)
+        linecodeLi.addEventListener("dragleave", this.editor.wrapHandler((handler) => {
+            this.handleDragLeave(handler, linecodeLi)
         }))
-        linecode.addEventListener("drop", this.editor.wrapHandler((handler) => {
-            this.handleDrop(handler, linecode, labelInput)
+        linecodeLi.addEventListener("drop", this.editor.wrapHandler((handler) => {
+            this.handleDrop(handler, linecodeLi, labelInput)
         }))
-        this.program.appendChild(linecode)
+
+        if (lineNumber < 0) {
+            this.program.appendChild(linecodeLi)
+        } else {
+            this.program.insertBefore(linecodeLi, this.program.childNodes[lineNumber])
+        }
         this.generateBrutSourceCode()
     }
 
     public getNodesList(selector: string) {
         // We must get nodes from this.editor.root !!!
-        const lineList = this.editor.root.querySelectorAll(selector) as NodeListOf<HTMLElement>
-        return lineList
+        const nodeList = this.editor.root.querySelectorAll(selector) as NodeListOf<HTMLElement>
+        return nodeList
     }
 
     private handleDragStart(evt: DragEvent, elem: HTMLLIElement) {
@@ -370,7 +385,7 @@ export class AssemblerEditor {
             this._lineLabels.push(lineLabel)
         })
         //sourceCodeLines.label.push(this.createBinaryString(_opcode.options.selectedIndex, 4) + this.createBinaryString(_operand.options.selectedIndex,4))
-        //console.log(this._lineLabels)
+        console.log(this._lineLabels)
     }
 
     private updateSelectOptionsForAddresses() {
@@ -385,12 +400,19 @@ export class AssemblerEditor {
         })
     }
 
-    private computeOperand(opCode: string, linecode: HTMLLIElement, operandSelect: HTMLSelectElement) {
-        let lineNumber = 0
-        if (linecode.parentElement != null) {
+    private getLineCodeNumber(linecodeLi: HTMLLIElement) {
+        let lineNumber = -1
+        if (linecodeLi != null) {
+            if (linecodeLi.parentElement != null) {
             // The only way to get the index of the current line
-            lineNumber = [...linecode.parentElement.children].indexOf(linecode)
+                lineNumber = [...linecodeLi.parentElement.children].indexOf(linecodeLi)
+            }
         }
+        return lineNumber
+    }
+
+    private computeOperand(opCode: string, linecodeLi: HTMLLIElement, operandSelect: HTMLSelectElement) {
+        const lineNumber = this.getLineCodeNumber(linecodeLi)
 
         // We must remove options list of select
         while (operandSelect.firstChild && operandSelect.lastChild != null) {
@@ -407,35 +429,31 @@ export class AssemblerEditor {
  */
         if (goToOpCode.includes(opCode)) {
             if(goToUpOpCode.includes(opCode)) {
-                console.log(this._program.length - lineNumber)
                 for (let i = ((lineNumber < 15)? lineNumber: 15); i > -1; i--) {
-                    console.log(i)
-                    if (this._lineLabels[i].lineNumber != i - 1) {
+                    console.log(i+1, " * ", this._lineLabels[i].lineNumber)
+                    if (this._lineLabels[i].labelName == (i + 1).toString()) {
                         option(
                             //cls(`.operandvalue${lineNumber.toString()}`),
                             i.toString(),
                             value(i.toString())
                         ).applyTo(operandSelect)
-                    }
-                    /*else {
+                    } else {
                         option(cls("operandvalue"), this._lineLabels[i].labelName, value(this._lineLabels[i].labelName)).applyTo(operandSelect)
-                    }*/
+                    }
                 }
             }
             else {
-                console.log(lineNumber)
                 for (let i = 0; i < this._program.length - lineNumber; i++) {
-                    console.log(this._lineLabels[i + lineNumber].lineNumber)
-                    if (this._lineLabels[i + lineNumber].lineNumber != i + lineNumber - 1) {
+                    console.log(i+1, " * ", this._lineLabels[i].lineNumber)
+                    if (this._lineLabels[i].labelName == (i + 1).toString()) {
                         option(
                             //cls(`.operandvalue${lineNumber.toString()}`),
                             i.toString(),
                             value(i.toString())
                         ).applyTo(operandSelect)
-                    }
-                    /*else {
+                    } else {
                         option(cls("operandvalue"), this._lineLabels[i].labelName, value(this._lineLabels[i].labelName)).applyTo(operandSelect)
-                    }*/
+                    }
                 }
             }
         } else {
