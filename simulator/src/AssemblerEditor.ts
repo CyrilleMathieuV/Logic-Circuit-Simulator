@@ -11,7 +11,6 @@ import {
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
 import { EditorSelection } from "./UIEventManager"
 import {CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
-import {Drawable, DrawableWithPosition} from "./components/Drawable"
 import {IconName, inlineIconSvgFor} from "./images"
 import {
     button,
@@ -33,11 +32,9 @@ import {
     draggable,
     id, applyModifiersTo, input, applyModifierTo, selected, disabled, hidden, maxlength,
 } from "./htmlgen"
-import {ComponentList} from "./ComponentList"
-import {Node} from "./components/Node";
-import {ROM} from "./components/ROM";
-import {RAM} from "./components/RAM";
-import {Component} from "./components/Component";
+import { ROM } from "./components/ROM";
+import { RAM } from "./components/RAM";
+import { Component } from "./components/Component";
 
 // sources
 // https://web.dev/drag-and-drop/
@@ -70,21 +67,12 @@ type Instruction = {
     operand: number
 }
 
-type IsNever<T> = [T] extends [never] ? true : false
-
-type IsAValue<Obj, Str extends string> = IsNever<{
-    [Prop in keyof Obj]: Str extends Obj[Prop] ? Str : never
-}[keyof Obj]> extends false ? true : false
-
 const goToOpCode = ["GDW", "GUP", "JIZ", "JIC"] as string[]
 const goToUpOpCode = ["GUP"] as string[]
-const noOperantOpCode = ["NOP", "DEC", "HLT"] as string[]
+const noOperandOpCode = ["NOP", "DEC", "HLT"] as string[]
 
 export class AssemblerEditor {
     public editor: LogicEditor
-    //public readonly _program: HTMLUListElement
-    //public readonly _htmlLine: HTMLElement[]
-
 
     private readonly mainDiv: HTMLDivElement
 
@@ -101,11 +89,8 @@ export class AssemblerEditor {
 
     private readonly programDiv: HTMLDivElement
     private readonly programOl: HTMLOListElement
-    //private readonly addInstructionButton: HTMLButtonElement
 
     private _dragSrcEl : HTMLLIElement | null = null
-    //private _addLineButton : HTMLButtonElement
-    //private sourceCodeDiv : HTMLDivElement
 
     private _addressBusNumBits = 8
 
@@ -114,7 +99,7 @@ export class AssemblerEditor {
     private _program : Instruction[]
     private _lineLabels : string[]
 
-    private _ROMRAMsList : Component[] | null = null
+    private _ROMRAMsList : Component[]
 
     public constructor(editor: LogicEditor) {
         this.editor = editor
@@ -128,8 +113,6 @@ export class AssemblerEditor {
         this._opcodes = CPUOpCodes
         this._program = []
         this._lineLabels = []
-        //this._program = []
-        //this.addInstructionButton = button()
 
         this.controlDivRAMROMSelect = select().render()
         option("none", value("none"), disabled).applyTo(this.controlDivRAMROMSelect)
@@ -195,41 +178,15 @@ export class AssemblerEditor {
 
         this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
 
-
         editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.mainDiv)
 
         this._dragSrcEl = this.editor.root.getElementById("instructionList") as HTMLLIElement
 
-        //this._addLineButton = button(i(cls("svgicon"), raw(inlineIconSvgFor("add"))),).render()
-        //this._addLineButton.addEventListener("click", this.editor.wrapHandler((handler) => {
-        //    this.addInstruction()
-        //}))
-        //editor.html.assemblerEditor.appendChild(this._addLineButton)
+        this.addLine()
 
-        //this._addLineButton = button(i(cls("svgicon"), raw(inlineIconSvgFor("add"))),).render()
-        //this._addLineButton.addEventListener("click", this.editor.wrapHandler((handler) => {
-        //    this.addInstruction()
-        //}))
-        //editor.html.assemblerEditor.appendChild(this._addLineButton)
-        // Very important to get events
-        this.addInstruction()
-        //this.initiateLineContent()
-        // Very important to get events
-        //this.setListener()
-        //this.generateSourceCode()
-    }
+        // Very important to get events ?
+        // this.setListener()
 
-    public setActiveLines(selector: string) {
-        this.getNodesList(selector).forEach(item  => {
-            setActive(item, true)
-        })
-    }
-
-    private removeInstruction(linecodeLi: HTMLLIElement) {
-        if (linecodeLi.parentNode != null) {
-            linecodeLi.parentNode.removeChild(linecodeLi)
-        }
-        this.generateBrutSourceCode()
     }
 
     private getRAMROMList() {
@@ -297,7 +254,7 @@ export class AssemblerEditor {
     private reDrawProgram(program: Instruction[]) {
         this.removeAllChildren(this.programOl)
         for (let _i = 0; _i < program.length; _i++) {
-            this.addInstruction(undefined, undefined, program)
+            this.addLine(undefined, undefined)
         }
     }
 
@@ -347,202 +304,22 @@ export class AssemblerEditor {
         return cells
     }
 
-
-    private addInstruction(previousLinecodeLi?: HTMLLIElement, aboveCurrentLinecode?: boolean, program?: Instruction[]) {
+    private addLine(previousLinecodeLi?: HTMLLIElement, aboveCurrentLinecode?: boolean) {
         if (this._program.length < 2 ** this._addressBusNumBits ) {
-            let lineNumber = -1
-            if (previousLinecodeLi != undefined) {
-                lineNumber = this.getLineCodeNumber(previousLinecodeLi)
-            }
-
-            let labelNameValue: string = ""
-            let opCodeValue = 0
-            let operandValue = 0
-
-            if (program != null) {
-                console.log(lineNumber)
-                labelNameValue = program[lineNumber + 1].labelName
-                opCodeValue = program[lineNumber + 1].opCode
-                operandValue = program[lineNumber + 1].operand
-            }
-
-            const labelInput = input(
-                cls("label"),
-                maxlength("8"),
-                value(labelNameValue),
-                //id(`label${lineNumber.toString()}`)
-            ).render()
-            const labelInputDiv = div(
-                cls("labelDiv"),
-                //id(`divLabelInput${lineNumber.toString()}`),
-                labelInput
-            ).render()
-
-            const opCodeSelect = select(
-                //id(`opcodes${lineNumber.toString()}`)
-                cls("opcode"),
-            ).render()
-            for (let opCode of this._opcodes) {
-                option(cls("opcodevalue"), opCode, value(opCode)).applyTo(opCodeSelect)
-            }
-            const opCodeDiv = div(
-                //id(`opcode${lineNumber.toString()}`),
-                cls("opCodeDiv"),
-                opCodeSelect
-            ).render()
-
-            const operandSelect = select(
-                cls("operand"),
-                //id(`operands${lineNumber.toString()}`)
-            ).render()
-            /*
-            for (let _i = 0; _i < 16; _i++) {
-                option(
-                    //cls(`operandvalue${lineNumber}`),
-                    _i.toString(),
-                    value(_i.toString())
-                ).applyTo(operandSelect)
-            }
-            */
-            const operandDiv = div(
-                //id(`operand${lineNumber.toString()}`),
-                cls("operandDiv"),
-                operandSelect
-            ).render()
-
-            const deleteButton = button(
-                i(cls("svgicon"),
-                    raw(inlineIconSvgFor("trash"))),
-                style("height:25px; width:25px; padding:0; align-items: center;")
-            ).render()
-
-            const addAboveButton = button(
-                i(cls("svgicon"), raw(inlineIconSvgFor("arrowcircleup"))),
-                style("height:25px; width:25px; padding:0; align-items: center;")
-            ).render()
-
-            const addBelowButton = button(
-                i(cls("svgicon"), raw(inlineIconSvgFor("arrowcircledown"))),
-                style("height:25px; width:25px; padding:0; align-items: center;")
-            ).render()
-
-            const linecodeDiv = div(
-                cls("linecodeDiv"),
-                //draggable,
-                //id(`grid${lineNumber.toString()}`),
-                labelInputDiv,
-                opCodeDiv,
-                operandDiv,
-                deleteButton,
-                addAboveButton,
-                addBelowButton
-            ).render()
-
-            const linecodeLi = li(
-                cls("linecode"),
-                style("color: #ffffff;"),
-                //value(lineNumber),
-                draggable,
-                //id(`line${lineNumber.toString()}`),
-                linecodeDiv
-            ).render()
-
-            opCodeSelect.value = CPUOpCodes[opCodeValue]
-            operandSelect.value = operandValue.toString()
-
-            this.computeOperand(CPUOpCodes[opCodeValue], linecodeLi, operandSelect)
-
-            deleteButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-                this.removeInstruction(linecodeLi)
-            }))
-
-            addAboveButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-                this.addInstruction(linecodeLi, true)
-            }))
-
-            addBelowButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-                this.addInstruction(linecodeLi, false)
-            }))
-
-            labelInput.addEventListener('input', this.editor.wrapHandler((handler) => {
-                //localStorage.setItem(`opcodes${this.getLineCodeNumber(linecodeLi).toString()}`, labelInput.value)
-                //const labelValue = localStorage.getItem(`opcodes${this.getLineCodeNumber(linecodeLi).toString()}`)
-                this.handleLabelInputChange(linecodeLi, labelInput)
-                //applyModifierTo(labelInput, value(labelInput.value))
-                //this.generateBrutSourceCode()
-                //const labelValue = localStorage.getItem(labelInput.id)
-                //console.log(labelValue)
-            }))
-            /*
-            labelInput.addEventListener('dragend', this.editor.wrapHandler((handler) => {
-                const labelValue = localStorage.getItem(labelInput.id)
-                console.log(labelValue)
-                //labelInput.setAttribute("innerText", (labelValue != null)? labelValue : "")
-                applyModifierTo(labelInput, value(labelValue))
-            }))
-            */
-            opCodeSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
-                applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected)
-                this.computeOperand(opCodeSelect.value, linecodeLi, operandSelect)
-                this.generateBrutSourceCode()
-            }))
-
-            opCodeSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
-                applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected)
-                //console.log(linecodeLi.value)
-                this.computeOperand(opCodeSelect.value, linecodeLi, operandSelect)
-                this.generateBrutSourceCode()
-                //console.log("You selected: ", selectOpCode.value)
-                //selectOpCode.value
-            }))
-
-            operandSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
-                applyModifierTo(operandSelect.options[operandSelect.options.selectedIndex], selected)
-                this.generateBrutSourceCode()
-            }))
-
-            operandSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
-                applyModifierTo(operandSelect.options[operandSelect.options.selectedIndex], selected)
-                //console.log("You selected: ", operandSelect.value)
-                this.generateBrutSourceCode()
-                //selectOperand.value
-            }))
-
-            linecodeLi.addEventListener("click", this.editor.wrapHandler((handler) => {
-                applyModifierTo(linecodeLi, selected)
-                // TO DO FOR INSERTING ?
-            }))
-            linecodeLi.addEventListener("dragstart", this.editor.wrapHandler((handler) => {
-                this.handleDragStart(handler, linecodeLi)
-                //console.log("s",this._dragSrcEl)
-            }))
-            linecodeLi.addEventListener("dragend", this.editor.wrapHandler((handler) => {
-                this.handleDragEnd(handler, linecodeLi)
-            }))
-            linecodeLi.addEventListener("dragover", this.editor.wrapHandler((handler) => {
-                this.handleDragOver(handler)
-            }))
-            linecodeLi.addEventListener("dragenter", this.editor.wrapHandler((handler) => {
-                this.handleDragEnter(handler, linecodeLi)
-            }))
-            linecodeLi.addEventListener("dragleave", this.editor.wrapHandler((handler) => {
-                this.handleDragLeave(handler, linecodeLi)
-            }))
-            linecodeLi.addEventListener("drop", this.editor.wrapHandler((handler) => {
-                this.handleDrop(handler, linecodeLi, labelInput)
-            }))
+            const line = this.makeLine()
+            const lineNumber = this.getLineNumber(previousLinecodeLi)
 
             if (lineNumber < 0) {
-                this.programOl.appendChild(linecodeLi)
+                this.programOl.appendChild(line)
             } else {
                 if (aboveCurrentLinecode != undefined) {
                     if (aboveCurrentLinecode) {
-                        this.programOl.insertBefore(linecodeLi, this.programOl.childNodes[lineNumber])
+                        this.programOl.insertBefore(line, this.programOl.childNodes[lineNumber])
                     } else {
                         if (this.programOl.childNodes[lineNumber].nextSibling != null) {
-                            this.programOl.insertBefore(linecodeLi, this.programOl.childNodes[lineNumber])
+                            this.programOl.insertBefore(line, this.programOl.childNodes[lineNumber])
                         } else {
-                            this.programOl.appendChild(linecodeLi)
+                            this.programOl.appendChild(line)
                         }
                     }
                 }
@@ -551,6 +328,168 @@ export class AssemblerEditor {
             this.generateBrutSourceCode()
         }
     }
+
+    private makeLine(): HTMLLIElement {
+        const labelInput = input(
+            cls("label"),
+            maxlength("8"),
+        ).render()
+        const labelInputDiv = div(
+            cls("labelDiv"),
+            labelInput
+        ).render()
+
+        const opCodeSelect = select(
+            cls("opcode"),
+        ).render()
+        for (let opCode of this._opcodes) {
+            option(cls("opcodevalue"), opCode, value(opCode)).applyTo(opCodeSelect)
+        }
+        const opCodeDiv = div(
+            cls("opCodeDiv"),
+            opCodeSelect
+        ).render()
+
+        const operandSelect = select(
+            cls("operand"),
+        ).render()
+        const operandDiv = div(
+            //id(`operand${lineNumber.toString()}`),
+            cls("operandDiv"),
+            operandSelect
+        ).render()
+
+        const deleteButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("trash"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+
+        const addAboveButton = button(
+            i(cls("svgicon"), raw(inlineIconSvgFor("arrowcircleup"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+
+        const addBelowButton = button(
+            i(cls("svgicon"), raw(inlineIconSvgFor("arrowcircledown"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+
+        const linecodeDiv = div(
+            cls("linecodeDiv"),
+            //draggable,
+            //id(`grid${lineNumber.toString()}`),
+            labelInputDiv,
+            opCodeDiv,
+            operandDiv,
+            deleteButton,
+            addAboveButton,
+            addBelowButton
+        ).render()
+
+        const linecodeLi = li(
+            cls("linecode"),
+            style("color: #ffffff;"),
+            draggable,
+            linecodeDiv
+        ).render()
+
+        deleteButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            this.removeLine(linecodeLi)
+        }))
+
+        addAboveButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            this.addLine(linecodeLi, true)
+        }))
+
+        addBelowButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            this.addLine(linecodeLi, false)
+        }))
+
+        labelInput.addEventListener('input', this.editor.wrapHandler((handler) => {
+            this.handleLabelInputChange(linecodeLi, labelInput)
+        }))
+
+        opCodeSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
+            applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected)
+            this.computeLineOperand(opCodeSelect.value, linecodeLi, operandSelect)
+            this.generateBrutSourceCode()
+        }))
+
+        opCodeSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
+            applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected)
+            this.computeLineOperand(opCodeSelect.value, linecodeLi, operandSelect)
+            this.generateBrutSourceCode()
+        }))
+
+        operandSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
+            applyModifierTo(operandSelect.options[operandSelect.options.selectedIndex], selected)
+            this.generateBrutSourceCode()
+        }))
+
+        operandSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
+            applyModifierTo(operandSelect.options[operandSelect.options.selectedIndex], selected)
+            //console.log("You selected: ", operandSelect.value)
+            this.generateBrutSourceCode()
+            //selectOperand.value
+        }))
+
+        linecodeLi.addEventListener("click", this.editor.wrapHandler((handler) => {
+            applyModifierTo(linecodeLi, selected)
+            // TO DO FOR INSERTING ?
+        }))
+        linecodeLi.addEventListener("dragstart", this.editor.wrapHandler((handler) => {
+            this.handleDragStart(handler, linecodeLi)
+            //console.log("s",this._dragSrcEl)
+        }))
+        linecodeLi.addEventListener("dragend", this.editor.wrapHandler((handler) => {
+            this.handleDragEnd(handler, linecodeLi)
+        }))
+        linecodeLi.addEventListener("dragover", this.editor.wrapHandler((handler) => {
+            this.handleDragOver(handler)
+        }))
+        linecodeLi.addEventListener("dragenter", this.editor.wrapHandler((handler) => {
+            this.handleDragEnter(handler, linecodeLi)
+        }))
+        linecodeLi.addEventListener("dragleave", this.editor.wrapHandler((handler) => {
+            this.handleDragLeave(handler, linecodeLi)
+        }))
+        linecodeLi.addEventListener("drop", this.editor.wrapHandler((handler) => {
+            this.handleDrop(handler, linecodeLi, labelInput)
+        }))
+
+        return linecodeLi
+    }
+
+    private updateLine() {
+        let labelNameValue: string = ""
+        let opCodeValue = 0
+        let operandValue = 0
+
+        if (program != null) {
+            console.log(lineNumber)
+            labelNameValue = program[lineNumber + 1].labelName
+            opCodeValue = program[lineNumber + 1].opCode
+            operandValue = program[lineNumber + 1].operand
+        }
+    }
+
+    private removeLine(line: HTMLLIElement) {
+        if (line.parentNode != null) {
+            line.parentNode.removeChild(line)
+        }
+        this.generateBrutSourceCode()
+    }
+
+    private getLineNumber(previousLinecodeLi: HTMLLIElement | undefined) {
+        let lineNumber = -1
+        if (previousLinecodeLi != undefined) {
+            lineNumber = this.getLineCodeNumber(previousLinecodeLi)
+        }
+        return lineNumber
+    }
+
+
 
 
     public getNodesList(selector: string) : NodeListOf<HTMLElement> {
@@ -580,12 +519,6 @@ export class AssemblerEditor {
         //setTimeout(() => elem.classList.add("dragging"), 0)
         elem.style.opacity = "0.4"
         this._dragSrcEl = elem
-        /*
-        if (evt.dataTransfer !== null) {
-            evt.dataTransfer.effectAllowed = 'move'
-            evt.dataTransfer.setData('text/html', elem.innerHTML)
-        }
-        */
         this.getNodesList(".linecode").forEach(item => {
             if (this._dragSrcEl != item) {
                 item.classList.add('hint')
@@ -595,7 +528,6 @@ export class AssemblerEditor {
 
     private handleDragEnd(evt: DragEvent, elem: HTMLLIElement) {
         elem.style.opacity = "1"
-        //applyModifierTo(labelInput, value(labelValue))
         this.getNodesList(".linecode").forEach(item => {
             item.classList.remove("hint")
             item.classList.remove("active")
@@ -668,7 +600,6 @@ export class AssemblerEditor {
         //.log(this._lineLabels)
     }
 
-
     private updateSelectOptionsForAddresses() {
         if (this.getNodesList(".linecode") != null) {
             this.getNodesList(".linecode").forEach(item => {
@@ -681,7 +612,7 @@ export class AssemblerEditor {
 
                     const opcode = this._opcodes[_opcode.options.selectedIndex]
 
-                    this.computeOperand(opcode, itemLine, _operand)
+                    this.computeLineOperand(opcode, itemLine, _operand)
                 }
             })
         }
@@ -706,7 +637,7 @@ export class AssemblerEditor {
         return lineNumber
     }
 
-    private computeOperand(opCode: string, linecodeLi: HTMLLIElement, operandSelect: HTMLSelectElement) {
+    private computeLineOperand(opCode: string, linecodeLi: HTMLLIElement, operandSelect: HTMLSelectElement) {
         const lineNumber = this.getLineCodeNumber(linecodeLi)
         //console.log(lineNumber)
         // We must remove options list of select
@@ -714,15 +645,7 @@ export class AssemblerEditor {
             applyModifierTo(operandSelect, style("visibility: visible"))
             this.removeAllChildren(operandSelect)
         }
-        /*
-                console.log(operandsOfOperandSelect)
-                if (operandsOfOperandSelect != null) {
-                    operandSelect.getElementsByTagName("#option").forEach(item => {
-                        operandSelect.removeChild(item)
-                    })
-                }
 
-         */
         if ((goToOpCode.includes(opCode))) {
             if(goToUpOpCode.includes(opCode)) {
                 for (let _i = ((lineNumber < 15)? lineNumber : 15); _i > -1 ; _i--) {
@@ -755,7 +678,7 @@ export class AssemblerEditor {
                 }
             }
         } else {
-            if (!noOperantOpCode.includes(opCode)) {
+            if (!noOperandOpCode.includes(opCode)) {
                 for (let _i = 0; _i < 16; _i++) {
                     option(
                         //cls(`.operandvalue${lineNumber.toString()}`),
