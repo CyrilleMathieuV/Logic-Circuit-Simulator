@@ -10,11 +10,33 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)">
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/arrowdownward.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/arrowdropdown.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/arrowdropup.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/arrowupward.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/chipextraction.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/enable.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/inputcircle.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/keyboarddoublearrowdown.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/keyboarddoublearrowup.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/outputcircle.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/stat2.icon.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/img/icons/statminus2.icon.svg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/css/LogicEditor.css" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/css/LogicEditor.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/icons/_source.txt" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/icons/_source.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/icons/arrowcircledown.icon.svg" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/icons/arrowcircledown.icon.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/icons/arrowcircleup.icon.svg" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/icons/arrowcircleup.icon.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/icons/dimensions.icon.svg" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/icons/dimensions.icon.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/icons/none.icon.svg" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/icons/none.icon.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/icons/strokewidth.icon.svg" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/icons/strokewidth.icon.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/img/icons/wirestyle.icon.svg" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/icons/wirestyle.icon.svg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/ROM.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/ROM.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/images.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/images.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/strings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/strings.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -115,11 +137,11 @@
       <recent name="$PROJECT_DIR$/simulator/src/components" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/simulator/img/icons" />
       <recent name="$PROJECT_DIR$/simulator/src/components" />
       <recent name="$PROJECT_DIR$/simulator/img" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/tools" />
-      <recent name="$PROJECT_DIR$/simulator/img/icons" />
     </key>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
@@ -197,7 +219,8 @@
       <workItem from="1691487220220" duration="27650000" />
       <workItem from="1691531633226" duration="17000" />
       <workItem from="1691550594901" duration="26951000" />
-      <workItem from="1691607103051" duration="9493000" />
+      <workItem from="1691607103051" duration="9951000" />
+      <workItem from="1691641914008" duration="28994000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -324,14 +347,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00084" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690961183665</created>
-      <option name="number" value="00084" />
-      <option name="presentableId" value="LOCAL-00084" />
-      <option name="project" value="LOCAL" />
-      <updated>1690961183665</updated>
     </task>
     <task id="LOCAL-00085" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -573,7 +588,15 @@
       <option name="project" value="LOCAL" />
       <updated>1691613248746</updated>
     </task>
-    <option name="localTasksCounter" value="115" />
+    <task id="LOCAL-00115" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)">
+      <option name="closed" value="true" />
+      <created>1691617066718</created>
+      <option name="number" value="00115" />
+      <option name="presentableId" value="LOCAL-00115" />
+      <option name="project" value="LOCAL" />
+      <updated>1691617066718</updated>
+    </task>
+    <option name="localTasksCounter" value="116" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

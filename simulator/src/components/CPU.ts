@@ -40,7 +40,7 @@ import {
     DrawContext,
     DrawContextExt,
     GraphicsRendering,
-    MenuData,
+    MenuData, MenuItem, MenuItemPlacement,
     MenuItems,
     Orientation,
 } from "./Drawable"
@@ -145,6 +145,7 @@ export const CPUBaseDef =
             showOperands: typeOrUndefined(t.boolean),
             enablePipeline: typeOrUndefined(t.boolean),
             showClockCycle : typeOrUndefined(t.boolean),
+            addProgramRAM: typeOrUndefined(t.boolean),
             trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
             //extOpCode: typeOrUndefined(t.boolean),
         },
@@ -152,8 +153,9 @@ export const CPUBaseDef =
             showStage: true,
             showOpCode: true,
             showOperands: true,
-            enablePipeline: true,
+            enablePipeline: false,
             showClockCycle: true,
+            addProgramRAM: false,
             trigger: EdgeTrigger.falling,
         },
         params: {
@@ -288,6 +290,8 @@ export abstract class CPUBase<
 
     protected _showClockCycle: boolean
 
+    protected _addProgramRAM: boolean
+
     public _opCodeOperandsInStages : any
 
     protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef, params: CPUBaseParams, saved?: TRepr) {
@@ -308,6 +312,9 @@ export abstract class CPUBase<
         this._enablePipeline = saved?.enablePipeline ?? CPUDef.aults.enablePipeline
 
         this._showClockCycle = saved?.showClockCycle ?? CPUDef.aults.showClockCycle
+
+        this._addProgramRAM = saved?.addProgramRAM ?? CPUDef.aults.addProgramRAM
+
 
         this._trigger = saved?.trigger ?? CPUDef.aults.trigger
     }
@@ -376,6 +383,7 @@ export abstract class CPUBase<
             showOperands: (this._showOperands !== CPUDef.aults.showOperands) ? this._showOperands : undefined,
             enablePipeline: (this._enablePipeline !== CPUDef.aults.enablePipeline) ? this._enablePipeline : undefined,
             showClockCycle: (this._showClockCycle !== CPUDef.aults.showClockCycle) ? this._showClockCycle : undefined,
+            addProgramRAM: (this._addProgramRAM !== CPUDef.aults.addProgramRAM) ? this._addProgramRAM : undefined,
             trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
@@ -400,6 +408,11 @@ export abstract class CPUBase<
     private doSetShowClockCycle(showClockCycle: boolean) {
         this._showClockCycle = showClockCycle
         this.setNeedsRedraw("show clockCycle changed")
+    }
+
+    public doAddProgramRAM(addProgramRAM: boolean) {
+        this._addProgramRAM = addProgramRAM
+        this.setNeedsRedraw("show assembler editor changed")
     }
 
     private doSetEnablePipeline(enabalePipeline: boolean) {
@@ -440,6 +453,11 @@ export abstract class CPUBase<
             this.doSetShowClockCycle(!this._showClockCycle)
         })
 
+        const iconAddProgramRAM = this._addProgramRAM ? "add" : "none"
+        const toggleAddProgramRAMItem = MenuData.item(iconAddProgramRAM, s.toggleAddProgramRAM, () => {
+            this.doAddProgramRAM(!this._addProgramRAM)
+        })
+
         return [
             ["mid", toggleShowStageItem],
             ...toggleShowOpCodeItem,
@@ -448,6 +466,8 @@ export abstract class CPUBase<
             ["mid", toggleEnablePipelineItem],
             ["mid", MenuData.sep()],
             ["mid", toggleShowClockCycleItem],
+            ["mid", MenuData.sep()],
+            ["mid", toggleAddProgramRAMItem],
             ["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
             ...this.makeCPUSpecificContextMenuItems(),
@@ -1260,6 +1280,11 @@ ISA5
             }
             this.doDrawGenericCaption(g, ctx)
         })
+        if (this._addProgramRAM) {
+
+        } else {
+
+        }
     }
 
     protected override doDrawGenericCaption(g: GraphicsRendering, ctx: DrawContextExt) {

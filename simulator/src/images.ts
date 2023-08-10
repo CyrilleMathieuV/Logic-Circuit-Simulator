@@ -21,6 +21,7 @@ import edit from '../img/icons/edit.icon.svg'; // @ts-ignore
 import eye from '../img/icons/eye.icon.svg'; // @ts-ignore
 import font from '../img/icons/font.icon.svg'; // @ts-ignore
 import force from '../img/icons/force.icon.svg'; // @ts-ignore
+import inputcircle from '../img/icons/inputcircle.icon.svg'; // @ts-ignore
 import inputs from '../img/icons/inputs.icon.svg'; // @ts-ignore
 import link from '../img/icons/link.icon.svg'; // @ts-ignore
 import memcontent from '../img/icons/memcontent.icon.svg'; // @ts-ignore
@@ -30,6 +31,7 @@ import move from '../img/icons/move.icon.svg'; // @ts-ignore
 import newcomponent from '../img/icons/newcomponent.icon.svg'; // @ts-ignore
 import none from '../img/icons/none.icon.svg'; // @ts-ignore
 import open from '../img/icons/open.icon.svg'; // @ts-ignore
+import outputcircle from '../img/icons/outputcircle.icon.svg'; // @ts-ignore
 import outputs from '../img/icons/outputs.icon.svg'; // @ts-ignore
 import palette from '../img/icons/palette.icon.svg'; // @ts-ignore
 import pause from '../img/icons/pause.icon.svg'; // @ts-ignore
@@ -142,6 +144,7 @@ const icons = {
     eye,
     font,
     force,
+    inputcircle,
     inputs,
     link,
     memcontent,
@@ -151,6 +154,7 @@ const icons = {
     newcomponent,
     none,
     open,
+    outputcircle,
     outputs,
     palette,
     pause,
