@@ -247,6 +247,7 @@ export class AssemblerEditor {
     }
 
     private downloadFromMemRAMROM(SelectedRAMROMRef: string) {
+        this._lineLabels = []
         let programMem: string[] = []
         if (this._ROMRAMsList != undefined) {
             const SelectedRAMROM = this._ROMRAMsList.find((comp) => comp.ref == SelectedRAMROMRef)
@@ -271,21 +272,25 @@ export class AssemblerEditor {
 
         for (let _i = 0; _i < program.length; _i++) {
             let instruction = program[_i]
+            let lineLabel = ""
             if ((goToOpCode.includes(CPUOpCodes[instruction.opCode]))) {
                 if(goToUpOpCode.includes(CPUOpCodes[instruction.opCode])) {
                     let labelLineNumber = (_i + 1) - instruction.operand
                     if (labelLineNumber < 1) {
                         labelLineNumber += program.length
                     }
-                    program[labelLineNumber - 1].labelName = "line " + labelLineNumber.toString()
+                    lineLabel = "line " + labelLineNumber.toString()
+                    program[labelLineNumber - 1].labelName = lineLabel
                 } else {
                     let labelLineNumber = (_i + 1) + instruction.operand
                     if (labelLineNumber > program.length) {
                         labelLineNumber += - program.length
                     }
-                    program[labelLineNumber - 1].labelName = "line " + labelLineNumber.toString()
+                    lineLabel = "line " + labelLineNumber.toString()
+                    program[labelLineNumber - 1].labelName = lineLabel
                 }
             }
+            this._lineLabels[_i] = lineLabel
         }
 
         this.reDrawProgram(program)
@@ -514,10 +519,6 @@ export class AssemblerEditor {
 
                 applyModifierTo(labelInput, value(labelNameValue))
                 //this.updateSelectOptionsForAddresses()
-            })
-            this.getNodesList(".linecode").forEach(item => {
-                this.updateSelectOptionsForAddresses()
-                const lineNumber = this.getLineNumber(item as HTMLLIElement)
 
                 const opCodeSelectedValue = program[lineNumber].opCode
 
@@ -531,35 +532,23 @@ export class AssemblerEditor {
                 applyModifierTo(opCodeSelect, selectedIndex(opCodeSelectedValue.toString()))
                 applyModifierTo(opCodeSelectedOption, selected(""))
 
-                this.updateSelectOptionsForAddresses()
-            })
-            this.getNodesList(".linecode").forEach(item => {
-                this.updateSelectOptionsForAddresses()
-                const lineNumber = this.getLineNumber(item as HTMLLIElement)
-
-                const operandSelectedValue = program[lineNumber].operand
+                const operandSelectedValue = program[lineNumber].opCode
 
                 const operandSelect = item.getElementsByClassName("operand")[0] as HTMLSelectElement
-                const operandOptions = operandSelect.querySelectorAll(".operandvalue") as NodeListOf<HTMLOptionElement>
-                console.log(operandOptions)
-                for(let operandOption of operandOptions) {
-                    operandOption.removeAttribute("selected")
-                }
-                /*
-                for(let _i = 0; _i < 16; _i++) {
-                    option(
-                        cls("operandvalue"),
-                        _i.toString(),
-                        value(_i.toString())
-                    ).applyTo(operandSelect)
-                }
-                */
-                const operandSelectedOption = operandOptions[operandSelectedValue] as HTMLOptionElement
 
-                applyModifierTo(operandSelect, selectedIndex(operandSelectedValue.toString()))
-                applyModifierTo(operandSelectedOption, selected(""))
+                this.computeLineOperand(CPUOpCodes[opCodeSelectedValue], item as HTMLLIElement, operandSelect)
+// TO FIX
+                if (!goToOpCode.includes(CPUOpCodes[opCodeSelectedValue]) && !noOperandOpCode.includes(CPUOpCodes[opCodeSelectedValue])) {
+                    const operandOptions = operandSelect.querySelectorAll(".operandvalue") as NodeListOf<HTMLOptionElement>
+                    for (let operandOption of operandOptions) {
+                        operandOption.removeAttribute("selected")
+                    }
 
-                this.updateSelectOptionsForAddresses()
+                    const operandSelectedOption = operandOptions[operandSelectedValue] as HTMLOptionElement
+
+                    applyModifierTo(operandSelect, selectedIndex(operandSelectedValue.toString()))
+                    applyModifierTo(operandSelectedOption, selected(""))
+                }
             })
             this.updateSelectOptionsForAddresses()
         }
