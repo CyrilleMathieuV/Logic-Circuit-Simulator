@@ -233,6 +233,7 @@ export abstract class ROMRAMBase<TRepr extends ROMRAMRepr> extends ParametrizedC
         this.setNeedsRedraw("additional display radix changed")
     }
 
+    // Need to be public for the Assembler Editor
     public doSetMem(mem: LogicValue[][]) {
         const addr = this.currentAddress()
         const out = isUnknown(addr) ? ArrayFillWith(Unknown, this.numDataBits) : mem[addr]
