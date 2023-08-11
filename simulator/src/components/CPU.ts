@@ -901,7 +901,7 @@ ISA5
         this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
 
         const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
-        console.log(_operandsDataSelectValueIndex)
+        //console.log(_operandsDataSelectValueIndex)
         let _operandsData : LogicValue[]
         if (_operandsDataSelectValueIndex === 0) {
             _operandsData = this._operandsValue
