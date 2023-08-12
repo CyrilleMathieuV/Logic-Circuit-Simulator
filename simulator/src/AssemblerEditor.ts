@@ -370,7 +370,7 @@ export class AssemblerEditor {
                 }
 
             }
-            this.updateSelectOptionsForAddresses()
+            this.updateSelectOptionsForAddresses(true)
             this.generateBrutSourceCode()
         }
     }
@@ -457,13 +457,13 @@ export class AssemblerEditor {
 
         opCodeSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
             applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected(""))
-            this.computeLineOperand(opCodeSelect.value, linecodeLi, operandSelect)
+            this.computeLineOperand(opCodeSelect.value, linecodeLi, operandSelect, true)
             this.generateBrutSourceCode()
         }))
 
         opCodeSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
             applyModifierTo(opCodeSelect.options[opCodeSelect.options.selectedIndex], selected(""))
-            this.computeLineOperand(opCodeSelect.value, linecodeLi, operandSelect)
+            this.computeLineOperand(opCodeSelect.value, linecodeLi, operandSelect, true)
             this.generateBrutSourceCode()
         }))
 
@@ -514,29 +514,24 @@ export class AssemblerEditor {
                 const lineNumber = this.getLineNumber(item as HTMLLIElement)
 
                 const labelNameValue = program[lineNumber].labelName
-
                 const labelInput = item.getElementsByClassName("label")[0] as HTMLInputElement
-
                 applyModifierTo(labelInput, value(labelNameValue))
                 //this.updateSelectOptionsForAddresses()
 
                 const opCodeSelectedValue = program[lineNumber].opCode
-
                 const opCodeSelect = item.getElementsByClassName("opcode")[0] as HTMLSelectElement
                 const opCodeOptions = opCodeSelect.querySelectorAll(".opcodevalue") as NodeListOf<HTMLOptionElement>
                 for(let opCodeOption of opCodeOptions) {
                     opCodeOption.removeAttribute("selected")
                 }
                 const opCodeSelectedOption = opCodeOptions[opCodeSelectedValue] as HTMLOptionElement
-
                 applyModifierTo(opCodeSelect, selectedIndex(opCodeSelectedValue.toString()))
                 applyModifierTo(opCodeSelectedOption, selected(""))
 
-                const operandSelectedValue = program[lineNumber].opCode
-
+                const operandSelectedValue = program[lineNumber].operand
                 const operandSelect = item.getElementsByClassName("operand")[0] as HTMLSelectElement
 
-                this.computeLineOperand(CPUOpCodes[opCodeSelectedValue], item as HTMLLIElement, operandSelect)
+                this.computeLineOperand(CPUOpCodes[opCodeSelectedValue], item as HTMLLIElement, operandSelect, false)
 // TO FIX
                 if (!goToOpCode.includes(CPUOpCodes[opCodeSelectedValue]) && !noOperandOpCode.includes(CPUOpCodes[opCodeSelectedValue])) {
                     const operandOptions = operandSelect.querySelectorAll(".operandvalue") as NodeListOf<HTMLOptionElement>
@@ -550,7 +545,7 @@ export class AssemblerEditor {
                     applyModifierTo(operandSelectedOption, selected(""))
                 }
             })
-            this.updateSelectOptionsForAddresses()
+            this.updateSelectOptionsForAddresses(true)
         }
     }
 
@@ -558,7 +553,7 @@ export class AssemblerEditor {
         if (line.parentNode != null && line.parentNode.childElementCount > 1) {
             line.parentNode.removeChild(line)
         }
-        this.updateSelectOptionsForAddresses()
+        this.updateSelectOptionsForAddresses(true)
         this.generateBrutSourceCode()
     }
 
@@ -589,7 +584,7 @@ export class AssemblerEditor {
             }
         }
         applyModifierTo(labelInput, value(labelInputValue))
-        this.updateSelectOptionsForAddresses()
+        this.updateSelectOptionsForAddresses(true)
         this.generateBrutSourceCode()
     }
 
@@ -646,7 +641,7 @@ export class AssemblerEditor {
             }
         }
         this.generateBrutSourceCode()
-        this.updateSelectOptionsForAddresses()
+        this.updateSelectOptionsForAddresses(true)
         return false
     }
 
@@ -678,7 +673,7 @@ export class AssemblerEditor {
         //.log(this._lineLabels)
     }
 
-    private updateSelectOptionsForAddresses() {
+    private updateSelectOptionsForAddresses(onlyGoto: boolean) {
         if (this.getNodesList(".linecode") != null) {
             this.getNodesList(".linecode").forEach(item => {
                 if (item != null) {
@@ -690,7 +685,7 @@ export class AssemblerEditor {
 
                     const opcode = this._opcodes[_opcode.options.selectedIndex]
 
-                    this.computeLineOperand(opcode, itemLine, _operand)
+                    this.computeLineOperand(opcode, itemLine, _operand, onlyGoto)
                 }
             })
         }
@@ -715,16 +710,16 @@ export class AssemblerEditor {
         return lineNumber
     }
 
-    private computeLineOperand(opCode: string, linecodeLi: HTMLLIElement, operandSelect: HTMLSelectElement) {
+    private computeLineOperand(opCode: string, linecodeLi: HTMLLIElement, operandSelect: HTMLSelectElement, onlyGoTo: boolean) {
         const lineNumber = this.getLineCodeNumber(linecodeLi)
         //console.log(lineNumber)
         // We must remove options list of select
-        if (operandSelect != null) {
-            applyModifierTo(operandSelect, style("visibility: visible"))
-            this.removeAllChildren(operandSelect)
-        }
 
         if ((goToOpCode.includes(opCode))) {
+            if (operandSelect != null) {
+                applyModifierTo(operandSelect, style("visibility: visible"))
+                this.removeAllChildren(operandSelect)
+            }
             if(goToUpOpCode.includes(opCode)) {
                 for (let _i = ((lineNumber < 15)? lineNumber : 15); _i > -1 ; _i--) {
                     if (this._lineLabels[lineNumber - _i + 1] == (lineNumber - _i + 1).toString()) {
@@ -756,23 +751,29 @@ export class AssemblerEditor {
                 }
             }
         } else {
-            if (!noOperandOpCode.includes(opCode)) {
-                for (let _i = 0; _i < 16; _i++) {
+            if (!onlyGoTo) {
+                if (operandSelect != null) {
+                    applyModifierTo(operandSelect, style("visibility: visible"))
+                    this.removeAllChildren(operandSelect)
+                }
+                if (!noOperandOpCode.includes(opCode)) {
+                    for (let _i = 0; _i < 16; _i++) {
+                        option(
+                            cls("operandvalue"),
+                            _i.toString(),
+                            value(_i.toString())
+                        ).applyTo(operandSelect)
+                    }
+                } else {
                     option(
                         cls("operandvalue"),
-                        _i.toString(),
-                        value(_i.toString())
+                        "0",
+                        value("0"),
+                        disabled,
+                        hidden,
                     ).applyTo(operandSelect)
+                    applyModifierTo(operandSelect, style("visibility: hidden"))
                 }
-            } else {
-                option(
-                    cls("operandvalue"),
-                    "0",
-                    value("0"),
-                    disabled,
-                    hidden,
-                ).applyTo(operandSelect)
-                applyModifierTo(operandSelect, style("visibility: hidden"))
             }
         }
         this.generateBrutSourceCode()
