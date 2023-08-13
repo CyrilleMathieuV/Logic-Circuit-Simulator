@@ -596,7 +596,7 @@ svg text {
   overflow-x: hidden;
 }
 
-.linecode  {
+.line  {
   border: 1px solid #000;
   background-color: #ddd;
   border-radius: .5em;
@@ -604,7 +604,7 @@ svg text {
   cursor: move;
 }
 
-.linecodeDiv {
+.lineDiv {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
   grid-gap: 5px;
