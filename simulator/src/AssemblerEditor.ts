@@ -657,6 +657,8 @@ export class AssemblerEditor {
         const operandSelectedOption = operandOptions[operandSelectedValue] as HTMLOptionElement
         applyModifierTo(operandSelect, selectedIndex(operandSelectedValue.toString()))
         applyModifierTo(operandSelectedOption, selected(""))
+
+        console.log(lineNumber, labelValue, opCodeSelectedValue, operandSelectedValue)
     }
 
     private updateLines() {
@@ -853,8 +855,9 @@ export class AssemblerEditor {
     private generateBrutSourceCode() {
         this._program = []
         this._lineLabels = []
-        if (this.programOl.getElementsByClassName("line") != null) {
-            const program = this.programOl.getElementsByClassName("line")
+        if (this.programOl.querySelectorAll(".line") != null) {
+            const program = this.programOl.querySelectorAll(".line")
+            console.log(program)
             //this.updateSelectOptionsForAddresses()
             for(let _i = 0; _i < program.length; _i++) {
                 const line = program[_i] as HTMLLIElement
@@ -863,12 +866,13 @@ export class AssemblerEditor {
                 const _opcode = line.querySelector(".opcode") as HTMLSelectElement
                 const _operand = line.querySelector(".operand") as HTMLSelectElement
 
-                const sourceCodeLine: Instruction = {
+                const instruction: Instruction = {
                     label : _label.value,
                     opCode : _opcode.options.selectedIndex,
                     operand :_operand.options.selectedIndex
                 }
-                this._program.push(sourceCodeLine)
+                console.log(instruction)
+                this._program.push(instruction)
             }
         }
         console.log("*",this._program)
@@ -972,7 +976,7 @@ export class AssemblerEditor {
             }
         }
         console.log("compute operand no generation")
-
+        console.log("**",this._program)
         //this.generateBrutSourceCode()
     }
 
