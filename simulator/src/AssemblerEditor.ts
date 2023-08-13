@@ -35,6 +35,7 @@ import {
     input,
     applyModifierTo,
     selected,
+    start,
     disabled,
     hidden,
     maxlength,
@@ -79,8 +80,7 @@ type Instruction = {
 
 const goToDownOpCode = ["GDW", "JIZ", "JIC"] as string[]
 const goToUpOpCode = ["GUP"] as string[]
-let goToOpCode: string[] = []
-goToOpCode.concat(goToDownOpCode, goToUpOpCode)
+let goToOpCode = goToDownOpCode.concat(goToUpOpCode)
 const noOperandOpCode = ["NOP", "DEC", "HLT"] as string[]
 
 export class AssemblerEditor {
@@ -215,7 +215,7 @@ export class AssemblerEditor {
             this.labelOperandDiv,
         ).render()
 
-        this.programOl = ol(cls(""), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 370px;")).render()
+        this.programOl = ol(cls(""), start("0"), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 370px;")).render()
         this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 390px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
         this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
@@ -281,20 +281,20 @@ export class AssemblerEditor {
             let lineLabel = ""
 
             if ((goToDownOpCode.includes(CPUOpCodes[instruction.opCode]))) {
-                let labelLineNumber = (_i + 1) + instruction.operand
+                let labelLineNumber = _i + instruction.operand
                 if (labelLineNumber > program.length) {
                     labelLineNumber += - program.length
                 }
                 lineLabel = "line " + labelLineNumber.toString()
-                program[labelLineNumber - 1].label = lineLabel
+                program[labelLineNumber].label = lineLabel
             }
             if(goToUpOpCode.includes(CPUOpCodes[instruction.opCode])) {
-                let labelLineNumber = (_i + 1) - instruction.operand
+                let labelLineNumber = _i - instruction.operand
                 if (labelLineNumber < 1) {
                     labelLineNumber += program.length
                 }
                 lineLabel = "line " + labelLineNumber.toString()
-                program[labelLineNumber - 1].label = lineLabel
+                program[labelLineNumber].label = lineLabel
             }
             this._lineLabels[_i] = lineLabel
         }
@@ -456,7 +456,6 @@ export class AssemblerEditor {
         const lineLi = li(
             cls("line"),
             style("color: #ffffff;"),
-
             draggable,
             lineDiv
         ).render()
@@ -485,6 +484,7 @@ export class AssemblerEditor {
 
         opCodeSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
             //this.handleOpCodeSelectChange(lineLi, opCodeSelect)
+            this.handleLineChanged(lineLi)
         }))
 
         operandSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
@@ -494,6 +494,7 @@ export class AssemblerEditor {
 
         operandSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
             //this.handleOperandSelectChange(lineLi, operandSelect)
+            this.handleLineChanged(lineLi)
         }))
 
         lineLi.addEventListener("click", this.editor.wrapHandler((handler) => {
@@ -553,42 +554,57 @@ export class AssemblerEditor {
                     applyModifierTo(newLabelInput, style("color: #000000;"))
                     this._program[lineNumber].label = newInstruction.label
                     applyModifierTo(newLabelInput, value(newInstruction.label))
-                    this.generateBrutSourceCode()
+                    //this.generateBrutSourceCode()
                     this.computeLinesOperand()
                 }
             }
         }
 
         if (newInstruction.opCode != this._program[lineNumber].opCode) {
-            if (goToOpCode.includes(CPUOpCodes[newInstruction.opCode])) {
-                if (!goToOpCode.includes(CPUOpCodes[this._program[lineNumber].opCode])) {
+            const newCPUOpCode = CPUOpCodes[newInstruction.opCode]
+            const CPUOpCode = CPUOpCodes[this._program[lineNumber].opCode]
+            if (goToOpCode.includes(newCPUOpCode)) {
+                if (!goToOpCode.includes(CPUOpCode)) {
                     this._program[lineNumber].operand = 0
                 }
             }
-            if (goToDownOpCode.includes(CPUOpCodes[newInstruction.opCode])) {
-                if (goToUpOpCode.includes(CPUOpCodes[this._program[lineNumber].opCode])) {
+            if (goToDownOpCode.includes(newCPUOpCode)) {
+                if (goToUpOpCode.includes(CPUOpCode)) {
                     this._program[lineNumber].operand = 0
                 }
             }
-            if (goToUpOpCode.includes(CPUOpCodes[newInstruction.opCode])) {
-                if (goToDownOpCode.includes(CPUOpCodes[this._program[lineNumber].opCode])) {
+            if (goToUpOpCode.includes(newCPUOpCode)) {
+                if (goToDownOpCode.includes(CPUOpCode)) {
                     this._program[lineNumber].operand = 0
                 }
             }
+            if (!goToOpCode.includes(newCPUOpCode)) {
+                if (goToOpCode.includes(CPUOpCode)) {
+                    this._program[lineNumber].operand = 0
+                    this.removeAllChildren(newOperandSelect)
+                    for (let _i = 0; _i < 16; _i++) {
+                        option(
+                            cls("operandvalue"),
+                            _i.toString(),
+                            value(_i.toString())
+                        ).applyTo(newOperandSelect)
+                    }
+                }
+            }
+
             this._program[lineNumber].opCode = newInstruction.opCode
             applyModifierTo(newOpCodeSelect.options[newOpCodeSelect.options.selectedIndex], selected(""))
-            this.generateBrutSourceCode()
-            this.computeLinesOperand()
+            //this.generateBrutSourceCode()
+            this.computeLineOperand(line)
         }
 
         if (newInstruction.operand != this._program[lineNumber].operand) {
             this._program[lineNumber].operand = newInstruction.operand
             applyModifierTo(newOperandSelect.options[newOperandSelect.options.selectedIndex], selected(""))
-            this.generateBrutSourceCode()
-            this.computeLinesOperand()
+            //this.generateBrutSourceCode()
+            this.computeLineOperand(line)
         }
     }
-
 
     private updateLine(line: HTMLLIElement) {
         const lineNumber = this.getLineNumber(line)
@@ -860,7 +876,7 @@ export class AssemblerEditor {
         if (goToOpCode.includes(CPUOpCode)) {
             this.removeAllChildren(operandSelect)
             if (goToUpOpCode.includes(CPUOpCode)) {
-                for (let _i = this._assemblerOperandLength ** 2 - 1; _i > -1; _i--) {
+                for (let _i = this._assemblerOperandLength ** 2 - 1; _i > 0; _i--) {
                     if (lineNumber - _i < 0) {
                         option(
                             cls("operandvalue"),
@@ -868,7 +884,7 @@ export class AssemblerEditor {
                         ).applyTo(operandSelect)
                     } else {
                         if (this._program[lineNumber - _i].label == "") {
-                            const operandvalue = "label " + (lineNumber - _i + 1).toString()
+                            const operandvalue = "label " + (lineNumber - _i).toString()
                             option(
                                 cls("operandvalue"),
                                 operandvalue,
@@ -887,10 +903,10 @@ export class AssemblerEditor {
                     }
                 }
             } else {
-                for (let _i = 0; _i < this._assemblerOperandLength ** 2; _i++) {
+                for (let _i = 1; _i < this._assemblerOperandLength ** 2; _i++) {
                     if (lineNumber + _i < this._program.length) {
                         if (this._program[lineNumber + _i].label == "") {
-                            const operandvalue = "label " + (lineNumber + _i + 1).toString()
+                            const operandvalue = "label " + (lineNumber + _i).toString()
                             option(
                                 cls("operandvalue"),
                                 operandvalue,

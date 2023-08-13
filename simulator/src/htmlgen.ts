@@ -153,9 +153,10 @@ export const id = attrBuilder("id")
 export const value = attrBuilder("value")
 export const maxlength = attrBuilder("maxlength")
 export const selected = attrBuilder("selected")
+export const selectedIndex = attrBuilder("selectedIndex")
+export const start = attrBuilder("start")
 export const disabled = attrBuilder("disabled")("true")
 export const hidden = attrBuilder("hidden")("hidden")
-export const selectedIndex = attrBuilder("selectedIndex")
 
 // Common Modifier-generating helpers
 

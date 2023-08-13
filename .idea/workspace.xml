@@ -14,6 +14,7 @@
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/htmlgen.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/htmlgen.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -206,7 +207,7 @@
       <workItem from="1691812453549" duration="1508000" />
       <workItem from="1691824781717" duration="29611000" />
       <workItem from="1691918934487" duration="26000" />
-      <workItem from="1691931617146" duration="6607000" />
+      <workItem from="1691931617146" duration="10093000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -333,14 +334,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00092" summary="CMN begins to implement CPU">
-      <option name="closed" value="true" />
-      <created>1690991424314</created>
-      <option name="number" value="00092" />
-      <option name="presentableId" value="LOCAL-00092" />
-      <option name="project" value="LOCAL" />
-      <updated>1690991424314</updated>
     </task>
     <task id="LOCAL-00093" summary="CMN begins to implement CPU">
       <option name="closed" value="true" />
@@ -582,7 +575,15 @@
       <option name="project" value="LOCAL" />
       <updated>1691918949665</updated>
     </task>
-    <option name="localTasksCounter" value="123" />
+    <task id="LOCAL-00123" summary="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)">
+      <option name="closed" value="true" />
+      <created>1691938676118</created>
+      <option name="number" value="00123" />
+      <option name="presentableId" value="LOCAL-00123" />
+      <option name="project" value="LOCAL" />
+      <updated>1691938676119</updated>
+    </task>
+    <option name="localTasksCounter" value="124" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
