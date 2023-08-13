@@ -9,9 +9,9 @@ import {
     TimeoutHandle,
 } from "./utils"
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
-import {EditorSelection, UIEventManager} from "./UIEventManager"
-import {CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
-import {IconName, inlineIconSvgFor} from "./images"
+import { EditorSelection, UIEventManager } from "./UIEventManager"
+import { CPUBase, CPUOpCode, CPUOpCodes } from "./components/CPU"
+import { IconName, inlineIconSvgFor } from "./images"
 import {
     button,
     cls,
@@ -77,8 +77,10 @@ type Instruction = {
     operand: number
 }
 
-const goToOpCode = ["GDW", "GUP", "JIZ", "JIC"] as string[]
+const goToDownOpCode = ["GDW", "JIZ", "JIC"] as string[]
 const goToUpOpCode = ["GUP"] as string[]
+let goToOpCode: string[] = []
+goToOpCode.concat(goToDownOpCode, goToUpOpCode)
 const noOperandOpCode = ["NOP", "DEC", "HLT"] as string[]
 
 export class AssemblerEditor {
@@ -277,22 +279,22 @@ export class AssemblerEditor {
         for (let _i = 0; _i < program.length; _i++) {
             let instruction = program[_i]
             let lineLabel = ""
-            if ((goToOpCode.includes(CPUOpCodes[instruction.opCode]))) {
-                if(goToUpOpCode.includes(CPUOpCodes[instruction.opCode])) {
-                    let labelLineNumber = (_i + 1) - instruction.operand
-                    if (labelLineNumber < 1) {
-                        labelLineNumber += program.length
-                    }
-                    lineLabel = "line " + labelLineNumber.toString()
-                    program[labelLineNumber - 1].label = lineLabel
-                } else {
-                    let labelLineNumber = (_i + 1) + instruction.operand
-                    if (labelLineNumber > program.length) {
-                        labelLineNumber += - program.length
-                    }
-                    lineLabel = "line " + labelLineNumber.toString()
-                    program[labelLineNumber - 1].label = lineLabel
+
+            if ((goToDownOpCode.includes(CPUOpCodes[instruction.opCode]))) {
+                let labelLineNumber = (_i + 1) + instruction.operand
+                if (labelLineNumber > program.length) {
+                    labelLineNumber += - program.length
                 }
+                lineLabel = "line " + labelLineNumber.toString()
+                program[labelLineNumber - 1].label = lineLabel
+            }
+            if(goToUpOpCode.includes(CPUOpCodes[instruction.opCode])) {
+                let labelLineNumber = (_i + 1) - instruction.operand
+                if (labelLineNumber < 1) {
+                    labelLineNumber += program.length
+                }
+                lineLabel = "line " + labelLineNumber.toString()
+                program[labelLineNumber - 1].label = lineLabel
             }
             this._lineLabels[_i] = lineLabel
         }
@@ -307,7 +309,7 @@ export class AssemblerEditor {
         this.removeAllChildren(this.programOl)
         for (let _i = 0; _i < this._program.length; _i++) {
             this.programOl.appendChild(this.makeLine())
-            this.updateLine(this.programOl)
+            this.updateLine(this.programOl.lastChild as HTMLLIElement)
         }
         this.computeLinesOperand()
     }
@@ -454,6 +456,7 @@ export class AssemblerEditor {
         const lineLi = li(
             cls("line"),
             style("color: #ffffff;"),
+
             draggable,
             lineDiv
         ).render()
@@ -471,11 +474,13 @@ export class AssemblerEditor {
         }))
 
         labelInput.addEventListener('input', this.editor.wrapHandler((handler) => {
-            this.handleLabelInputChange(lineLi)
+            //this.handleLabelInputChange(lineLi)
+            this.handleLineChanged(lineLi)
         }))
 
         opCodeSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
-            this.handleOpCodeSelectChange(lineLi, opCodeSelect)
+            //this.handleOpCodeSelectChange(lineLi, opCodeSelect)
+            this.handleLineChanged(lineLi)
         }))
 
         opCodeSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
@@ -483,7 +488,8 @@ export class AssemblerEditor {
         }))
 
         operandSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
-            this.handleOperandSelectChange(lineLi, operandSelect)
+            //this.handleOperandSelectChange(lineLi, operandSelect)
+            this.handleLineChanged(lineLi)
         }))
 
         operandSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
@@ -517,9 +523,75 @@ export class AssemblerEditor {
         return lineLi
     }
 
-    private updateLine(programList: HTMLOListElement) {
-        const line = programList.lastChild as HTMLLIElement
-        const lineNumber = programList.childElementCount - 1
+    private handleLineChanged(line: HTMLLIElement) {
+        const lineNumber = this.getLineNumber(line)
+
+        const newLabelInput = line.querySelector(".label") as HTMLInputElement
+        const newOpCodeSelect = line.querySelector(".opcode") as HTMLSelectElement
+        const newOperandSelect = line.querySelector(".operand") as HTMLSelectElement
+
+        const newInstruction: Instruction = {
+            label : newLabelInput.value,
+            opCode : newOpCodeSelect.options.selectedIndex,
+            operand : newOperandSelect.options.selectedIndex
+        }
+
+        console.log(newInstruction)
+        console.log(this._program[lineNumber])
+
+        if (newInstruction.label != this._program[lineNumber].label) {
+            const allLabels = this._program.map(instruction => instruction.label)
+            if (newInstruction.label == "") {
+                this._program[lineNumber].label = ""
+                applyModifierTo(newLabelInput, style("color: #000000;"))
+                this.generateBrutSourceCode()
+                this.computeLinesOperand()
+            } else {
+                if (allLabels.includes(newInstruction.label)) {
+                    applyModifierTo(newLabelInput, style("color: #ff0000;"))
+                } else {
+                    applyModifierTo(newLabelInput, style("color: #000000;"))
+                    this._program[lineNumber].label = newInstruction.label
+                    applyModifierTo(newLabelInput, value(newInstruction.label))
+                    this.generateBrutSourceCode()
+                    this.computeLinesOperand()
+                }
+            }
+        }
+
+        if (newInstruction.opCode != this._program[lineNumber].opCode) {
+            if (goToOpCode.includes(CPUOpCodes[newInstruction.opCode])) {
+                if (!goToOpCode.includes(CPUOpCodes[this._program[lineNumber].opCode])) {
+                    this._program[lineNumber].operand = 0
+                }
+            }
+            if (goToDownOpCode.includes(CPUOpCodes[newInstruction.opCode])) {
+                if (goToUpOpCode.includes(CPUOpCodes[this._program[lineNumber].opCode])) {
+                    this._program[lineNumber].operand = 0
+                }
+            }
+            if (goToUpOpCode.includes(CPUOpCodes[newInstruction.opCode])) {
+                if (goToDownOpCode.includes(CPUOpCodes[this._program[lineNumber].opCode])) {
+                    this._program[lineNumber].operand = 0
+                }
+            }
+            this._program[lineNumber].opCode = newInstruction.opCode
+            applyModifierTo(newOpCodeSelect.options[newOpCodeSelect.options.selectedIndex], selected(""))
+            this.generateBrutSourceCode()
+            this.computeLinesOperand()
+        }
+
+        if (newInstruction.operand != this._program[lineNumber].operand) {
+            this._program[lineNumber].operand = newInstruction.operand
+            applyModifierTo(newOperandSelect.options[newOperandSelect.options.selectedIndex], selected(""))
+            this.generateBrutSourceCode()
+            this.computeLinesOperand()
+        }
+    }
+
+
+    private updateLine(line: HTMLLIElement) {
+        const lineNumber = this.getLineNumber(line)
 
         const labelValue = this._program[lineNumber].label
         const labelInput = line.getElementsByClassName("label")[0] as HTMLInputElement
@@ -601,15 +673,15 @@ export class AssemblerEditor {
         this.generateBrutSourceCode()
         this.computeLinesOperand()
     }
-/*
-    private getLineNumber(previousLinecodeLi: HTMLLIElement | undefined) {
-        let lineNumber = -1
-        if (previousLinecodeLi != undefined) {
-            lineNumber = this.getLineNumber(previousLinecodeLi)
+    /*
+        private getLineNumber(previousLinecodeLi: HTMLLIElement | undefined) {
+            let lineNumber = -1
+            if (previousLinecodeLi != undefined) {
+                lineNumber = this.getLineNumber(previousLinecodeLi)
+            }
+            return lineNumber
         }
-        return lineNumber
-    }
-*/
+    */
     private getLineNumber(line: HTMLLIElement) {
         let lineNumber = -1
         if (line != null) {
@@ -648,7 +720,7 @@ export class AssemblerEditor {
     }
 
     private handleOpCodeSelectChange(line: HTMLLIElement, opCodeSelect: HTMLSelectElement) {
-        //const lineNumber = this.getLineNumber(line)
+        this.updateLine(line)
         //this._program[lineNumber].opCode = opCodeSelect.options.selectedIndex
         //applyModifierTo(opSelect.options[opSelect.options.selectedIndex], selected(""))
         this.generateBrutSourceCode()
@@ -726,12 +798,12 @@ export class AssemblerEditor {
         this._program = []
         this._lineLabels = []
         if (this.getNodesList(".line") != null) {
-            this.getNodesList(".line").forEach(item => {
-                const itemLine = item as HTMLLIElement
+            this.getNodesList(".line").forEach(lineItem => {
+                const line = lineItem as HTMLLIElement
 
-                const _label = itemLine.querySelector(".label") as HTMLInputElement
-                const _opcode = itemLine.querySelector(".opcode") as HTMLSelectElement
-                const _operand = itemLine.querySelector(".operand") as HTMLSelectElement
+                const _label = line.querySelector(".label") as HTMLInputElement
+                const _opcode = line.querySelector(".opcode") as HTMLSelectElement
+                const _operand = line.querySelector(".operand") as HTMLSelectElement
 
                 const sourceCodeLine: Instruction = {
                     label : _label.value,
@@ -739,11 +811,11 @@ export class AssemblerEditor {
                     operand :_operand.options.selectedIndex
                 }
                 this._program.push(sourceCodeLine)
-/*
-                if (sourceCodeLine.label != undefined) {
-                    this._lineLabels[this._program.length - 1] = ""
-                }
-*/
+                /*
+                                if (sourceCodeLine.label != undefined) {
+                                    this._lineLabels[this._program.length - 1] = ""
+                                }
+                */
             })
         }
         //console.log(this._lineLabels)
@@ -785,7 +857,7 @@ export class AssemblerEditor {
         const operandOptions = operandSelect.querySelectorAll(".operandvalue") as NodeListOf<HTMLOptionElement>
 
         applyModifierTo(operandSelect, style("visibility: visible"))
-        if ((goToOpCode.includes(CPUOpCode))) {
+        if (goToOpCode.includes(CPUOpCode)) {
             this.removeAllChildren(operandSelect)
             if (goToUpOpCode.includes(CPUOpCode)) {
                 for (let _i = this._assemblerOperandLength ** 2 - 1; _i > -1; _i--) {
@@ -809,7 +881,7 @@ export class AssemblerEditor {
                                 cls("operandvalue"),
                                 operandvalue,
                                 value(operandvalue),
-                                (operandSelectedValue == this._program[lineNumber - _i].operand)? selected(""): "",
+                                (operandSelectedValue == this._program[lineNumber - _i].operand) ? selected("") : "",
                             ).applyTo(operandSelect)
                         }
                     }
@@ -831,7 +903,7 @@ export class AssemblerEditor {
                                 cls("operandvalue"),
                                 operandvalue,
                                 value(operandvalue),
-                                (operandSelectedValue == this._program[lineNumber + _i].operand)? selected(""): "",
+                                (operandSelectedValue == this._program[lineNumber + _i].operand) ? selected("") : "",
                             ).applyTo(operandSelect)
                         }
                     } else {
