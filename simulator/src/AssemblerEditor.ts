@@ -370,12 +370,6 @@ export class AssemblerEditor {
                 lineNumber = this.getLineNumber(line)
             }
 
-            const emptyInstruction: Instruction = {
-                label : "",
-                opCode: 0,
-                operand: 0
-            }
-
             const newLine = this.makeLine()
 
             if (lineNumber < 0) {
@@ -865,9 +859,9 @@ export class AssemblerEditor {
             for(let _i = 0; _i < program.length; _i++) {
                 const line = program[_i] as HTMLLIElement
 
-                const _label = line.getElementsByClassName("label")[0] as HTMLInputElement
-                const _opcode = line.getElementsByClassName("opcode")[0] as HTMLSelectElement
-                const _operand = line.getElementsByClassName("operand")[0] as HTMLSelectElement
+                const _label = line.querySelector(".label") as HTMLInputElement
+                const _opcode = line.querySelector(".opcode") as HTMLSelectElement
+                const _operand = line.querySelector(".operand") as HTMLSelectElement
 
                 const sourceCodeLine: Instruction = {
                     label : _label.value,
@@ -979,7 +973,7 @@ export class AssemblerEditor {
         }
         console.log("compute operand no generation")
 
-        this.generateBrutSourceCode()
+        //this.generateBrutSourceCode()
     }
 
     public createBinaryString (nMask: number, nBit: number) {
