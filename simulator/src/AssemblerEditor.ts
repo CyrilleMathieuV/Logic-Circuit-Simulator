@@ -571,6 +571,7 @@ export class AssemblerEditor {
                     //this.generateBrutSourceCode()
                 }
             }
+            this.generateBrutSourceCode()
             this.computeLineOperand(line)
             this.generateBrutSourceCode()
         }
@@ -611,7 +612,7 @@ export class AssemblerEditor {
             const newOpCodeSelectIndex = newOpCodeSelect.options.selectedIndex
             applyModifierTo(newOpCodeSelect, selectedIndex(newOpCodeSelectIndex.toString()))
             //applyModifierTo(newOpCodeSelect.options[newOpCodeSelectIndex], selected(""))
-
+            this.generateBrutSourceCode()
             this.computeLineOperand(line)
             this.generateBrutSourceCode()
         }
@@ -622,6 +623,7 @@ export class AssemblerEditor {
             applyModifierTo(newOperandSelect, selectedIndex(newOperandSelectIndex.toString()))
             //applyModifierTo(newOperandSelect.options[newOperandSelectIndex], selected(""))
             //this.generateBrutSourceCode()
+            this.generateBrutSourceCode()
             this.computeLineOperand(line)
             this.generateBrutSourceCode()
         }
@@ -710,10 +712,9 @@ export class AssemblerEditor {
 
     private removeLine(line: HTMLLIElement) {
         if (line.parentNode != null && line.parentNode.childElementCount > 1) {
-            const lineNumber = this.getLineNumber(line)
             line.parentNode.removeChild(line)
-            this._program.slice(lineNumber, 1)
         }
+        this.generateBrutSourceCode()
         this.computeLinesOperand()
         console.log("remove")
 
@@ -915,7 +916,7 @@ export class AssemblerEditor {
         if (goToOpCode.includes(CPUOpCode)) {
             this.removeAllChildren(operandSelect)
             if (goToUpOpCode.includes(CPUOpCode)) {
-                for (let _i = this._assemblerOperandLength ** 2 - 1; _i > 0; _i--) {
+                for (let _i = this._assemblerOperandLength ** 2 - 1; _i > -1; _i--) {
                     if (lineNumber - _i < 0) {
                         option(
                             cls("operandvalue"),
@@ -943,7 +944,7 @@ export class AssemblerEditor {
                     }
                 }
             } else {
-                for (let _i = 1; _i < this._assemblerOperandLength ** 2; _i++) {
+                for (let _i = 0; _i < this._assemblerOperandLength ** 2; _i++) {
                     if (lineNumber + _i < this._program.length) {
                         if (this._program[lineNumber + _i].label == "") {
                             const operandvalue = "label " + (lineNumber + _i).toString()
