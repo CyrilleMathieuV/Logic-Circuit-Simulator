@@ -1,48 +1,10 @@
 import { LogicEditor, MouseAction } from "./LogicEditor"
-import {
-    allBooleans,
-    binaryStringRepr,
-    hexStringRepr,
-    InteractionResult,
-    isAllZeros, LogicValue,
-    setActive,
-    TimeoutHandle,
-} from "./utils"
+import { binaryStringRepr, TimeoutHandle } from "./utils"
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
 import { EditorSelection, UIEventManager } from "./UIEventManager"
-import {CPU, CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
+import { CPU, CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
 import { IconName, inlineIconSvgFor } from "./images"
-import {
-    button,
-    cls,
-    emptyMod,
-    i,
-    Modifier,
-    raw,
-    span,
-    title,
-    li,
-    div,
-    ol,
-    select,
-    option,
-    label,
-    value,
-    style,
-    draggable,
-    id,
-    applyModifiersTo,
-    input,
-    applyModifierTo,
-    selected,
-    start,
-    disabled,
-    hidden,
-    maxlength,
-    canvas,
-    selectedIndex,
-    attrBuilder,
-} from "./htmlgen"
+import { button, cls, i, raw, li, div, ol, select, option, value, style, draggable, id, input, applyModifierTo, selected, start, disabled, hidden, maxlength, selectedIndex } from "./htmlgen"
 import { ROM } from "./components/ROM";
 import { RAM } from "./components/RAM";
 import { Component } from "./components/Component";
@@ -207,8 +169,8 @@ export class AssemblerEditor {
             this.labelOperandDiv,
         ).render()
 
-        this.programOl = ol(cls(""), start("0"), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 370px;")).render()
-        this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 390px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
+        this.programOl = ol(cls(""), start("0"), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 410px;")).render()
+        this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 425px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
         //this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
 
@@ -439,12 +401,18 @@ export class AssemblerEditor {
         ).render()
 
         const addAboveButton = button(
-            i(cls("svgicon"), raw(inlineIconSvgFor("arrowcircleup"))),
+            i(cls("svgicon"), raw(inlineIconSvgFor("arrowupward"))),
             style("height:25px; width:25px; padding:0; align-items: center;")
         ).render()
 
+        const addImage = i(
+            cls("svgicon"),
+            raw(inlineIconSvgFor("add")),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        )
+
         const addBelowButton = button(
-            i(cls("svgicon"), raw(inlineIconSvgFor("arrowcircledown"))),
+            i(cls("svgicon"), raw(inlineIconSvgFor("arrowdownward"))),
             style("height:25px; width:25px; padding:0; align-items: center;")
         ).render()
 
@@ -457,6 +425,7 @@ export class AssemblerEditor {
             operandDiv,
             deleteButton,
             addAboveButton,
+            addImage,
             addBelowButton
         ).render()
 
@@ -555,7 +524,7 @@ export class AssemblerEditor {
                 } else {
                     applyModifierTo(newLabelInput, style("color: #000000;"))
                     this._program[lineNumber].label = newInstruction.label
-                    applyModifierTo(newLabelInput, value(newInstruction.label)))
+                    applyModifierTo(newLabelInput, value(newInstruction.label))
                 }
             }
             this.generateBrutSourceCode()
