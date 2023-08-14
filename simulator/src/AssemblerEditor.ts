@@ -317,9 +317,11 @@ export class AssemblerEditor {
             this.programOl.appendChild(this.makeLine())
             this.updateLine(this.programOl.lastChild as HTMLLIElement)
         }
-        this.computeLinesOperand()
-        console.log("redraw")
+
         this.generateBrutSourceCode()
+        this.computeLinesOperand()
+        this.generateBrutSourceCode()
+
     }
 
     private uploadToMemRAMROM(SelectedRAMROMRef: string) {
@@ -395,8 +397,7 @@ export class AssemblerEditor {
                 }
 
             }
-            //this.computeLinesOperand()
-            console.log("addline")
+
             this.generateBrutSourceCode()
             this.computeLinesOperand()
             this.generateBrutSourceCode()
@@ -663,6 +664,15 @@ export class AssemblerEditor {
 
         let operandSelectedValue = this._program[lineNumber].operand
 
+        let goToLabel = ""
+        if (goToOpCode.includes(CPUOpCode)) {
+            if (goToUpOpCode.includes(CPUOpCode)) {
+                goToLabel = this._program[lineNumber - operandSelectedValue].label
+            } else {
+                goToLabel = this._program[lineNumber + operandSelectedValue].label
+            }
+        }
+
         if (goToUpOpCode.includes(CPUOpCode)) {
             operandSelectedValue = (this._assemblerOperandLength ** 2 - 1) - operandSelectedValue
         }
@@ -674,57 +684,8 @@ export class AssemblerEditor {
         }
         const operandSelectedOption = operandOptions[operandSelectedValue] as HTMLOptionElement
         applyModifierTo(operandSelect, selectedIndex(operandSelectedValue.toString()))
+        applyModifierTo(operandSelectedOption, value(goToLabel))
         applyModifierTo(operandSelectedOption, selected(""))
-        if (CPUOpCode == "GUP") {
-            console.log("&", lineNumber, labelValue, opCodeSelectedValue, operandSelectedValue)
-        }
-    }
-
-    private updateLines() {
-        if (this.programOl.getElementsByClassName("line") != null) {
-            const program = this.programOl.getElementsByClassName("line")
-            //this.updateSelectOptionsForAddresses()
-            for(let _i = 0; _i < program.length; _i++) {
-                const line = program[_i] as HTMLLIElement
-                //this.updateSelectOptionsForAddresses()
-                const lineNumber = this.getLineNumber(line)
-
-                const labelValue = this._program[lineNumber].label
-                const labelInput = line.getElementsByClassName("label")[0] as HTMLInputElement
-                applyModifierTo(labelInput, value(labelValue))
-                //this.updateSelectOptionsForAddresses()
-
-                const opCodeSelectedValue = this._program[lineNumber].opCode
-                const opCodeSelect = line.getElementsByClassName("opcode")[0] as HTMLSelectElement
-                const opCodeOptions = opCodeSelect.getElementsByClassName("opcodevalue")
-                for(let opCodeOption of opCodeOptions) {
-                    opCodeOption.removeAttribute("selected")
-                }
-                const opCodeSelectedOption = opCodeOptions[opCodeSelectedValue] as HTMLOptionElement
-                applyModifierTo(opCodeSelect, selectedIndex(opCodeSelectedValue.toString()))
-                applyModifierTo(opCodeSelectedOption, selected(""))
-
-                const operandSelectedValue = this._program[lineNumber].operand
-                const operandSelect = line.getElementsByClassName("operand")[0] as HTMLSelectElement
-                /*
-                                this.computeLinesOperand(CPUOpCodes[opCodeSelectedValue], item as HTMLLIElement, operandSelect, false)
-                // TO FIX
-                                if (!goToOpCode.includes(CPUOpCodes[opCodeSelectedValue]) && !noOperandOpCode.includes(CPUOpCodes[opCodeSelectedValue])) {
-                                    const operandOptions = operandSelect.querySelectorAll(".operandvalue") as NodeListOf<HTMLOptionElement>
-                                    for (let operandOption of operandOptions) {
-                                        operandOption.removeAttribute("selected")
-                                    }
-
-                                    const operandSelectedOption = operandOptions[operandSelectedValue] as HTMLOptionElement
-
-                                    applyModifierTo(operandSelect, selectedIndex(operandSelectedValue.toString()))
-                                    applyModifierTo(operandSelectedOption, selected(""))
-                                }
-
-                 */
-            }
-            this.computeLinesOperand()
-        }
     }
 
     private removeLine(line: HTMLLIElement) {
@@ -872,9 +833,8 @@ export class AssemblerEditor {
                     label : _label.value,
                     opCode : _opcode.options.selectedIndex,
                     operand : goToUpOpCode.includes(CPUOpCode)? (this._assemblerOperandLength ** 2 - 1) - _operand.options.selectedIndex : _operand.options.selectedIndex,
-                    //operand : _operand.options.selectedIndex
                 }
-                if (CPUOpCode == "GUP") {console.log(CPUOpCode, instruction)}
+
                 this._program.push(instruction)
             }
         }
@@ -916,6 +876,8 @@ export class AssemblerEditor {
         //console.log(this._program)
         if (goToOpCode.includes(CPUOpCode)) {
             let selectedGoToLabel = ""
+            console.log(operandSelect)
+            console.log(operandSelect.selectedOptions)
             if (operandSelect.selectedOptions.length == 1) {
                 selectedGoToLabel = operandSelect.selectedOptions[0].value
             }
@@ -939,8 +901,7 @@ export class AssemblerEditor {
                             ).applyTo(operandSelect)
                         } else {
                             const accessibleLabelValue = this._program[lineNumber - _i].label
-                            console.log(_i)
-                            console.log("***", accessibleLabelValue)
+                            console.log(_i, "GUP", accessibleLabelValue)
                             option(
                                 cls("operandvalue"),
                                 accessibleLabelValue,
@@ -963,6 +924,7 @@ export class AssemblerEditor {
                             ).applyTo(operandSelect)
                         } else {
                             const accessibleLabelValue = this._program[lineNumber + _i].label
+                            console.log(_i, "GUP", accessibleLabelValue)
                             option(
                                 cls("operandvalue"),
                                 accessibleLabelValue,
