@@ -60,8 +60,9 @@ export class AssemblerEditor {
     private readonly downloadFromMemRAMROMSelectedButton : HTMLButtonElement
     private readonly uploadToMemRAMROMSelectedButton : HTMLButtonElement
     private readonly controlDivCPUSelect: HTMLSelectElement
-    private readonly openFromFileButton : HTMLButtonElement
-    private readonly downloadToFileButton : HTMLButtonElement
+    private readonly addressModeButton: HTMLButtonElement
+    private readonly openFromFileButton: HTMLButtonElement
+    private readonly downloadToFileButton: HTMLButtonElement
     private readonly hideButton: HTMLButtonElement
     private readonly showButton: HTMLButtonElement
 
@@ -191,6 +192,15 @@ export class AssemblerEditor {
             applyModifierTo(this.controlDivCPUSelect.options[this.controlDivCPUSelect.options.selectedIndex], selected(""))
         }))
 
+        this.addressModeButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("signpost"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+        this.addressModeButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            // TO DO
+        }))
+
         this.openFromFileButton = button(
             i(cls("svgicon"),
                 raw(inlineIconSvgFor("open"))),
@@ -207,6 +217,7 @@ export class AssemblerEditor {
         this.downloadToFileButton.addEventListener('click', this.editor.wrapHandler((handler) => {
             // TO DO
         }))
+
         this.showButton = button(
             i(cls("svgicon"),
                 raw(inlineIconSvgFor("eye"))),
@@ -233,8 +244,10 @@ export class AssemblerEditor {
             this.downloadFromMemRAMROMSelectedButton,
             this.uploadToMemRAMROMSelectedButton,
             this.controlDivCPUSelect,
+            this.addressModeButton,
             this.openFromFileButton,
             this.downloadToFileButton,
+            this.addressModeButton,
             this.showButton,
             this.hideButton,
         ).render()
