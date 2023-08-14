@@ -598,11 +598,26 @@ svg text {
 }
 
 .line  {
-  border: 1px solid #000;
-  background-color: #ddd;
-  border-radius: .5em;
+  border: 5px solid #ffffff;
+  background-color: #dddddd;
+  /*border-radius: .5em;*/
   padding: 5px;
   cursor: move;
+}
+
+.hint {
+  border: 5px dotted #ffc49a;
+  background: #feffb4;
+}
+
+.active {
+  border: 5px solid #ffa5a5;
+  background: #ffe7e7;
+}
+
+.over {
+  border: 5px dotted #666333;
+  background-color: #d39e00;
 }
 
 .lineDiv {
@@ -626,21 +641,6 @@ svg text {
 
 .operand {
   width: 80px
-}
-
-.hint {
-  border: 4px dotted #ffc49a;
-  background: #feffb4;
-}
-
-.active {
-  border: 1px solid #ffa5a5;
-  background: #ffe7e7;
-}
-
-.over {
-  border: 1px dotted #666;
-  background-color: #d39e00;
 }
 
 .labeldiv {

@@ -605,6 +605,8 @@ export class CPU extends CPUBase<CPURepr> {
     private _backwardJump : LogicValue = Unknown
     private _operandsValue : LogicValue[] = ArrayFillWith(false, this.numDataBits)
 
+    public _currentAddressEvent : CustomEvent
+
     public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
         super(parent, CPUDef, params, saved)
 
@@ -670,6 +672,11 @@ export class CPU extends CPUBase<CPURepr> {
         // this._virtualOperationStageCounter.recalcVirtualValue()
 
         this._lastClock = Unknown
+
+        this._currentAddressEvent = new CustomEvent("instrAddr", {
+            bubbles: true,
+            detail: { text: () => this.outputs.Isaadr },
+        });
     }
 
     public toJSON() {

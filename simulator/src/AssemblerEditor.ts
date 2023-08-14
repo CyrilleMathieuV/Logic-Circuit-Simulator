@@ -1,16 +1,18 @@
 import { LogicEditor, MouseAction } from "./LogicEditor"
-import { binaryStringRepr, TimeoutHandle } from "./utils"
+import {binaryStringRepr, TimeoutHandle, Unknown} from "./utils"
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
 import { EditorSelection, UIEventManager } from "./UIEventManager"
 import { CPU, CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
 import { IconName, inlineIconSvgFor } from "./images"
 import { button, cls, i, raw, li, div, ol, select, option, value, style, draggable, id, input, applyModifierTo, selected, start, disabled, hidden, maxlength, selectedIndex } from "./htmlgen"
-import { ROM } from "./components/ROM";
-import { RAM } from "./components/RAM";
-import { Component } from "./components/Component";
+import { ROM } from "./components/ROM"
+import { RAM } from "./components/RAM"
+import { Component } from "./components/Component"
+import {COLOR_BACKGROUND_INVALID, COLOR_MOUSE_OVER_DANGER} from "./drawutils"
 
 // sources
 // https://web.dev/drag-and-drop/
+// https://medium.com/@reiberdatschi/common-pitfalls-with-html5-drag-n-drop-api-9f011a09ee6c
 // https://coder-coder.com/display-divs-side-by-side/
 // https://www.encodedna.com/javascript/how-to-get-all-li-elements-in-ul-using-javascript.htm
 // https://www.tutorialspoint.com/why-addeventlistener-to-select-element-does-not-work-in-javascript
@@ -55,6 +57,9 @@ export class AssemblerEditor {
     private readonly controlDivRAMROMSelect: HTMLSelectElement
     private readonly downloadFromMemRAMROMSelectedButton : HTMLButtonElement
     private readonly uploadToMemRAMROMSelectedButton : HTMLButtonElement
+    private readonly controlDivCPUSelect: HTMLSelectElement
+    private readonly openFromFileButton : HTMLButtonElement
+    private readonly downloadToFileButton : HTMLButtonElement
 
     private readonly headerDiv: HTMLDivElement
     private readonly lineNumberHeaderDiv: HTMLDivElement
@@ -65,23 +70,27 @@ export class AssemblerEditor {
     private readonly programDiv: HTMLDivElement
     private readonly programOl: HTMLOListElement
 
-    private _dragSrcEl : HTMLLIElement | null = null
+    private _dragSrcEl: HTMLLIElement | null = null
 
     private _assemblerNumMaxAddressBits = 8
     private _assemblerWordLength = 8
     private _assemblerOperandLength = 4
 
-    private _opcodes : typeof CPUOpCodes
+    private _opcodes: typeof CPUOpCodes
 
-    private _program : Instruction[]
+    private _program: Instruction[]
 
-    private _ROMRAMsList : Component[]
+    private _ROMRAMsList: Component[]
+    private _CPUsList: Component[]
 
     private _counterCheck = 0
 
     public constructor(editor: LogicEditor) {
         this.editor = editor
         /*
+        TO DO Get from drag/drop or file
+        finding the correct event !!!
+
                 this.editor.html.mainCanvas.addEventListener("drop",  this.editor.wrapHandler((handler) => {
                     handler.preventDefault()
                     if (handler.dataTransfer !== null) {
@@ -111,14 +120,17 @@ export class AssemblerEditor {
         this.editor.html.mainCanvas.addEventListener("mouseup",  this.editor.wrapHandler((handler) => {
             //const selectedComps = this.editor.eventMgr.currentMouseOverComp as Component
             this.getRAMROMList()
+            this.getCPUList()
         }))
 
         // We must get the right moment !!! => focusout
         this.editor.html.mainContextMenu.addEventListener("focusout",  this.editor.wrapHandler((handler) => {
             this.getRAMROMList()
+            this.getCPUList()
         }))
 
         this._ROMRAMsList = []
+        this._CPUsList = []
 
         this._opcodes = CPUOpCodes
         this._program = []
@@ -148,12 +160,41 @@ export class AssemblerEditor {
             this.uploadToMemRAMROM(this.controlDivRAMROMSelect.value)
         }))
 
+        this.controlDivCPUSelect = select().render()
+        this.getCPUList()
+        this.controlDivCPUSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
+            applyModifierTo(this.controlDivCPUSelect.options[this.controlDivCPUSelect.options.selectedIndex], selected(""))
+        }))
+        this.controlDivCPUSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
+            applyModifierTo(this.controlDivCPUSelect.options[this.controlDivCPUSelect.options.selectedIndex], selected(""))
+        }))
+
+        this.openFromFileButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("open"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+        this.openFromFileButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            // TO DO
+        }))
+        this.downloadToFileButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("download"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+        this.downloadToFileButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            // TO DO
+        }))
+
         this.controlDiv = div(
             cls("controlprogram"),
             style("position: absolute; left: 0; top: 0; width: 100%; height: 30px;"),
             this.controlDivRAMROMSelect,
             this.downloadFromMemRAMROMSelectedButton,
             this.uploadToMemRAMROMSelectedButton,
+            this.controlDivCPUSelect,
+            this.openFromFileButton,
+            this.downloadToFileButton
         ).render()
 
         this.lineNumberHeaderDiv = div(style("width: 10px; border-right: 1px black;"),"#").render()
@@ -178,6 +219,11 @@ export class AssemblerEditor {
         editor.html.assemblerEditor.appendChild(this.controlDiv)
         editor.html.assemblerEditor.appendChild(this.headerDiv)
         editor.html.assemblerEditor.appendChild(this.programDiv)
+
+        // TO DO, naive approach, needs an event in CPU to trigger
+        editor.html.assemblerEditor.addEventListener("instrAddr", this.editor.wrapHandler((handler) => {
+            console.log(handler)
+        }))
 
         this._dragSrcEl = this.editor.root.getElementById("instructionList") as HTMLLIElement
 
@@ -212,12 +258,34 @@ export class AssemblerEditor {
         }
     }
 
+    private getCPUList() {
+        let numberOfCPU = 0
+        if (this.controlDivCPUSelect != null) {
+            this.removeAllChildren(this.controlDivCPUSelect)
+            this._CPUsList = []
+        }
+        this._CPUsList = [...this.editor.components.all()].filter((comp) => comp instanceof CPU)
+        console.log(this._CPUsList)
+        if (this._CPUsList.length > 0) {
+            for (let cpu of this._CPUsList) {
+                if (cpu.ref != undefined) {
+                    option(cpu.ref, value(cpu.ref)).applyTo(this.controlDivCPUSelect)
+                    numberOfCPU += 1
+                }
+            }
+        }
+        if (numberOfCPU == 0) {
+            option("none", value("none"), disabled).applyTo(this.controlDivCPUSelect)
+        }
+    }
+
     private downloadFromMemRAMROM(SelectedRAMROMRef: string) {
         let programMem: string[] = []
         if (this._ROMRAMsList != undefined) {
-            const SelectedRAMROM = this._ROMRAMsList.find((comp) => comp.ref == SelectedRAMROMRef)
-            if (SelectedRAMROM != undefined) {
-                programMem = this.contentRepr(SelectedRAMROM.value.mem)
+            const selectedRAMROM = this._ROMRAMsList.find((comp) => comp.ref == SelectedRAMROMRef)
+            if (selectedRAMROM != undefined) {
+                let RAMROM = selectedRAMROM as ROM
+                programMem = this.contentRepr(selectedRAMROM.value.mem)
             } else {
                 programMem = ["00000000"]
             }
@@ -485,7 +553,7 @@ export class AssemblerEditor {
             this.handleDragEnd(handler, lineLi)
         }))
         lineLi.addEventListener("dragover", this.editor.wrapHandler((handler) => {
-            this.handleDragOver(handler)
+            this.handleDragOver(handler, lineLi)
         }))
         lineLi.addEventListener("dragenter", this.editor.wrapHandler((handler) => {
             this.handleDragEnter(handler, lineLi)
@@ -520,7 +588,7 @@ export class AssemblerEditor {
                 applyModifierTo(newLabelInput, style("color: #000000;"))
             } else {
                 if (allLabels.includes(newInstruction.label)) {
-                    applyModifierTo(newLabelInput, style("color: #ff0000;"))
+                    applyModifierTo(newLabelInput, style(`color: ${COLOR_BACKGROUND_INVALID}; background-color : #f7d5d5`))
                 } else {
                     applyModifierTo(newLabelInput, style("color: #000000;"))
                     this._program[lineNumber].label = newInstruction.label
@@ -566,11 +634,10 @@ export class AssemblerEditor {
             this._program[lineNumber].opCode = newInstruction.opCode
             const newOpCodeSelectIndex = newOpCodeSelect.options.selectedIndex
             applyModifierTo(newOpCodeSelect, selectedIndex(newOpCodeSelectIndex.toString()))
-            //applyModifierTo(newOpCodeSelect.options[newOpCodeSelectIndex], selected(""))
+
             this.generateBrutSourceCode()
             this.computeLinesOperand()
             this.generateBrutSourceCode()
-            this.computeLinesOperand()
         }
 
         if (newInstruction.operand != this._program[lineNumber].operand) {
@@ -596,7 +663,6 @@ export class AssemblerEditor {
         const labelValue = this._program[lineNumber].label
         const labelInput = line.getElementsByClassName("label")[0] as HTMLInputElement
         applyModifierTo(labelInput, value(labelValue))
-        //this.updateSelectOptionsForAddresses()
 
         const opCodeSelectedValue = this._program[lineNumber].opCode
         const opCodeSelect = line.getElementsByClassName("opcode")[0] as HTMLSelectElement
@@ -655,95 +721,91 @@ export class AssemblerEditor {
         }
         return lineNumber
     }
-
+/*
     public getNodesList(parentElement: HTMLElement, className: string) {
         // We must get nodes from this.editor.root !!!
         return parentElement.getElementsByClassName(className)
     }
-
+*/
     private handleLabelInputChange(line: HTMLLIElement) {
-        const labelInput = line.getElementsByClassName("label")[0] as HTMLInputElement
-        let labelInputValue = labelInput.value
-
+        // => handleLineChanged
     }
 
-    private handleOpCodeSelectChange(line: HTMLLIElement, opCodeSelect: HTMLSelectElement) {
-        this.updateLine(line)
-        //this._program[lineNumber].opCode = opCodeSelect.options.selectedIndex
-        //applyModifierTo(opSelect.options[opSelect.options.selectedIndex], selected(""))
-        this.computeLinesOperand()
-        this.generateBrutSourceCode()
-
+    private handleOpCodeSelectChange(line: HTMLLIElement) {
+        // => handleLineChanged
     }
 
-    private handleOperandSelectChange(line: HTMLLIElement, operandSelect: HTMLSelectElement) {
-        const lineNumber = this.getLineNumber(line)
-        this._program[lineNumber].operand = operandSelect.options.selectedIndex
-
-
-        //applyModifierTo(opSelect.options[opSelect.options.selectedIndex], selected(""))
-        this.computeLinesOperand()
-        this.generateBrutSourceCode()
+    private handleOperandSelectChange(line: HTMLLIElement) {
+        // => handleLineChanged
     }
 
     private handleDragStart(evt: DragEvent, elem: HTMLLIElement) {
-        //setTimeout(() => elem.classList.add("dragging"), 0)
-        elem.style.opacity = "0.4"
+        setTimeout(() => elem.classList.add("dragging"), 50)
+        //console.log("drag start")
+
+
+        elem.style.opacity = "0.2"
         this._dragSrcEl = elem
-        if (this.programOl.getElementsByClassName("line") != null) {
-            const program = this.programOl.getElementsByClassName("line")
-            //this.updateSelectOptionsForAddresses()
-            for(let _i = 0; _i < program.length; _i++) {
-                const line = program[_i] as HTMLLIElement
-                if (this._dragSrcEl != line) {
-                    line.classList.add('hint')
-                }
+        //console.log(this.programOl, this._dragSrcEl)
+        /*
+        this.programOl.querySelectorAll(".line").forEach(lineItem => {
+            //const line = lineItem as HTMLLIElement
+            if (this._dragSrcEl != lineItem) {
+                lineItem.classList.add("hint")
             }
-        }
+        })
+        */
+        evt.stopPropagation()
     }
 
     private handleDragEnd(evt: DragEvent, elem: HTMLLIElement) {
+        //
         elem.style.opacity = "1"
-        if (this.programOl.getElementsByClassName("line") != null) {
-            const program = this.programOl.getElementsByClassName("line")
-            //this.updateSelectOptionsForAddresses()
-            for (let _i = 0; _i < program.length; _i++) {
-                const line = program[_i] as HTMLLIElement
-                line.classList.remove("hint")
-                line.classList.remove("active")
-            }
-        }
+        //console.log("drag end")
+        this.programOl.querySelectorAll(".line").forEach(lineItem => {
+            const line = lineItem as HTMLLIElement
+            //line.classList.remove("hint")
+            line.classList.remove("active")
+            line.classList.remove("dragging")
+        })
+        //evt.stopPropagation()
     }
 
-    private handleDragOver(evt: DragEvent) {
+    private handleDragOver(evt: DragEvent, elem: HTMLLIElement) {
+        //evt.stopPropagation()
+        //console.log("drag over")
+        //elem.classList.add("over")
         evt.preventDefault()
         return false
     }
 
     private handleDragEnter (evt: DragEvent, elem: HTMLLIElement) {
+        //console.log("drag enter")
+        //
+
         elem.classList.add("active")
+        //evt.stopPropagation()
     }
 
     private handleDragLeave (evt: DragEvent, elem: HTMLLIElement) {
+        //evt.stopPropagation()
+        //console.log("drag leave")
         elem.classList.remove("active")
+        //evt.stopPropagation()
     }
 
     private handleDrop(evt: DragEvent, elem: HTMLLIElement, labelInput: HTMLInputElement) {
         evt.stopPropagation()
         if (elem != this._dragSrcEl) {
             let currentpos = 0, droppedpos = 0;
-            if (this.programOl.getElementsByClassName("line") != null) {
-                const program = this.programOl.getElementsByClassName("line")
-                //this.updateSelectOptionsForAddresses()
-                for(let _i = 0; _i < program.length; _i++) {
-                    const line = program[_i] as HTMLLIElement
-                    if (elem == line) {
-                        currentpos = elem.value
-                    } else {
-                        droppedpos = line.value;
-                    }
+            this.programOl.querySelectorAll(".line").forEach(lineItem => {
+                const line = lineItem as HTMLLIElement
+                if (elem == line) {
+                    currentpos = elem.value
+                } else {
+                    droppedpos = line.value
                 }
-            }
+            })
             if (elem.parentNode != null && this._dragSrcEl != null) {
                 if (currentpos < droppedpos) {
                     elem.parentNode.insertBefore(this._dragSrcEl, elem.nextSibling);
@@ -752,10 +814,9 @@ export class AssemblerEditor {
                 }
             }
         }
+
         this.generateBrutSourceCode()
         this.computeLinesOperand()
-        console.log("DROP")
-
         this.generateBrutSourceCode()
 
         return false
@@ -860,7 +921,6 @@ export class AssemblerEditor {
                             hidden
                         ).applyTo(operandSelect)
                     }
-
                 }
             } else {
                 for (let _i = 0; _i < this._assemblerOperandLength ** 2; _i++) {
@@ -889,6 +949,14 @@ export class AssemblerEditor {
                         ).applyTo(operandSelect)
                     }
                 }
+            }
+            const hiddenOptions = operandSelect.querySelectorAll('[hidden = "hidden"]').length
+            const disabledOptions = operandSelect.querySelectorAll('[disabled = "true"]').length
+            if (16 - hiddenOptions - disabledOptions == 0 || operandSelect.selectedIndex == 0) {
+                applyModifierTo(operandSelect, style("background-color : #f7d5d5"))
+                console.log("*")
+            } else {
+                applyModifierTo(operandSelect,style("background-color : #ffffff"))
             }
         } else {
             if (noOperandOpCode.includes(CPUOpCode)) {
