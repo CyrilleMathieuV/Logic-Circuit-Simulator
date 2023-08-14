@@ -10,7 +10,7 @@ import {
 } from "./utils"
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
 import { EditorSelection, UIEventManager } from "./UIEventManager"
-import { CPUBase, CPUOpCode, CPUOpCodes } from "./components/CPU"
+import {CPU, CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
 import { IconName, inlineIconSvgFor } from "./images"
 import {
     button,
@@ -87,7 +87,7 @@ const noOperandOpCode = ["NOP", "DEC", "HLT"] as string[]
 export class AssemblerEditor {
     public editor: LogicEditor
 
-    private readonly mainDiv: HTMLDivElement
+    //private readonly mainDiv: HTMLDivElement
 
     private readonly controlDiv: HTMLDivElement
     private readonly controlDivRAMROMSelect: HTMLSelectElement
@@ -112,7 +112,6 @@ export class AssemblerEditor {
     private _opcodes : typeof CPUOpCodes
 
     private _program : Instruction[]
-    private _lineLabels : string[]
 
     private _ROMRAMsList : Component[]
 
@@ -161,7 +160,6 @@ export class AssemblerEditor {
 
         this._opcodes = CPUOpCodes
         this._program = []
-        this._lineLabels = []
 
         this.controlDivRAMROMSelect = select().render()
         this.getRAMROMList()
@@ -219,9 +217,12 @@ export class AssemblerEditor {
         this.programOl = ol(cls(""), start("0"), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 370px;")).render()
         this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 390px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
-        this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
+        //this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
 
-        editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.mainDiv)
+        //editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.mainDiv)
+        editor.html.assemblerEditor.appendChild(this.controlDiv)
+        editor.html.assemblerEditor.appendChild(this.headerDiv)
+        editor.html.assemblerEditor.appendChild(this.programDiv)
 
         this._dragSrcEl = this.editor.root.getElementById("instructionList") as HTMLLIElement
 
@@ -257,7 +258,6 @@ export class AssemblerEditor {
     }
 
     private downloadFromMemRAMROM(SelectedRAMROMRef: string) {
-        this._lineLabels = []
         let programMem: string[] = []
         if (this._ROMRAMsList != undefined) {
             const SelectedRAMROM = this._ROMRAMsList.find((comp) => comp.ref == SelectedRAMROMRef)
@@ -276,7 +276,7 @@ export class AssemblerEditor {
             program.push({
                 label : labelMem,
                 opCode: opCodeMem,
-                operand: operandMem
+                operand: operandMem,
             })
         }
 
@@ -284,23 +284,26 @@ export class AssemblerEditor {
             let instruction = program[_i]
             let lineLabel = ""
 
-            if ((goToDownOpCode.includes(CPUOpCodes[instruction.opCode]))) {
-                let labelLineNumber = _i + instruction.operand
-                if (labelLineNumber > program.length) {
-                    labelLineNumber += - program.length
+            const CPUOpCode = CPUOpCodes[instruction.opCode]
+
+            if ((goToOpCode.includes(CPUOpCode))) {
+                if(goToUpOpCode.includes(CPUOpCode)) {
+                    console.log("from ram")
+                    let labelLineNumber = _i - instruction.operand
+                    if (labelLineNumber < 1) {
+                        labelLineNumber += program.length
+                    }
+                    lineLabel = "line " + labelLineNumber.toString()
+                    program[labelLineNumber].label = lineLabel
+                } else {
+                    let labelLineNumber = _i + instruction.operand
+                    if (labelLineNumber > program.length) {
+                        labelLineNumber += -program.length
+                    }
+                    lineLabel = "line " + labelLineNumber.toString()
+                    program[labelLineNumber].label = lineLabel
                 }
-                lineLabel = "line " + labelLineNumber.toString()
-                program[labelLineNumber].label = lineLabel
             }
-            if(goToUpOpCode.includes(CPUOpCodes[instruction.opCode])) {
-                let labelLineNumber = _i - instruction.operand
-                if (labelLineNumber < 1) {
-                    labelLineNumber += program.length
-                }
-                lineLabel = "line " + labelLineNumber.toString()
-                program[labelLineNumber].label = lineLabel
-            }
-            this._lineLabels[_i] = lineLabel
         }
 
         this._program = Array.from(program)
@@ -546,8 +549,9 @@ export class AssemblerEditor {
         const newInstruction: Instruction = {
             label : newLabelInput.value,
             opCode : newOpCodeSelect.options.selectedIndex,
-            operand : newOperandSelect.options.selectedIndex
+            operand : newOperandSelect.options.selectedIndex,
         }
+
 
         if (newInstruction.label != this._program[lineNumber].label) {
             const allLabels = this._program.map(instruction => instruction.label)
@@ -571,8 +575,9 @@ export class AssemblerEditor {
                     //this.generateBrutSourceCode()
                 }
             }
+
             this.generateBrutSourceCode()
-            this.computeLineOperand(line)
+            this.computeLinesOperand()
             this.generateBrutSourceCode()
         }
 
@@ -600,7 +605,6 @@ export class AssemblerEditor {
                     this.removeAllChildren(newOperandSelect)
                     for (let _i = 0; _i < 16; _i++) {
                         option(
-                            cls("operandvalue"),
                             _i.toString(),
                             value(_i.toString())
                         ).applyTo(newOperandSelect)
@@ -613,18 +617,23 @@ export class AssemblerEditor {
             applyModifierTo(newOpCodeSelect, selectedIndex(newOpCodeSelectIndex.toString()))
             //applyModifierTo(newOpCodeSelect.options[newOpCodeSelectIndex], selected(""))
             this.generateBrutSourceCode()
-            this.computeLineOperand(line)
+            this.computeLinesOperand()
             this.generateBrutSourceCode()
         }
 
         if (newInstruction.operand != this._program[lineNumber].operand) {
             this._program[lineNumber].operand = newInstruction.operand
-            const newOperandSelectIndex = newOperandSelect.options.selectedIndex
+            let newOperandSelectIndex = newOperandSelect.options.selectedIndex
+            const lineCPUOpCode = CPUOpCodes[this._program[lineNumber].opCode]
+
+            if (goToUpOpCode.includes(lineCPUOpCode)) {
+                newOperandSelectIndex = (this._assemblerOperandLength ** 2 - 1) - newOperandSelectIndex
+            }
+
             applyModifierTo(newOperandSelect, selectedIndex(newOperandSelectIndex.toString()))
-            //applyModifierTo(newOperandSelect.options[newOperandSelectIndex], selected(""))
-            //this.generateBrutSourceCode()
+
             this.generateBrutSourceCode()
-            this.computeLineOperand(line)
+            this.computeLinesOperand()
             this.generateBrutSourceCode()
         }
         console.log("handlechange")
@@ -650,7 +659,14 @@ export class AssemblerEditor {
         applyModifierTo(opCodeSelect, selectedIndex(opCodeSelectedValue.toString()))
         applyModifierTo(opCodeSelectedOption, selected(""))
 
-        const operandSelectedValue = this._program[lineNumber].operand
+        const CPUOpCode = CPUOpCodes[opCodeSelectedValue]
+
+        let operandSelectedValue = this._program[lineNumber].operand
+
+        if (goToUpOpCode.includes(CPUOpCode)) {
+            operandSelectedValue = (this._assemblerOperandLength ** 2 - 1) - operandSelectedValue
+        }
+
         const operandSelect = line.getElementsByClassName("operand")[0] as HTMLSelectElement
         const operandOptions = operandSelect.getElementsByClassName("operandvalue")
         for(let operandOption of operandOptions) {
@@ -659,8 +675,9 @@ export class AssemblerEditor {
         const operandSelectedOption = operandOptions[operandSelectedValue] as HTMLOptionElement
         applyModifierTo(operandSelect, selectedIndex(operandSelectedValue.toString()))
         applyModifierTo(operandSelectedOption, selected(""))
-
-        console.log(lineNumber, labelValue, opCodeSelectedValue, operandSelectedValue)
+        if (CPUOpCode == "GUP") {
+            console.log("&", lineNumber, labelValue, opCodeSelectedValue, operandSelectedValue)
+        }
     }
 
     private updateLines() {
@@ -741,23 +758,6 @@ export class AssemblerEditor {
         const labelInput = line.getElementsByClassName("label")[0] as HTMLInputElement
         let labelInputValue = labelInput.value
 
-        if (labelInputValue == "") {
-            this._program[this.getLineNumber(line)].label = ""
-        } else {
-            if (this._lineLabels.includes(labelInputValue)) {
-                applyModifierTo(labelInput, style("color: #ff0000;"))
-            } else {
-                applyModifierTo(labelInput, style("color: #000000;"))
-                this._program[this.getLineNumber(line)].label = labelInputValue
-            }
-        }
-        applyModifierTo(labelInput, value(labelInputValue))
-
-
-        this.computeLinesOperand()
-        console.log("NOT HERE")
-
-        this.generateBrutSourceCode()
     }
 
     private handleOpCodeSelectChange(line: HTMLLIElement, opCodeSelect: HTMLSelectElement) {
@@ -855,10 +855,9 @@ export class AssemblerEditor {
 
     private generateBrutSourceCode() {
         this._program = []
-        this._lineLabels = []
         if (this.programOl.querySelectorAll(".line") != null) {
             const program = this.programOl.querySelectorAll(".line")
-            console.log(program)
+            //console.log(program)
             //this.updateSelectOptionsForAddresses()
             for(let _i = 0; _i < program.length; _i++) {
                 const line = program[_i] as HTMLLIElement
@@ -867,16 +866,18 @@ export class AssemblerEditor {
                 const _opcode = line.querySelector(".opcode") as HTMLSelectElement
                 const _operand = line.querySelector(".operand") as HTMLSelectElement
 
+                const CPUOpCode = CPUOpCodes[_opcode.options.selectedIndex]
+
                 const instruction: Instruction = {
                     label : _label.value,
                     opCode : _opcode.options.selectedIndex,
-                    operand :_operand.options.selectedIndex
+                    operand : goToUpOpCode.includes(CPUOpCode)? (this._assemblerOperandLength ** 2 - 1) - _operand.options.selectedIndex : _operand.options.selectedIndex,
+                    //operand : _operand.options.selectedIndex
                 }
-                console.log(instruction)
+                if (CPUOpCode == "GUP") {console.log(CPUOpCode, instruction)}
                 this._program.push(instruction)
             }
         }
-        console.log("*",this._program)
     }
 
     private removeAllChildren(parent: HTMLElement) {
@@ -899,7 +900,6 @@ export class AssemblerEditor {
 
     private computeLineOperand(line: HTMLLIElement) {
         const lineNumber = this.getLineNumber(line)
-        console.log(this._program)
 
         const labelValue = this._program[lineNumber].label
         const labelInput = line.getElementsByClassName("label")[0] as HTMLInputElement
@@ -908,12 +908,18 @@ export class AssemblerEditor {
         const opCodeSelect = line.getElementsByClassName("opcode")[0] as HTMLSelectElement
         const CPUOpCode = CPUOpCodes[opCodeSelectedValue]
 
-        const operandSelectedValue = this._program[lineNumber].operand
+        let operandSelectedValue = this._program[lineNumber].operand
         const operandSelect = line.getElementsByClassName("operand")[0] as HTMLSelectElement
-        const operandOptions = operandSelect.getElementsByClassName("operandvalue")
+
 
         applyModifierTo(operandSelect, style("visibility: visible"))
+        //console.log(this._program)
         if (goToOpCode.includes(CPUOpCode)) {
+            let selectedGoToLabel = ""
+            if (operandSelect.selectedOptions.length == 1) {
+                selectedGoToLabel = operandSelect.selectedOptions[0].value
+            }
+            console.log("===",selectedGoToLabel)
             this.removeAllChildren(operandSelect)
             if (goToUpOpCode.includes(CPUOpCode)) {
                 for (let _i = this._assemblerOperandLength ** 2 - 1; _i > -1; _i--) {
@@ -932,13 +938,14 @@ export class AssemblerEditor {
                                 disabled
                             ).applyTo(operandSelect)
                         } else {
-                            console.log(lineNumber, CPUOpCode, this._program[lineNumber].operand, operandSelectedValue, "*", this._program[lineNumber - _i].operand, this._program[lineNumber - _i].label)
-                            const operandvalue = this._program[lineNumber - _i].label
+                            const accessibleLabelValue = this._program[lineNumber - _i].label
+                            console.log(_i)
+                            console.log("***", accessibleLabelValue)
                             option(
                                 cls("operandvalue"),
-                                operandvalue,
-                                value(operandvalue),
-                                (operandSelectedValue == _i) ? selected("") : "",
+                                accessibleLabelValue,
+                                value(accessibleLabelValue),
+                                (accessibleLabelValue == selectedGoToLabel) ? selected("") : "",
                             ).applyTo(operandSelect)
                         }
                     }
@@ -955,12 +962,12 @@ export class AssemblerEditor {
                                 disabled
                             ).applyTo(operandSelect)
                         } else {
-                            const operandvalue = this._program[lineNumber + _i].label
+                            const accessibleLabelValue = this._program[lineNumber + _i].label
                             option(
                                 cls("operandvalue"),
-                                operandvalue,
-                                value(operandvalue),
-                                (operandSelectedValue == _i) ? selected("") : "",
+                                accessibleLabelValue,
+                                value(accessibleLabelValue),
+                                (accessibleLabelValue == selectedGoToLabel) ? selected("") : "",
                             ).applyTo(operandSelect)
                         }
                     } else {
@@ -976,9 +983,7 @@ export class AssemblerEditor {
                 applyModifierTo(operandSelect, style("visibility: hidden"))
             }
         }
-        console.log("compute operand no generation")
-        console.log("**",this._program)
-        //this.generateBrutSourceCode()
+        console.log("compute operand")
     }
 
     public createBinaryString (nMask: number, nBit: number) {
