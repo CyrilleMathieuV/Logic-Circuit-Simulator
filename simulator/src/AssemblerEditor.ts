@@ -54,12 +54,16 @@ export class AssemblerEditor {
     //private readonly mainDiv: HTMLDivElement
 
     private readonly controlDiv: HTMLDivElement
+    private readonly undoButton: HTMLButtonElement
+    private readonly redoButton: HTMLButtonElement
     private readonly controlDivRAMROMSelect: HTMLSelectElement
     private readonly downloadFromMemRAMROMSelectedButton : HTMLButtonElement
     private readonly uploadToMemRAMROMSelectedButton : HTMLButtonElement
     private readonly controlDivCPUSelect: HTMLSelectElement
     private readonly openFromFileButton : HTMLButtonElement
     private readonly downloadToFileButton : HTMLButtonElement
+    private readonly hideButton: HTMLButtonElement
+    private readonly showButton: HTMLButtonElement
 
     private readonly headerDiv: HTMLDivElement
     private readonly lineNumberHeaderDiv: HTMLDivElement
@@ -136,6 +140,24 @@ export class AssemblerEditor {
         this._program = []
 
         this.controlDivRAMROMSelect = select().render()
+
+        this.undoButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("undo"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+        this.undoButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            // TO DO
+        }))
+        this.redoButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("redo"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+        this.redoButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            // TO DO
+        }))
+
         this.getRAMROMList()
         this.controlDivRAMROMSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
             applyModifierTo(this.controlDivRAMROMSelect.options[this.controlDivRAMROMSelect.options.selectedIndex], selected(""))
@@ -185,16 +207,36 @@ export class AssemblerEditor {
         this.downloadToFileButton.addEventListener('click', this.editor.wrapHandler((handler) => {
             // TO DO
         }))
+        this.showButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("eye"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+        this.showButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            // TO DO
+        }))
+        this.hideButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("close"))),
+            style("height:25px; width:25px; padding:0; align-items: center;")
+        ).render()
+        this.hideButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            // TO DO
+        }))
 
         this.controlDiv = div(
             cls("controlprogram"),
             style("position: absolute; left: 0; top: 0; width: 100%; height: 30px;"),
+            this.undoButton,
+            this.redoButton,
             this.controlDivRAMROMSelect,
             this.downloadFromMemRAMROMSelectedButton,
             this.uploadToMemRAMROMSelectedButton,
             this.controlDivCPUSelect,
             this.openFromFileButton,
-            this.downloadToFileButton
+            this.downloadToFileButton,
+            this.showButton,
+            this.hideButton,
         ).render()
 
         this.lineNumberHeaderDiv = div(style("width: 10px; border-right: 1px black;"),"#").render()
