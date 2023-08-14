@@ -247,7 +247,6 @@ export class AssemblerEditor {
             this.addressModeButton,
             this.openFromFileButton,
             this.downloadToFileButton,
-            this.addressModeButton,
             this.showButton,
             this.hideButton,
         ).render()
