@@ -562,7 +562,7 @@ svg text {
   align-items: stretch;
   margin: -3px 0 -3px -5px;
   padding: 3px 5px;
-  width: 440px;
+  width: 680px;
   height: 100%;
   /*grid-template-columns: repeat(4, 1fr);*/
   gap: 10px;
@@ -586,7 +586,7 @@ svg text {
   background-color: rgb(239, 239, 239);
   /*border-left: 1px solid lightgray;*/
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
   grid-gap: 5px;
   place-items: center;
 }
@@ -622,7 +622,7 @@ svg text {
 
 .lineDiv {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
   grid-gap: 5px;
   place-items: center;
 }
@@ -643,16 +643,24 @@ svg text {
   width: 80px
 }
 
+.comment {
+  width: 250px
+}
+
 .labeldiv {
-  max-width: 33%;
+  max-width: 20%;
 }
 
 .opcodediv {
-  max-width: 33%;
+  max-width: 10%;
 }
 
 .operanddiv {
-  max-width: 33%;
+  max-width: 20%;
+}
+
+.commentdiv {
+  max-width: 40%;
 }
 
 sourceCode{

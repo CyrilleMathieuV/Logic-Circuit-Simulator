@@ -41,6 +41,7 @@ type Instruction = {
     label: string
     opCode: number
     operand: number
+    comment: string
 }
 
 const goToDownOpCode = ["GDW", "JIZ", "JIC"] as string[]
@@ -71,6 +72,7 @@ export class AssemblerEditor {
     private readonly labelHeaderDiv: HTMLDivElement
     private readonly labelOpCodeDiv: HTMLDivElement
     private readonly labelOperandDiv: HTMLDivElement
+    private readonly commentHeaderDiv: HTMLDivElement
 
     private readonly programDiv: HTMLDivElement
     private readonly programOl: HTMLOListElement
@@ -255,6 +257,7 @@ export class AssemblerEditor {
         this.labelHeaderDiv = div(style("width: 75px; border-right: 1px black;"),"# label").render()
         this.labelOpCodeDiv = div(style("width: 55px"),"OpCode").render()
         this.labelOperandDiv = div(style("width: 80px"),"Operand").render()
+        this.commentHeaderDiv = div(style("width: 300px; border-right: 1px black;"),"# comment").render()
         this.headerDiv = div(
             cls("headerprogram"),
             style("position: absolute; left: 0; top: 30px; width: 100%; height: 30px;"),
@@ -262,10 +265,11 @@ export class AssemblerEditor {
             this.labelHeaderDiv,
             this.labelOpCodeDiv,
             this.labelOperandDiv,
+            this.commentHeaderDiv,
         ).render()
 
-        this.programOl = ol(cls(""), start("0"), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 410px;")).render()
-        this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 425px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
+        this.programOl = ol(cls(""), start("0"), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 655px;")).render()
+        this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 670px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
         //this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
 
@@ -354,6 +358,7 @@ export class AssemblerEditor {
                 label : labelMem,
                 opCode: opCodeMem,
                 operand: operandMem,
+                comment: ""
             })
         }
 
@@ -517,6 +522,16 @@ export class AssemblerEditor {
             operandSelect
         ).render()
 
+        const commentInput = input(
+            cls("comment"),
+            value(""),
+            maxlength("32"),
+        ).render()
+        const commentInputDiv = div(
+            cls("commentDiv"),
+            commentInput
+        ).render()
+
         const deleteButton = button(
             i(cls("svgicon"), raw(inlineIconSvgFor("trash"))),
             style("height:25px; width:25px; padding:0; align-items: center;")
@@ -545,6 +560,7 @@ export class AssemblerEditor {
             labelInputDiv,
             opCodeDiv,
             operandDiv,
+            commentInputDiv,
             deleteButton,
             addAboveButton,
             addImage,
@@ -628,11 +644,13 @@ export class AssemblerEditor {
         const newLabelInput = line.getElementsByClassName("label")[0] as HTMLInputElement
         const newOpCodeSelect = line.getElementsByClassName("opcode")[0] as HTMLSelectElement
         const newOperandSelect = line.getElementsByClassName("operand")[0] as HTMLSelectElement
+        const newComment = line.getElementsByClassName("comment")[0] as HTMLInputElement
 
         const newInstruction: Instruction = {
             label : newLabelInput.value,
             opCode : newOpCodeSelect.options.selectedIndex,
             operand : newOperandSelect.options.selectedIndex,
+            comment : newComment.value,
         }
 
         if (newInstruction.label != this._program[lineNumber].label) {
@@ -887,6 +905,7 @@ export class AssemblerEditor {
                 const _label = line.querySelector(".label") as HTMLInputElement
                 const _opcode = line.querySelector(".opcode") as HTMLSelectElement
                 const _operand = line.querySelector(".operand") as HTMLSelectElement
+                const _comment = line.querySelector(".comment") as HTMLInputElement
 
                 const CPUOpCode = CPUOpCodes[_opcode.options.selectedIndex]
 
@@ -894,6 +913,7 @@ export class AssemblerEditor {
                     label : _label.value,
                     opCode : _opcode.options.selectedIndex,
                     operand : goToUpOpCode.includes(CPUOpCode)? (this._assemblerOperandLength ** 2 - 1) - _operand.options.selectedIndex : _operand.options.selectedIndex,
+                    comment : _comment.value
                 }
 
                 this._program.push(instruction)

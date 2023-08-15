@@ -9,7 +9,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)" />
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/css/LogicEditor.css" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/css/LogicEditor.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -207,6 +213,7 @@
       <workItem from="1692018308378" duration="11870000" />
       <workItem from="1692030208146" duration="11370000" />
       <workItem from="1692051742726" duration="686000" />
+      <workItem from="1692094305034" duration="1323000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
