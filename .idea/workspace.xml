@@ -9,7 +9,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)" />
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -209,6 +211,8 @@
       <workItem from="1692051742726" duration="686000" />
       <workItem from="1692094305034" duration="1600000" />
       <workItem from="1692102319281" duration="640000" />
+      <workItem from="1692130801791" duration="876000" />
+      <workItem from="1692272210515" duration="624000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -335,14 +339,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00108" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)">
-      <option name="closed" value="true" />
-      <created>1691557853360</created>
-      <option name="number" value="00108" />
-      <option name="presentableId" value="LOCAL-00108" />
-      <option name="project" value="LOCAL" />
-      <updated>1691557853361</updated>
     </task>
     <task id="LOCAL-00109" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)">
       <option name="closed" value="true" />
@@ -584,7 +580,15 @@
       <option name="project" value="LOCAL" />
       <updated>1692095886605</updated>
     </task>
-    <option name="localTasksCounter" value="139" />
+    <task id="LOCAL-00139" summary="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)">
+      <option name="closed" value="true" />
+      <created>1692131619986</created>
+      <option name="number" value="00139" />
+      <option name="presentableId" value="LOCAL-00139" />
+      <option name="project" value="LOCAL" />
+      <updated>1692131619987</updated>
+    </task>
+    <option name="localTasksCounter" value="140" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
