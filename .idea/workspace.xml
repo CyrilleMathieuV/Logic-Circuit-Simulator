@@ -9,7 +9,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
+      <change afterPath="$PROJECT_DIR$/simulator/src/components/VirtualRAM.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simulator/src/components/VirtualROM.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/VirtualRegister.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/VirtualRegister.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -93,7 +102,7 @@
     "ShowUsagesActions.previewPropertyKey": "true",
     "WebServerToolWindowFactoryState": "false",
     "js.last.introduce.type": "LET",
-    "last_opened_file_path": "/Users/cyrille/WebstormProjects/Logic-Circuit-Simulator/simulator/src",
+    "last_opened_file_path": "/Users/cyrille/WebstormProjects/Logic-Circuit-Simulator/simulator/src/components",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.standard": "true",
     "node.js.detected.package.tslint": "true",
@@ -105,14 +114,15 @@
     "settings.editor.selected.configurable": "settings.javascript.linters.tslint",
     "ts.external.directory.path": "/Users/cyrille/WebstormProjects/Logic-Circuit-Simulator/node_modules/typescript/lib",
     "ts.rename.search.for.dynamic.occurrences": "true",
+    "ts.rename.search.for.js.occurrences": "false",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/simulator/src/components" />
       <recent name="$PROJECT_DIR$/simulator/src" />
       <recent name="$PROJECT_DIR$/simulator/img" />
-      <recent name="$PROJECT_DIR$/simulator/src/components" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/simulator/img/icons" />
@@ -220,7 +230,7 @@
       <workItem from="1694765763873" duration="2528000" />
       <workItem from="1696624921599" duration="753000" />
       <workItem from="1697272927570" duration="6000" />
-      <workItem from="1697272962947" duration="3216000" />
+      <workItem from="1697272962947" duration="15752000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>

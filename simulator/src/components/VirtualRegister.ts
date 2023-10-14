@@ -8,10 +8,10 @@ import {
     typeOrUndefined,
     Unknown,
 } from "../utils"
-import {Counter} from "./Counter";
-import {VirtualFlipflop,VirtualSyncComponent} from "./VirtualFlipflopOrLatch";
-import {displayValuesFromArray} from "../drawutils";
-import {NodeIn} from "./Node";
+import { Counter } from "./Counter";
+import { VirtualFlipflop,VirtualSyncComponent } from "./VirtualFlipflopOrLatch";
+import { displayValuesFromArray } from "../drawutils";
+import { NodeIn } from "./Node";
 
 export type VirtualRegisterBaseValue = LogicValue[]
 

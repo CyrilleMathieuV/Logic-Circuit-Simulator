@@ -31,7 +31,7 @@ See <https://jp.pellet.name/hep/logiga/>
  * Clocks can be paused
  * Components have been added: bit display, segment display, nibble display, half adder, muxes, register, RAM, counter, various decoders, etc.
  * Size of components (in terms of number of bits) can be changed
- * RAM/ROM contents can be loaded from files
+ * RAM/VirutalROM contents can be loaded from files
  * Mouseover tooltips have been added
  * Components can be edited to be faulty, for educational exercises
  * Editor can be in several modes with different capabilities

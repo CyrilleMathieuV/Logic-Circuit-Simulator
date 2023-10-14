@@ -52,6 +52,7 @@ import { ALUOps, doALUOp } from "./ALU"
 import { VirtualFlipflopD } from "./VirtualFlipflopD";
 import { VirtualRegister } from "./VirtualRegister";
 import { VirtualCounter } from "./VirtualCounter";
+import { VirtualRAM } from "./VirtualRAM";
 import { VirtualComponent } from "./VirtualComponent";
 
 export const CPUOpCodes = [
@@ -197,6 +198,7 @@ export const CPUBaseDef =
                     Cout: [inputX, 11, "e", `Cout`],
                     HaltSignal: [inputX, 13, "e", `Halt`],
                     RunningState: [inputX, 15, "e", "Run state"],
+                    StackOverflow: [inputX, 17, "e", "Run state"],
                 },
             }
         },
@@ -216,6 +218,7 @@ export const CPUBaseDef =
                 cout: false_,
                 haltsignal: false,
                 runningstate: false_,
+                stackoverflow: false_
             }
             let initialState
             if (saved === undefined) {
@@ -232,8 +235,9 @@ export const CPUBaseDef =
                     z: false_,
                     //v: false_,
                     cout: false_,
-                    haltsignal: false,
+                    haltsignal: false_,
                     runningstate: false_,
+                    stackoverflow: false_
                 }
             }
             //const state = saved.state === undefined ? defaults.state : toLogicValue(saved.state)
@@ -323,7 +327,8 @@ export abstract class CPUBase<
             //v: false_,
             cout: false_,
             haltsignal: false_,
-            runningstate: false_
+            runningstate: false_,
+            stackoverflow: false_
         }
         return newState as CPUBaseValue
     }
@@ -342,7 +347,8 @@ export abstract class CPUBase<
             //v: val,
             cout: val,
             haltsignal: val,
-            runningstate: val
+            runningstate: val,
+            stackoverflow: val
         }
         return newState as CPUBaseValue
     }
@@ -578,6 +584,9 @@ export class CPU extends CPUBase<CPURepr> {
     protected _virtualProgramCounterRegister : VirtualRegister
     protected _virtualPreviousProgramCounterRegister : VirtualRegister
 
+    protected _virtualStackPointerRegister : VirtualRegister
+    protected _virtualStack : VirtualRAM
+
     //protected _virtualSpecialVoidProgramCounterFlipflopD : VirtualFlipflopD
 
     protected _virtualFetchFlipflopD : VirtualFlipflopD
@@ -633,13 +642,15 @@ export class CPU extends CPUBase<CPURepr> {
         // this._virtualFlagsRegister.inputClr = true
         // this._virtualFlagsRegister.recalcVirtualValue()
 
-        this. _virtualProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
+        this._virtualProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
         // this. _virtualProgramCounterRegister.inputClr = true
         // this. _virtualProgramCounterRegister.recalcVirtualValue()
-        this. _virtualPreviousProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
+        this._virtualPreviousProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
         // this. _virtualPreviousProgramCounterRegister.inputClr = true
         // this. _virtualPreviousProgramCounterRegister.recalcVirtualValue()
 
+        this._virtualStackPointerRegister = new VirtualRegister(2, EdgeTrigger.falling)
+        this._virtualStack = new VirtualRAM(this.numAddressInstructionBits,2)
 
         //this._virtualSpecialVoidProgramCounterFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
@@ -777,6 +788,10 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualFlagsRegister.inputClr = clrSignal
 
         this._virtualOperationStageCounter.inputClr = clrSignal
+
+        this._virtualStackPointerRegister.inputPre = clrSignal
+
+        this._virtualStack.inputClr = clrSignal
 
         // FETCH Stage
 
@@ -1021,8 +1036,9 @@ export class CPU extends CPUBase<CPURepr> {
                 z: false_,
                 //v: false_,
                 cout: false_,
-                haltsignal: false,
-                runningstate: false_
+                haltsignal: false_,
+                runningstate: false_,
+                stackoverflow: false_,
             }
         } else {
             newState = {
@@ -1038,6 +1054,7 @@ export class CPU extends CPUBase<CPURepr> {
                 cout: this._virtualFlagsRegister.outputsQ[1],
                 haltsignal: this._virtualHaltSignalFlipflopD.outputQ,
                 runningstate: runningState,
+                stackoverflow: false_,
             }
         }
 
@@ -1058,6 +1075,7 @@ export class CPU extends CPUBase<CPURepr> {
         this.outputs.Cout.value = newValue.cout
         this.outputs.HaltSignal.value = newValue.haltsignal
         this.outputs.RunningState.value = newValue.runningstate
+        this.outputs.StackOverflow.value = newValue.stackoverflow
     }
 /*
     public makeStateAfterClock(): CPUBaseValue {
@@ -1130,6 +1148,7 @@ export class CPU extends CPUBase<CPURepr> {
         drawWireLineToComponent(g, this.outputs.Cout, right, this.outputs.Cout.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.HaltSignal, right, this.outputs.HaltSignal.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.RunningState, right, this.outputs.RunningState.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.StackOverflow, right, this.outputs.RunningState.posYInParentTransform)
 
         // outline
         g.fillStyle = COLOR_BACKGROUND
@@ -1185,6 +1204,7 @@ export class CPU extends CPUBase<CPURepr> {
             drawLabel(ctx, this.orient, "Cout", "e", right, this.outputs.Cout, undefined, true)
             drawLabel(ctx, this.orient, "Halt", "e", right, this.outputs.HaltSignal, undefined, true)
             drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState, undefined, true)
+            drawLabel(ctx, this.orient, "Stack Overflow", "e", right, this.outputs.StackOverflow, undefined, true)
 
             const counter = displayValuesFromArray(this._virtualOperationStageCounter.outputsQ, false)[1]
             const stringRep = formatWithRadix(counter, 10, 16, false)

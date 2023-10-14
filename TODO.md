@@ -51,9 +51,9 @@
  * Highlight only nodes when dragging
  * (Address) decoder: 2, 3, 4 bit versions
  * Incrementable register
- * Swap ROM for RAM and inversely
- * Load/save RAM/ROM contents via file and editor
- * ROM
+ * Swap VirutalROM for RAM and inversely
+ * Load/save RAM/VirutalROM contents via file and editor
+ * VirutalROM
  * Lock position
  * Show selected RAM contents
  * Draw n-x-1 mux/demux compactly
@@ -65,7 +65,7 @@
  * 8-bit counter
  * Replace with component with different params (e.g. 4-bit to 8-bit)
  * prevent clock "backlog" from running like crazy
- * 8-bit adder, ALU, register, ROM, display
+ * 8-bit adder, ALU, register, VirutalROM, display
  * 4-bit adder with carry in and out
  * Add waypoint by dragging; add wire by alt-dragging from existing wire
  * Correct register display when horizontal
