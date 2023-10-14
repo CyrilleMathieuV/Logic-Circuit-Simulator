@@ -896,7 +896,7 @@ export class CPU extends CPUBase<CPURepr> {
             _operandsData = this._virtualAccumulatorRegister.outputsQ
         }
 
-*/
+
         // ISA_v6
         //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
         const _operandsDataSelectValue = [
@@ -955,6 +955,68 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualHaltSignalFlipflopD.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
             this._virtualHaltSignalFlipflopD.recalcVirtualValue()
         }
+
+*/
+
+        // ISA_v8
+        //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
+        const _operandsDataSelectValue = [
+            (opCodeValue[3] && opCodeValue[2]) || (opCodeValue[3] && !opCodeValue[1]) || (!opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]),
+            (opCodeValue[3] && opCodeValue[2]) || (opCodeValue[3] && !opCodeValue[1]) || (!opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0])
+        ]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
+
+        _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
+
+        this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
+
+        const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
+        //console.log(_operandsDataSelectValueIndex)
+        let _operandsData : LogicValue[]
+        if (_operandsDataSelectValueIndex === 0) {
+            _operandsData = this._operandsValue
+        } else if (_operandsDataSelectValueIndex === 1) {
+            //console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
+            _operandsData = this._virtualAccumulatorRegister.outputsQ
+        } else if (_operandsDataSelectValueIndex === 2) {
+            _operandsData = _ALUoutputs.s
+            //console.log(_operandsData)
+        } else if (_operandsDataSelectValueIndex === 3) {
+            _operandsData = this.inputValues(this.inputs.Din).reverse()
+        } else {
+            _operandsData = this._virtualAccumulatorRegister.outputsQ
+        }
+
+        this._virtualAccumulatorRegister.inputsD = _operandsData
+
+        this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
+        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_operandsData)
+
+        const c = this._virtualFlagsRegister.outputsQ[1]
+        const z = this._virtualFlagsRegister.outputsQ[0]
+
+        const jumpControl = opCodeValue[2] && !opCodeValue[3]
+        this._noJump = !((((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && jumpControl) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
+        this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
+
+        this._virtualHaltSignalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && !(opCodeValue[4] || opCodeValue[5] || opCodeValue[6] || opCodeValue[7])
+
+        if (this._enablePipeline) {
+            this._virtualAccumulatorRegister.inputClock = clockSync
+            this._virtualAccumulatorRegister.recalcVirtualValue()
+            this._virtualFlagsRegister.inputClock = clockSync
+            this._virtualFlagsRegister.recalcVirtualValue()
+            this._virtualHaltSignalFlipflopD.inputClock = clockSync
+            this._virtualHaltSignalFlipflopD.recalcVirtualValue()
+        } else {
+            this._virtualAccumulatorRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
+            this._virtualAccumulatorRegister.recalcVirtualValue()
+            this._virtualFlagsRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
+            this._virtualFlagsRegister.recalcVirtualValue()
+            this._virtualHaltSignalFlipflopD.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
+            this._virtualHaltSignalFlipflopD.recalcVirtualValue()
+        }
+
         // EXECUTE STAGE
 
         // PROGRAM COUNTER LOGIC
