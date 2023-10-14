@@ -56,7 +56,7 @@ import { VirtualRAM } from "./VirtualRAM";
 import { VirtualComponent } from "./VirtualComponent";
 
 export const CPUOpCodes = [
-    "NOP", "STO", "LDA", "LDK",
+    "NOP", "STA", "LDA", "LDK",
     //0000 0001   0010   0011
     "JMD", "JMU", "BRZ", "BRC",
     //0100 0101   0110   0111

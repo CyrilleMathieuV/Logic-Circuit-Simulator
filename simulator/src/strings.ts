@@ -353,7 +353,7 @@ const Strings_fr = {
         },
         CPU: {
             "NOP": tuple("No operation", "Pas d'opération"),
-            "STO": tuple("Store ACC to RAM", "Enregistre l'ACC dans la RAM"),
+            "STA": tuple("Store ACC to RAM", "Enregistre l'ACC dans la RAM"),
             "LDA": tuple("Load RAM to ACC", "Charge la RAM dans l'ACC"),
             "LDK": tuple("Load Constant to ACC", "Charge une constante dans l'ACC"),
             "JMD": tuple("Jump Down", "Saute vers le bas"),
@@ -1192,7 +1192,7 @@ const Strings_en: Strings = {
         },
         CPU: {
             "NOP": tuple("No operation", "Pas d'opération"),
-            "STO": tuple("Store ACC to RAM", "Enregistre l'ACC dans la RAM"),
+            "STA": tuple("Store ACC to RAM", "Enregistre l'ACC dans la RAM"),
             "LDA": tuple("Load RAM to ACC", "Charge la RAM dans l'ACC"),
             "LDK": tuple("Load Constant to ACC", "Charge une constante dans l'ACC"),
             "JMD": tuple("Jump Down", "Saute vers le bas"),
