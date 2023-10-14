@@ -12,6 +12,7 @@
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/VirtualRAM.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/VirtualRAM.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -225,7 +226,8 @@
       <workItem from="1696624921599" duration="753000" />
       <workItem from="1697272927570" duration="6000" />
       <workItem from="1697272962947" duration="19118000" />
-      <workItem from="1697303119399" duration="3061000" />
+      <workItem from="1697303119399" duration="3367000" />
+      <workItem from="1697310833424" duration="913000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -352,14 +354,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00113" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)">
-      <option name="closed" value="true" />
-      <created>1691612573551</created>
-      <option name="number" value="00113" />
-      <option name="presentableId" value="LOCAL-00113" />
-      <option name="project" value="LOCAL" />
-      <updated>1691612573551</updated>
     </task>
     <task id="LOCAL-00114" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)">
       <option name="closed" value="true" />
@@ -601,7 +595,15 @@
       <option name="project" value="LOCAL" />
       <updated>1697296861537</updated>
     </task>
-    <option name="localTasksCounter" value="144" />
+    <task id="LOCAL-00144" summary="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
+      <option name="closed" value="true" />
+      <created>1697306700762</created>
+      <option name="number" value="00144" />
+      <option name="presentableId" value="LOCAL-00144" />
+      <option name="project" value="LOCAL" />
+      <updated>1697306700762</updated>
+    </task>
+    <option name="localTasksCounter" value="145" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

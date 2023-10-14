@@ -42,7 +42,7 @@ export class VirtualRAM extends VirtualROMRAMBase {
         this._trigger = trigger
     }
 
-    protected doRecalcValue(): VirtualROMRAMBaseValue {
+    public recalcVirtualValue(): VirtualROMRAMBaseValue {
         const clear = this.inputClr
         const numWords = this.numWords
         if (clear === true) {
