@@ -273,16 +273,17 @@ export class AssemblerEditor_v6 {
 
         //this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
 
-        //editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.mainDiv)
-        editor.html.assemblerEditor.appendChild(this.controlDiv)
-        editor.html.assemblerEditor.appendChild(this.headerDiv)
-        editor.html.assemblerEditor.appendChild(this.programDiv)
+        //editor.html.assemblerEditor_v6.insertAdjacentElement("afterbegin", this.mainDiv)
+        //editor.html.assemblerEditor_v6.appendChild(this.controlDiv)
+        //editor.html.assemblerEditor_v6.appendChild(this.headerDiv)
+        //editor.html.assemblerEditor_v6.appendChild(this.programDiv)
 
         // TO DO, naive approach, needs an event in CPU to trigger
-        editor.html.assemblerEditor.addEventListener("instrAddr", this.editor.wrapHandler((handler) => {
+        /*
+        editor.html.assemblerEditor_v6.addEventListener("instrAddr", this.editor.wrapHandler((handler) => {
             console.log(handler)
         }))
-
+        */
         this._dragSrcEl = this.editor.root.getElementById("instructionList") as HTMLLIElement
 
         this.addLine()
@@ -1055,7 +1056,7 @@ export class AssemblerEditor_v6 {
 export class AssemblerEditorEventManager_v6 {
 
     public readonly editor: LogicEditor
-    //private _assemblerEditor: AssemblerEditor
+    //private _assemblerEditor_v6: AssemblerEditor_v6
     private _currentMouseOverLine: HTMLElement | null = null
     private _currentMouseOverPopper: [popper: PopperInstance, removeScrollListener: () => void] | null = null
     //private _currentMouseDownData: MouseDownData | null = null
@@ -1065,10 +1066,10 @@ export class AssemblerEditorEventManager_v6 {
 
     public constructor(editor: LogicEditor) {
         this.editor = editor
-        //const assemblerEditor = this.editor.html.assemblerEditor
-        //this._assemblerEditor = this.editor.html.assemblerEditor as HTMLElement
+        //const assemblerEditor_v6 = this.editor.html.assemblerEditor_v6
+        //this._assemblerEditor_v6 = this.editor.html.assemblerEditor_v6 as HTMLElement
 
-        //const assemblerListener = assemblerEditor.ondragstart
+        //const assemblerListener = assemblerEditor_v6.ondragstart
     }
 
     public get currentMouseOverLine() {
@@ -1089,7 +1090,7 @@ export class AssemblerEditorEventManager_v6 {
         }
     }
 
-    public registerAssemblerEditorListenersOn = (assemblerEditor: AssemblerEditor_v6) => {
+    public registerAssemblerEditorListenersOn_v6 = (assemblerEditor_v6: AssemblerEditor_v6) => {
         const editor = this.editor
         /*
                 const returnTrue = () => true

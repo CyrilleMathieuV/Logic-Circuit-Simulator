@@ -11,6 +11,7 @@ import { Component, ComponentBase, ComponentRepr } from "./components/Component"
 import { ControlledInverterDef } from "./components/ControlledInverter"
 import { CounterDef } from "./components/Counter"
 import { CPUDef } from "./components/CPU"
+//import { CPUDef_v6 } from "./components/CPU_v6"
 import { CustomComponent, CustomComponentDef, CustomComponentDefRepr, CustomComponentPrefix } from "./components/CustomComponent"
 import { DecoderDef } from "./components/Decoder"
 import { Decoder16SegDef } from "./components/Decoder16Seg"
@@ -31,7 +32,7 @@ import { GateArrayDef } from "./components/GateArray"
 import { Gate1Types, GateNTypes } from "./components/GateTypes"
 import { HalfAdderDef } from "./components/HalfAdder"
 import { Input, InputDef } from "./components/Input"
-import { Keypad, KeypadDef } from "./components/Keypad"
+//import { Keypad, KeypadDef } from "./components/Keypad"
 import { Label, LabelDef } from "./components/Label"
 import { LatchSRDef } from "./components/LatchSR"
 import { MuxDef } from "./components/Mux"
@@ -64,7 +65,7 @@ const AllComponentDefs: ComponentMaker<any>[] = [
     InputDef,
     ClockDef,
     RandomDef,
-    KeypadDef,
+    //KeypadDef,
 
     // out
     OutputDef,
@@ -95,6 +96,7 @@ const AllComponentDefs: ComponentMaker<any>[] = [
     AdderArrayDef,
     ALUDef,
     CPUDef,
+    //CPUDef_v6,
     MuxDef,
     DemuxDef,
     LatchSRDef,

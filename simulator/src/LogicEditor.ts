@@ -41,8 +41,7 @@ import { Modifier, a, attr, attrBuilder, cls, div, emptyMod, href, input, label,
 import { inlineIconSvgFor, isIconName, makeIcon } from "./images"
 import { DefaultLang, S, getLang, isLang, setLang } from "./strings"
 import { InBrowser, KeysOfByType, RichStringEnum, UIDisplay, copyToClipboard, formatString, getURLParameter, isArray, isEmbeddedInIframe, isFalsyString, isString, isTruthyString, onVisible, pasteFromClipboard, setDisplay, setVisible, showModal, toggleVisible } from "./utils"
-import {AssemblerEditor, AssemblerEditorEventManager} from "./AssemblerEditor";
-
+import {AssemblerEditor, AssemblerEditorEventManager} from "./AssemblerEditor"
 
 
 enum Mode {
@@ -199,7 +198,7 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
         tooltipElem: HTMLElement,
         tooltipContents: HTMLElement,
         mainContextMenu: HTMLElement,
-        hiddenPath: SVGPathElement,
+        // hiddenPath: SVGPathElement,
         fileChooser: HTMLInputElement,
         optionsZone: HTMLElement,
         embedDialog: HTMLDialogElement,
@@ -248,7 +247,7 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
             tooltipContents: this.elemWithId("tooltipContents"),
             mainContextMenu: this.elemWithId("mainContextMenu"),
             optionsZone: this.elemWithId("optionsZone"),
-            hiddenPath: this.elemWithId("hiddenPath"),
+            // hiddenPath: this.elemWithId("hiddenPath"),
             fileChooser: this.elemWithId("fileChooser"),
             embedDialog: this.elemWithId("embedDialog"),
             embedUrl: this.elemWithId("embedUrl"),

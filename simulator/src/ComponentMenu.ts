@@ -29,7 +29,7 @@ import { Gate1Def, GateNDef } from "./components/Gate"
 import { GateArrayDef } from "./components/GateArray"
 import { HalfAdderDef } from "./components/HalfAdder"
 import { InputDef } from "./components/Input"
-import { KeypadDef } from "./components/Keypad"
+//import { KeypadDef } from "./components/Keypad"
 import { LabelDef } from "./components/Label"
 import { LatchSRDef } from "./components/LatchSR"
 import { MuxDef } from "./components/Mux"
@@ -103,7 +103,7 @@ const componentsMenu: Array<Section> = [{
         DisplayAsciiDef.button("DisplayAscii", { compat: "out.ascii", visible: withButton }),
 
         RandomDef.button({ bits: 1 }, "Random", { compat: "random", visible: withButton }),
-        KeypadDef.button({ bits: 8 }, "Display8", { compat: "out.byte-display", visible: ifShowOnly }),
+        //KeypadDef.button({ bits: 8 }, "Keypad", { compat: "out.byte-display", visible: ifShowOnly }),
 
         ShiftDisplayDef.button("ShiftDisplay", { compat: "out.shift-buffer", visible: withButton }),
     ],
