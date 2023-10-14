@@ -1030,6 +1030,16 @@ export class CPU extends CPUBase<CPURepr> {
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const _programCounterALUinputB = this._operandsValue.slice()
         ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits, false)
+
+        const _stackPointerDecision = opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
+        const _stackPointerDec = !opCodeValue[0] && _stackPointerDecision
+        const _stackPointerSelect = opCodeValue[0] && _stackPointerDecision
+        const _stackPointerALUop = _stackPointerDec? "A-B" : "A+B"
+        const _stackPointerALUinputA = this._virtualStackPointerRegister.outputsQ
+        const _stackPointerALUinputB = [_stackPointerDecision, false]
+        //ArrayClampOrPad(_stackPointerALUinputB, this.numAddressInstructionBits, false)
+        let _stackPointerALUoutputs= doALUOp(_stackPointerALUop, _stackPointerALUinputA, _stackPointerALUinputB, false)
+
         if (!this._noJump) {
             if (this._directAddressingMode) {
                 this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
@@ -1040,7 +1050,11 @@ export class CPU extends CPUBase<CPURepr> {
                 // We must go back of one step cylcle
                 if (this._enablePipeline) {
                     _programCounterALUoutputs = doALUOp("A-1", _programCounterALUoutputs.s, _programCounterALUinputB, false)
+                    this._virtualStack.inputsD = this._virtualPreviousProgramCounterRegister.outputsQ
+                } else {
+                    this._virtualStack.inputsD = this._virtualProgramCounterRegister.outputsQ
                 }
+                this._virtualStack.inputsAddr = this._virtualStackPointerRegister.outputsQ
                 this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
             }
         }
