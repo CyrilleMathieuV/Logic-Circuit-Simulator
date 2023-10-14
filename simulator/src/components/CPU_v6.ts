@@ -54,25 +54,38 @@ import { VirtualRegister } from "./VirtualRegister";
 import { VirtualCounter } from "./VirtualCounter";
 import { VirtualComponent } from "./VirtualComponent";
 
-export const CPUOpCodes = [
-    "NOP", "STO", "LDA", "LDK",
-    //0000 0001   0010   0011
-    "JMD", "JMU", "BRZ", "BRC",
+
+export const CPUOpCodes_v6 = [
+    "NOP", "DEC", "LDM", "LDK",
+    //0000  0001   0010   0011
+    "GDW", "GUP", "JIZ", "JIC",
     //0100 0101   0110   0111
-    "ADD", "SUB", "JSR", "RET",
-    //1000 1001   1010   1011
-    "OR_", "AND", "NOT", "XOR",
+    "ADM", "SBM", "HLT", "STM",
+    //1000  1001   1010    1011
+    "ORM", "ANM", "NOT", "XRM",
     //1100 1101   1110   1111
 ] as const
 
-export type CPUOpCode = typeof CPUOpCodes[number]
+// TO DO
+// Used to future CISC CPUOpCodes.
+// export const CPUOpCodesExtended:
+//  "NOP", "EX0", "LDM", "LDK",
+//0000  0001   0010   0011
+//    "GDW", "GUP", "JIZ", "JIC",
+//0100 0101   0110   0111
+//    "ADM", "SBM", "HLT", "STM",
+//1000  1001   1010    1011
+//    "ORM", "ANM", "EX1", "XRM",
+//1100 1101   1110   1111
 
-export const CPUOpCode = {
-    shortName(opCode: CPUOpCode): string {
-        return S.Components.CPU[opCode][0]
+export type CPUOpCode_v6 = typeof CPUOpCodes_v6[number]
+
+export const CPUOpCode_v6 = {
+    shortName(opCode: CPUOpCode_v6): string {
+        return S.Components.CPU_v6[opCode][0]
     },
-    fullName(opCode: CPUOpCode): string {
-        return S.Components.CPU[opCode][1]
+    fullName(opCode: CPUOpCode_v6): string {
+        return S.Components.CPU_v6[opCode][1]
     },
 }
 
@@ -120,7 +133,7 @@ export const CPUStageColorKey2 = {
 }
 */
 
-export const CPUBaseDef =
+export const CPUBaseDef_v6 =
     defineAbstractParametrizedComponent( {
         button: { imgWidth: 40 },
         repr: {
@@ -241,17 +254,17 @@ export const CPUBaseDef =
         }
     })
 
-type CPUBaseValue = Value<typeof CPUBaseDef>
+type CPUBaseValue_v6 = Value<typeof CPUBaseDef_v6>
 
-export type CPUBaseRepr = Repr<typeof CPUBaseDef>
-export type CPUBaseParams = ResolvedParams<typeof CPUBaseDef>
+export type CPUBaseRepr_v6 = Repr<typeof CPUBaseDef_v6>
+export type CPUBaseParams_v6 = ResolvedParams<typeof CPUBaseDef_v6>
 
-export abstract class CPUBase<
-    TRepr extends CPUBaseRepr,
+export abstract class CPUBase_v6<
+    TRepr extends CPUBaseRepr_v6,
     TParamDefs extends ExtractParamDefs<TRepr> = ExtractParamDefs<TRepr>,
 > extends ParametrizedComponentBase<
     TRepr,
-    CPUBaseValue,
+    CPUBaseValue_v6,
     TParamDefs,
     ExtractParams<TRepr>,
     NodesIn<TRepr>,
@@ -281,7 +294,7 @@ export abstract class CPUBase<
 
     public _opCodeOperandsInStages : any
 
-    protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef, params: CPUBaseParams, saved?: TRepr) {
+    protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef_v6, params: CPUBaseParams_v6, saved?: TRepr) {
         super(parent, SubclassDef.with(params as any) as any /* TODO */, saved)
 
         this.numAddressInstructionBits = params.numAddressInstructionBits
@@ -291,24 +304,24 @@ export abstract class CPUBase<
 
         this._opCodeOperandsInStages = { FETCH : "", DECODE : "", EXECUTE : ""}
 
-        this._showStage = saved?.showStage ?? CPUDef.aults.showStage
+        this._showStage = saved?.showStage ?? CPUDef_v6.aults.showStage
 
-        this._showOpCode = saved?.showOpCode ?? CPUDef.aults.showOpCode
-        this._showOperands = saved?.showOperands ?? CPUDef.aults.showOperands
+        this._showOpCode = saved?.showOpCode ?? CPUDef_v6.aults.showOpCode
+        this._showOperands = saved?.showOperands ?? CPUDef_v6.aults.showOperands
 
-        this._enablePipeline = saved?.enablePipeline ?? CPUDef.aults.enablePipeline
+        this._enablePipeline = saved?.enablePipeline ?? CPUDef_v6.aults.enablePipeline
 
-        this._showClockCycle = saved?.showClockCycle ?? CPUDef.aults.showClockCycle
+        this._showClockCycle = saved?.showClockCycle ?? CPUDef_v6.aults.showClockCycle
 
-        this._addProgramRAM = saved?.addProgramRAM ?? CPUDef.aults.addProgramRAM
+        this._addProgramRAM = saved?.addProgramRAM ?? CPUDef_v6.aults.addProgramRAM
 
 
-        this._trigger = saved?.trigger ?? CPUDef.aults.trigger
+        this._trigger = saved?.trigger ?? CPUDef_v6.aults.trigger
     }
 
-    protected abstract override doRecalcValue(): CPUBaseValue
+    protected abstract override doRecalcValue(): CPUBaseValue_v6
 
-    public makeInvalidState(): CPUBaseValue {
+    public makeInvalidState(): CPUBaseValue_v6 {
         const false_ = false as LogicValue
         let newState : any
         newState = {
@@ -325,10 +338,10 @@ export abstract class CPUBase<
             haltsignal: false_,
             runningstate: false_
         }
-        return newState as CPUBaseValue
+        return newState as CPUBaseValue_v6
     }
 
-    public makeStateFromMainValue(val: LogicValue): CPUBaseValue {
+    public makeStateFromMainValue(val: LogicValue): CPUBaseValue_v6 {
         let newState : any
         newState = {
             isaadr: ArrayFillWith<LogicValue>(val, this.numAddressInstructionBits),
@@ -344,7 +357,7 @@ export abstract class CPUBase<
             haltsignal: val,
             runningstate: val
         }
-        return newState as CPUBaseValue
+        return newState as CPUBaseValue_v6
     }
 
     //protected abstract makeStateAfterClock(): CPUBaseValue
@@ -360,22 +373,22 @@ export abstract class CPUBase<
 
     public override toJSONBase() {
         return {
-            addressInstructionBits: this.numAddressInstructionBits === CPUDef.aults.addressInstructionBits ? undefined : this.numAddressInstructionBits,
-            dataBits: this.numDataBits === CPUDef.aults.dataBits ? undefined : this.numDataBits,
-            addressDataBits: this.numAddressDataBits === CPUDef.aults.addressDataBits ? undefined : this.numAddressDataBits,
+            addressInstructionBits: this.numAddressInstructionBits === CPUDef_v6.aults.addressInstructionBits ? undefined : this.numAddressInstructionBits,
+            dataBits: this.numDataBits === CPUDef_v6.aults.dataBits ? undefined : this.numDataBits,
+            addressDataBits: this.numAddressDataBits === CPUDef_v6.aults.addressDataBits ? undefined : this.numAddressDataBits,
             ...super.toJSONBase(),
             //extOpCode: this.usesExtendedOpCode === CPUDef.aults.extOpCode ? undefined : this.usesExtendedOpCode,
-            showStage: (this._showStage !== CPUDef.aults.showStage) ? this._showStage : undefined,
-            showOpCode: (this._showOpCode !== CPUDef.aults.showOpCode) ? this._showOpCode : undefined,
-            showOperands: (this._showOperands !== CPUDef.aults.showOperands) ? this._showOperands : undefined,
-            enablePipeline: (this._enablePipeline !== CPUDef.aults.enablePipeline) ? this._enablePipeline : undefined,
-            showClockCycle: (this._showClockCycle !== CPUDef.aults.showClockCycle) ? this._showClockCycle : undefined,
-            addProgramRAM: (this._addProgramRAM !== CPUDef.aults.addProgramRAM) ? this._addProgramRAM : undefined,
-            trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
+            showStage: (this._showStage !== CPUDef_v6.aults.showStage) ? this._showStage : undefined,
+            showOpCode: (this._showOpCode !== CPUDef_v6.aults.showOpCode) ? this._showOpCode : undefined,
+            showOperands: (this._showOperands !== CPUDef_v6.aults.showOperands) ? this._showOperands : undefined,
+            enablePipeline: (this._enablePipeline !== CPUDef_v6.aults.enablePipeline) ? this._enablePipeline : undefined,
+            showClockCycle: (this._showClockCycle !== CPUDef_v6.aults.showClockCycle) ? this._showClockCycle : undefined,
+            addProgramRAM: (this._addProgramRAM !== CPUDef_v6.aults.addProgramRAM) ? this._addProgramRAM : undefined,
+            trigger: (this._trigger !== CPUDef_v6.aults.trigger) ? this._trigger : undefined,
         }
     }
 
-    protected override propagateValue(newValue: CPUBaseValue) {}
+    protected override propagateValue(newValue: CPUBaseValue_v6) {}
 
     private doSetShowStage(ShowStage: boolean) {
         this._showStage = ShowStage
@@ -506,26 +519,26 @@ export abstract class CPUBase<
 
 }
 
-export const CPUDef =
+export const CPUDef_v6 =
     defineParametrizedComponent("CPU", true, true, {
         variantName: ({ addressInstructionBits }) => `CPU-${addressInstructionBits}`,
         idPrefix: "CPU",
-        ...CPUBaseDef,
+        ...CPUBaseDef_v6,
         repr: {
-            ...CPUBaseDef.repr,
+            ...CPUBaseDef_v6.repr,
             instructionBits: typeOrUndefined(t.number),
             directAddressingMode: typeOrUndefined(t.boolean),
             //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         },
         valueDefaults: {
-            ...CPUBaseDef.valueDefaults,
+            ...CPUBaseDef_v6.valueDefaults,
             directAddressingMode: false,
             trigger: EdgeTrigger.falling,
         },
         params: {
-            addressInstructionBits: CPUBaseDef.params.addressInstructionBits,
-            dataBits: CPUBaseDef.params.dataBits,
-            addressDataBits: CPUBaseDef.params.addressDataBits,
+            addressInstructionBits: CPUBaseDef_v6.params.addressInstructionBits,
+            dataBits: CPUBaseDef_v6.params.dataBits,
+            addressDataBits: CPUBaseDef_v6.params.addressDataBits,
             instructionBits: param(8, [8]),
             //extOpCode: CPUBaseDef.params.extOpCode,
         },
@@ -537,7 +550,7 @@ export const CPUDef =
             //usesExtendedOpCode: extOpCode,
         }),
         makeNodes: (params, defaults) => {
-            const base = CPUBaseDef.makeNodes(params, defaults)
+            const base = CPUBaseDef_v6.makeNodes(params, defaults)
             const bottom = params.gridHeight / 2
             const top = -bottom
             const right = params.gridWidth / 2
@@ -557,14 +570,14 @@ export const CPUDef =
         }
     })
 
-type CPUValue = Value<typeof CPUDef>
+type CPUValue_v6 = Value<typeof CPUDef_v6>
 
-export type CPURepr = Repr<typeof CPUDef>
-export type CPUParams = ResolvedParams<typeof CPUDef>
+export type CPURepr_v6 = Repr<typeof CPUDef_v6>
+export type CPUParams_v6 = ResolvedParams<typeof CPUDef_v6>
 
-export class CPU extends CPUBase<CPURepr> {
+export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
     public readonly numInstructionBits: number
-    private _directAddressingMode = CPUDef.aults.directAddressingMode
+    private _directAddressingMode = CPUDef_v6.aults.directAddressingMode
 
     protected _mustGetFetchInstructionAgain : boolean
 
@@ -594,12 +607,12 @@ export class CPU extends CPUBase<CPURepr> {
 
     public _currentAddressEvent : CustomEvent
 
-    public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
-        super(parent, CPUDef, params, saved)
+    public constructor(parent: DrawableParent, params: CPUParams_v6, saved?: CPURepr_v6) {
+        super(parent, CPUDef_v6, params, saved)
 
         this.numInstructionBits = params.numInstructionBits
-        this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
-        this._trigger = saved?.trigger ?? CPUDef.aults.trigger
+        this._directAddressingMode = saved?.directAddressingMode ?? CPUDef_v6.aults.directAddressingMode
+        this._trigger = saved?.trigger ?? CPUDef_v6.aults.trigger
 
         this._mustGetFetchInstructionAgain = true
 
@@ -668,15 +681,15 @@ export class CPU extends CPUBase<CPURepr> {
 
     public toJSON() {
         return {
-            instructionBits: this.numInstructionBits === CPUDef.aults.instructionBits ? undefined : this.numInstructionBits,
+            instructionBits: this.numInstructionBits === CPUDef_v6.aults.instructionBits ? undefined : this.numInstructionBits,
             ...this.toJSONBase(),
-            directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
-            trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
+            directAddressingMode: (this._directAddressingMode !== CPUDef_v6.aults.directAddressingMode) ? this._directAddressingMode : undefined,
+            trigger: (this._trigger !== CPUDef_v6.aults.trigger) ? this._trigger : undefined,
         }
     }
 
     protected get moduleName() {
-        return "CPU"
+        return "CPU_v6"
     }
 
     protected doSetDirectAddressingMode(directAddressingMode: boolean) {
@@ -719,11 +732,11 @@ export class CPU extends CPUBase<CPURepr> {
         }
     }
     */
-    protected doRecalcValue(): CPUBaseValue {
-       /*
-        BE CAREFUL WITH .reverse()
-        IT AFFECTS THE OBJECT !!!
-         */
+    protected doRecalcValue(): CPUBaseValue_v6 {
+        /*
+         BE CAREFUL WITH .reverse()
+         IT AFFECTS THE OBJECT !!!
+          */
         // RUN CONTROL LOGIC
         const prevClock = this._lastClock
         const clockSpeed = this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
@@ -794,7 +807,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         const isa_FETCH_opCodeValue = isa_FETCH.slice(0, 4).reverse()
         const isa_FETCH_opCodeIndex = displayValuesFromArray(isa_FETCH_opCodeValue, false)[1]
-        const isa_FETCH_opCodeName = isUnknown(isa_FETCH_opCodeIndex) ? Unknown : CPUOpCodes[isa_FETCH_opCodeIndex]
+        const isa_FETCH_opCodeName = isUnknown(isa_FETCH_opCodeIndex) ? Unknown : CPUOpCodes_v6[isa_FETCH_opCodeIndex]
 
         const isa_FETCH_operands = isa_FETCH.slice(4, 8).reverse()
 
@@ -810,7 +823,7 @@ export class CPU extends CPUBase<CPURepr> {
             }
         }
 
-        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
+        if (CPU_v6.isClockTrigger(this._trigger, prevClock, clockSync)) {
             console.log(cycle, "-", stage, " * ", this.getOperandsNumberWithRadix(isa_FETCH, 2))
             console.log("before ",this._opCodeOperandsInStages)
             //this._mustGetFetchInstructionAgain = true
@@ -844,7 +857,7 @@ export class CPU extends CPUBase<CPURepr> {
         // DECCODE Stage
         const opCodeValue = this._virtualInstructionRegister.outputsQ.slice(0, 4).reverse()
         const opCodeIndex = displayValuesFromArray(opCodeValue, false)[1]
-        const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
+        const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes_v6[opCodeIndex]
 
         const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
         const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
@@ -852,7 +865,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
         /*
-        ISA_v5
+ISA5
         const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
         const _operandsDataSelectValue = [
             (_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]),
@@ -1041,10 +1054,10 @@ export class CPU extends CPUBase<CPURepr> {
             }
         }
 
-        return newState as CPUBaseValue
+        return newState as CPUBaseValue_v6
     }
 
-    public override propagateValue(newValue: CPUValue) {
+    public override propagateValue(newValue: CPUValue_v6) {
         this.outputValues(this.outputs.Isaadr , newValue.isaadr, true)
         this.outputValues(this.outputs.Dadr , newValue.dadr, true)
         this.outputValues(this.outputs.Dout , newValue.dout)
@@ -1059,11 +1072,11 @@ export class CPU extends CPUBase<CPURepr> {
         this.outputs.HaltSignal.value = newValue.haltsignal
         this.outputs.RunningState.value = newValue.runningstate
     }
-/*
-    public makeStateAfterClock(): CPUBaseValue {
-        return []
-    }
-*/
+    /*
+        public makeStateAfterClock(): CPUBaseValue {
+            return []
+        }
+    */
     public doRecalcValueAfterClock(): [LogicValue[], LogicValue[], LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue] {
         return [
             this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ),
@@ -1081,7 +1094,7 @@ export class CPU extends CPUBase<CPURepr> {
         const opCode = this.opCode
         const stage = this.stage
         const s = S.Components.CPU.tooltip
-        const opCodeDesc = isUnknown(opCode) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOpCode.fullName(opCode)
+        const opCodeDesc = isUnknown(opCode) ? s.SomeUnknownInstruction : s.ThisInstruction + " " + CPUOpCode_v6.fullName(opCode)
         return tooltipContent(s.title,
             mods(
                 div(`${s.CurrentlyCarriesOut} ${opCodeDesc}.`)
@@ -1293,14 +1306,14 @@ export class CPU extends CPUBase<CPURepr> {
         }
     }
 
-    public get opCode(): CPUOpCode | Unknown {
+    public get opCode(): CPUOpCode_v6 | Unknown {
         //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
         const opCodeValues = this._virtualInstructionRegister.inputsD.slice(0,4)
         //opValues.push(this.inputs.Mode.value)
         const opCodeIndex = displayValuesFromArray(opCodeValues, true)[1]
         // TO DO
         //return isUnknown(opCodeIndex) ? Unknown : (this.usesExtendedOpCode ? CPUOpCodes : CPUOpCodes)[opCodeIndex]
-        return isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
+        return isUnknown(opCodeIndex) ? Unknown : CPUOpCodes_v6[opCodeIndex]
     }
 
     public get operands(): LogicValue[] {
@@ -1332,4 +1345,4 @@ export class CPU extends CPUBase<CPURepr> {
     }
 }
 
-CPUDef.impl = CPU
+CPUDef_v6.impl = CPU_v6

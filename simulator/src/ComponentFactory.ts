@@ -31,6 +31,7 @@ import { GateArrayDef } from "./components/GateArray"
 import { Gate1Types, GateNTypes } from "./components/GateTypes"
 import { HalfAdderDef } from "./components/HalfAdder"
 import { Input, InputDef } from "./components/Input"
+import { Keypad, KeypadDef } from "./components/Keypad"
 import { Label, LabelDef } from "./components/Label"
 import { LatchSRDef } from "./components/LatchSR"
 import { MuxDef } from "./components/Mux"
@@ -63,6 +64,7 @@ const AllComponentDefs: ComponentMaker<any>[] = [
     InputDef,
     ClockDef,
     RandomDef,
+    KeypadDef,
 
     // out
     OutputDef,

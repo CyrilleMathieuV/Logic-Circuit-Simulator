@@ -2,7 +2,7 @@ import { LogicEditor, MouseAction } from "./LogicEditor"
 import { binaryStringRepr, TimeoutHandle, Unknown } from "./utils"
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
 import { EditorSelection, UIEventManager } from "./UIEventManager"
-import { CPU, CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
+import { CPU_v6, CPUBase_v6, CPUOpCode_v6, CPUOpCodes_v6} from "./components/CPU_v6"
 import { IconName, inlineIconSvgFor } from "./images"
 import { button, cls, i, raw, li, div, ol, select, option, value, style, draggable, id, input, applyModifierTo, selected, start, disabled, hidden, maxlength, selectedIndex } from "./htmlgen"
 import { ROM } from "./components/ROM"
@@ -44,12 +44,12 @@ type Instruction = {
     comment: string
 }
 
-const goToDownOpCode = ["JMD", "BRZ", "BRC", "JSR"] as string[]
-const goToUpOpCode = ["JMU", "RET"] as string[]
+const goToDownOpCode = ["GDW", "JIZ", "JIC"] as string[]
+const goToUpOpCode = ["GUP"] as string[]
 let goToOpCode = goToDownOpCode.concat(goToUpOpCode)
-const noOperandOpCode = ["NOP"] as string[]
+const noOperandOpCode = ["NOP", "DEC", "HLT"] as string[]
 
-export class AssemblerEditor {
+export class AssemblerEditor_v6 {
     public editor: LogicEditor
 
     //private readonly mainDiv: HTMLDivElement
@@ -83,7 +83,7 @@ export class AssemblerEditor {
     private _assemblerWordLength = 8
     private _assemblerOperandLength = 4
 
-    private _opcodes: typeof CPUOpCodes
+    private _opcodes: typeof CPUOpCodes_v6
 
     private _program: Instruction[]
 
@@ -139,7 +139,7 @@ export class AssemblerEditor {
         this._ROMRAMsList = []
         this._CPUsList = []
 
-        this._opcodes = CPUOpCodes
+        this._opcodes = CPUOpCodes_v6
         this._program = []
 
         this.controlDivRAMROMSelect = select().render()
@@ -322,7 +322,7 @@ export class AssemblerEditor {
             this.removeAllChildren(this.controlDivCPUSelect)
             this._CPUsList = []
         }
-        this._CPUsList = [...this.editor.components.all()].filter((comp) => comp instanceof CPU)
+        this._CPUsList = [...this.editor.components.all()].filter((comp) => comp instanceof CPU_v6)
         console.log(this._CPUsList)
         if (this._CPUsList.length > 0) {
             for (let cpu of this._CPUsList) {
@@ -366,7 +366,7 @@ export class AssemblerEditor {
             let instruction = program[_i]
             let lineLabel = ""
 
-            const CPUOpCode = CPUOpCodes[instruction.opCode]
+            const CPUOpCode = CPUOpCodes_v6[instruction.opCode]
 
             if ((goToOpCode.includes(CPUOpCode))) {
                 if(goToUpOpCode.includes(CPUOpCode)) {
@@ -673,8 +673,8 @@ export class AssemblerEditor {
         }
 
         if (newInstruction.opCode != this._program[lineNumber].opCode) {
-            const newCPUOpCode = CPUOpCodes[newInstruction.opCode]
-            const CPUOpCode = CPUOpCodes[this._program[lineNumber].opCode]
+            const newCPUOpCode = CPUOpCodes_v6[newInstruction.opCode]
+            const CPUOpCode = CPUOpCodes_v6[this._program[lineNumber].opCode]
             if (goToOpCode.includes(newCPUOpCode)) {
                 if (!goToOpCode.includes(CPUOpCode)) {
                     this._program[lineNumber].operand = 0
@@ -715,7 +715,7 @@ export class AssemblerEditor {
         if (newInstruction.operand != this._program[lineNumber].operand) {
             this._program[lineNumber].operand = newInstruction.operand
             let newOperandSelectIndex = newOperandSelect.options.selectedIndex
-            const lineCPUOpCode = CPUOpCodes[this._program[lineNumber].opCode]
+            const lineCPUOpCode = CPUOpCodes_v6[this._program[lineNumber].opCode]
 
             if (goToUpOpCode.includes(lineCPUOpCode)) {
                 newOperandSelectIndex = (this._assemblerOperandLength ** 2 - 1) - newOperandSelectIndex
@@ -746,7 +746,7 @@ export class AssemblerEditor {
         applyModifierTo(opCodeSelect, selectedIndex(opCodeSelectedValue.toString()))
         applyModifierTo(opCodeSelectedOption, selected(""))
 
-        const CPUOpCode = CPUOpCodes[opCodeSelectedValue]
+        const CPUOpCode = CPUOpCodes_v6[opCodeSelectedValue]
 
         let operandSelectedValue = this._program[lineNumber].operand
 
@@ -907,7 +907,7 @@ export class AssemblerEditor {
                 const _operand = line.querySelector(".operand") as HTMLSelectElement
                 const _comment = line.querySelector(".comment") as HTMLInputElement
 
-                const CPUOpCode = CPUOpCodes[_opcode.options.selectedIndex]
+                const CPUOpCode = CPUOpCodes_v6[_opcode.options.selectedIndex]
 
                 const instruction: Instruction = {
                     label : _label.value,
@@ -947,7 +947,7 @@ export class AssemblerEditor {
 
         const opCodeSelectedValue = this._program[lineNumber].opCode
         const opCodeSelect = line.getElementsByClassName("opcode")[0] as HTMLSelectElement
-        const CPUOpCode = CPUOpCodes[opCodeSelectedValue]
+        const CPUOpCode = CPUOpCodes_v6[opCodeSelectedValue]
 
         let operandSelectedValue = this._program[lineNumber].operand
         const operandSelect = line.getElementsByClassName("operand")[0] as HTMLSelectElement
@@ -1052,7 +1052,7 @@ export class AssemblerEditor {
     }
 }
 
-export class AssemblerEditorEventManager {
+export class AssemblerEditorEventManager_v6 {
 
     public readonly editor: LogicEditor
     //private _assemblerEditor: AssemblerEditor
@@ -1089,7 +1089,7 @@ export class AssemblerEditorEventManager {
         }
     }
 
-    public registerAssemblerEditorListenersOn = (assemblerEditor: AssemblerEditor) => {
+    public registerAssemblerEditorListenersOn = (assemblerEditor: AssemblerEditor_v6) => {
         const editor = this.editor
         /*
                 const returnTrue = () => true

@@ -10,6 +10,7 @@ import { ParamDef, ParametrizedComponentDef, ParamsFromDefs } from "./components
 import { ControlledInverterDef } from "./components/ControlledInverter"
 import { CounterDef } from "./components/Counter"
 import { CPUDef } from "./components/CPU"
+import { CPUDef_v6 } from "./components/CPU_v6"
 import { CustomComponentDef, CustomComponentImageHeight, CustomComponentImageWidth } from "./components/CustomComponent"
 import { DecoderDef } from "./components/Decoder"
 import { Decoder16SegDef } from "./components/Decoder16Seg"
@@ -28,6 +29,7 @@ import { Gate1Def, GateNDef } from "./components/Gate"
 import { GateArrayDef } from "./components/GateArray"
 import { HalfAdderDef } from "./components/HalfAdder"
 import { InputDef } from "./components/Input"
+import { KeypadDef } from "./components/Keypad"
 import { LabelDef } from "./components/Label"
 import { LatchSRDef } from "./components/LatchSR"
 import { MuxDef } from "./components/Mux"
@@ -101,6 +103,8 @@ const componentsMenu: Array<Section> = [{
         DisplayAsciiDef.button("DisplayAscii", { compat: "out.ascii", visible: withButton }),
 
         RandomDef.button({ bits: 1 }, "Random", { compat: "random", visible: withButton }),
+        KeypadDef.button({ bits: 8 }, "Display8", { compat: "out.byte-display", visible: ifShowOnly }),
+
         ShiftDisplayDef.button("ShiftDisplay", { compat: "out.shift-buffer", visible: withButton }),
     ],
 }, {
@@ -159,6 +163,7 @@ const componentsMenu: Array<Section> = [{
         AdderArrayDef.button({ bits: 4 }, "AdderArray"),
         ALUDef.button({ bits: 4, ext: false }, "ALU"),
         CPUDef.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, addressInstructionBits : 8 }, "CPU"),
+        CPUDef_v6.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, addressInstructionBits : 8 }, "CPU_v6"),
 
         MuxDef.button({ from: 4, to: 2 }, "Mux"),
         DemuxDef.button({ from: 2, to: 4 }, "Demux"),

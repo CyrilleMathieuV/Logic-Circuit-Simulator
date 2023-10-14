@@ -607,8 +607,8 @@ export class Ribbon extends Drawable {
     // private _endNodes: NodeIn[] = []
 
     public constructor(parent: DrawableParent,
-        public readonly startNodeGroup: NodeGroup<NodeOut>,
-        public readonly endNodeGroup: NodeGroup<NodeIn>,
+                       public readonly startNodeGroup: NodeGroup<NodeOut>,
+                       public readonly endNodeGroup: NodeGroup<NodeIn>,
     ) {
         super(parent)
     }
@@ -891,6 +891,7 @@ export class WireManager {
             this.offsetWireIfNecessary(wire)
         }
         this.tryMergeWire(wire)
+        this.parent.ifEditing?.setToolCursor(null)
         this.parent.ifEditing?.setDirty("added wire")
         return wire
     }

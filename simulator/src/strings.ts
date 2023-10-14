@@ -50,6 +50,7 @@ const Strings_fr = {
             Input1: ["Entrée", "IN"],
             InputN: ["Entrée multiple", "IN mult."],
             Input8: ["Entrée octet (8 bits)", "IN 8 bits"],
+            KeypadN: ["Clavier", "IN mult."],
             Clock: ["Générateur de signal d’horloge", "Horloge"],
             Random: ["Entrée aléatoire", "Aléatoire"],
             Output1: ["Sortie", "OUT"],
@@ -104,6 +105,7 @@ const Strings_fr = {
             AdderArray: ["Additionneur multiple", "Add. mult."],
             ALU: ["Unité arithmétique et logique", "ALU"],
             CPU: ["Unité centrale", "CPU"],
+            CPU_v6: ["Unité centrale", "CPU"],
 
             Mux: ["Multiplexer", "Mux"],
             Mux2to1: ["Multiplexer 2-vers-1 (1 bit de contrôle)", "Mux 2-1"],
@@ -351,6 +353,51 @@ const Strings_fr = {
         },
         CPU: {
             "NOP": tuple("No operation", "Pas d'opération"),
+            "STO": tuple("Store ACC to RAM", "Enregistre l'ACC dans la RAM"),
+            "LDA": tuple("Load RAM to ACC", "Charge la RAM dans l'ACC"),
+            "LDK": tuple("Load Constant to ACC", "Charge une constante dans l'ACC"),
+            "JMD": tuple("Jump Down", "Saute vers le bas"),
+            "JMU": tuple("Jump Up", "Saute vers le haut"),
+            "BRZ": tuple("Branch If Z", "Saute vers le bas si Z = 1"),
+            "BRC": tuple("Branch If C", "Saute vers le bas si C = 1"),
+            "ADD": tuple("Add RAM to ACC", "Additionne la RAM à l'ACC"),
+            "SUB": tuple("Sub RAM from ACC", "Soustrait la RAM à l'ACC"),
+            "JSR": tuple("Jump to subroutine", "Saute vers la sous-routine"),
+            "RET": tuple("Return from subroutine", "Revient de la sous-routine"),
+            "OR_": tuple("Or RAM and ACC", "ACC ou RAM"),
+            "AND": tuple("And RAM and ACC", "ACC et RAM"),
+            "NOT": tuple("Not ACC", "Complément de l'ACC"),
+            "XOR": tuple("Xor RAM and ACC", "ACC ou exclusif RAM"),
+
+            StageName: {
+                "FETCH": tuple("Fetch", "Fetch"),
+                "DECODE": tuple("Decode", "Decode"),
+                "EXECUTE": tuple("Execute", "Execute"),
+            },
+            StageColor: {
+                "FETCH": "green",
+                "DECODE": "blue",
+                "EXECUTE": "orange",
+            },
+            tooltip: {
+                title: "Unité centrale (CPU)",
+                CurrentlyCarriesOut: "Effectue actuellement",
+                SomeUnknownInstruction: "une instruction inconnue",
+                ThisInstruction: "l'instruction",
+            },
+            contextMenu: {
+                toggleShowOpCode: "Afficher l’opération",
+                toggleShowOperands: "Afficher les opérandes",
+                toggleShowStage: "Afficher l'étape",
+                toggleEnablePipeline: "Activer le pipeline",
+                toggleShowClockCycle: "Afficher le cycle",
+                toggleAddProgramRAM: "Ajouter une RAM programme",
+                toggleDirectAddressingMode: "Adressage direct",
+                //ParamUseExtendedOpCode: "Utiliser opérations étendues",
+            },
+        },
+        CPU_v6: {
+            "NOP": tuple("No operation", "Pas d'opération"),
             "DEC": tuple("Decrement ACC", "Décrémente l'ACC"),
             "LDM": tuple("Load RAM to ACC", "Charge la RAM dans l'ACC"),
             "LDK": tuple("Load Constant to ACC", "Charge une constante dans l'ACC"),
@@ -523,6 +570,17 @@ const Strings_fr = {
         Input: {
             tooltip: {
                 title: template("Entrée (${numBits} bit$s{numBits})"),
+            },
+            contextMenu: {
+                LockValue: "Verrouiller cette valeur",
+                PushButton: "Poussoir",
+                ToggleButton: "Commutateur",
+                ReplaceWithClock: "Remplacer par horloge",
+            },
+        },
+        Keypad: {
+            tooltip: {
+                title: template("Clavier (${numBits} bit$s{numBits})"),
             },
             contextMenu: {
                 LockValue: "Verrouiller cette valeur",
@@ -831,6 +889,7 @@ const Strings_en: Strings = {
             Input1: ["Input", "IN"],
             InputN: ["Multiple Inputs", "IN Mult."],
             Input8: ["Byte (8-Bit) Input", "IN (8-Bit)"],
+            KeypadN: ["Keypad", "IN mult."],
             Clock: ["Clock Generator", "Clock"],
             Random: ["Random Input", "Random"],
             Output1: ["Output", "OUT"],
@@ -885,6 +944,7 @@ const Strings_en: Strings = {
             AdderArray: ["Adder Array", "Adder Arr."],
             ALU: ["Arithmetic and Logic Unit", "ALU"],
             CPU: ["Central Processing Unit", "CPU"],
+            CPU_v6: ["Central Processing Unit", "CPU"],
 
             Mux: ["Multiplexer", "Mux"],
             Mux2to1: ["2-to-1 Multiplexer (1 Control Bit)", "Mux 2-1"],
@@ -1132,6 +1192,51 @@ const Strings_en: Strings = {
         },
         CPU: {
             "NOP": tuple("No operation", "Pas d'opération"),
+            "STO": tuple("Store ACC to RAM", "Enregistre l'ACC dans la RAM"),
+            "LDA": tuple("Load RAM to ACC", "Charge la RAM dans l'ACC"),
+            "LDK": tuple("Load Constant to ACC", "Charge une constante dans l'ACC"),
+            "JMD": tuple("Jump Down", "Saute vers le bas"),
+            "JMU": tuple("Jump Up", "Saute vers le haut"),
+            "BRZ": tuple("Branch If Z", "Saute vers le bas si Z = 1"),
+            "BRC": tuple("Branch If C", "Saute vers le bas si C = 1"),
+            "ADD": tuple("Add RAM to ACC", "Additionne la RAM à l'ACC"),
+            "SUB": tuple("Sub RAM from ACC", "Soustrait la RAM à l'ACC"),
+            "JSR": tuple("Jump to subroutine", "Saute vers la sous-routine"),
+            "RET": tuple("Return from subroutine", "Revient de la sous-routine"),
+            "OR_": tuple("Or RAM and ACC", "ACC ou RAM"),
+            "AND": tuple("And RAM and ACC", "ACC et RAM"),
+            "NOT": tuple("Not ACC", "Complément de l'ACC"),
+            "XOR": tuple("Xor RAM and ACC", "ACC ou exclusif RAM"),
+
+            StageName: {
+                "FETCH": tuple("Fetch", "Fetch"),
+                "DECODE": tuple("Decode", "Decode"),
+                "EXECUTE": tuple("Execute", "Execute"),
+            },
+            StageColor: {
+                "FETCH": "green",
+                "DECODE": "blue",
+                "EXECUTE": "orange",
+            },
+            tooltip: {
+                title: "Central Processing Unit (CPU)",
+                CurrentlyCarriesOut: "Currently carries out",
+                SomeUnknownInstruction: "an unknown instruction",
+                ThisInstruction: "instruction",
+            },
+            contextMenu: {
+                toggleShowOpCode: "Show Operation",
+                toggleShowOperands: "Show Operands",
+                toggleShowStage: "Show Stage",
+                toggleEnablePipeline: "Pipeline enabled",
+                toggleShowClockCycle: "Show Cycle",
+                toggleAddProgramRAM: "Add a program RAM",
+                toggleDirectAddressingMode: "Direct addressing mode enabled",
+                //ParamUseExtendedOpCode: "Use Extended Opcode",
+            },
+        },
+        CPU_v6: {
+            "NOP": tuple("No operation", "Pas d'opération"),
             "DEC": tuple("Decrement ACC", "Décrémente l'ACC"),
             "LDM": tuple("Load RAM to ACC", "Charge la RAM dans l'ACC"),
             "LDK": tuple("Load Constant to ACC", "Charge une constante dans l'ACC"),
@@ -1303,6 +1408,17 @@ const Strings_en: Strings = {
         Input: {
             tooltip: {
                 title: template("Input (${numBits}-Bit)"),
+            },
+            contextMenu: {
+                LockValue: "Lock This Value",
+                PushButton: "Push Button",
+                ToggleButton: "Toggle Button",
+                ReplaceWithClock: "Replace With Clock",
+            },
+        },
+        Keypad: {
+            tooltip: {
+                title: template("Keypad (${numBits}-Bit)"),
             },
             contextMenu: {
                 LockValue: "Lock This Value",
