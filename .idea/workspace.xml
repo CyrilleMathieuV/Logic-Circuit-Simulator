@@ -9,25 +9,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)">
-      <change afterPath="$PROJECT_DIR$/simulator/img/CPU_v6.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor_v6.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/src/components/CPU_v6.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simulator/src/components/Keypad.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/img/CPU.svg" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/img/CPU.svg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/ComponentFactory.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/ComponentFactory.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/ComponentMenu.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/ComponentMenu.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/LogicEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/LogicEditor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/ROM.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/ROM.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/Wire.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/Wire.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/images.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/images.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/strings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/strings.ts" afterDir="false" />
-    </list>
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -56,6 +38,7 @@
                 <branch-info repo="$PROJECT_DIR$" source="withoutComponents" />
                 <branch-info repo="$PROJECT_DIR$" source="withVirtualComponents" />
                 <branch-info repo="$PROJECT_DIR$" source="withVirtualComponentsAndAssembler" />
+                <branch-info repo="$PROJECT_DIR$" source="ISA_v8" />
               </list>
             </value>
           </entry>
@@ -64,7 +47,7 @@
     </favorite-branches>
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="withVirtualComponents" />
+        <entry key="$PROJECT_DIR$" value="withVirtualComponentsAndAssembler" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -237,7 +220,7 @@
       <workItem from="1694765763873" duration="2528000" />
       <workItem from="1696624921599" duration="753000" />
       <workItem from="1697272927570" duration="6000" />
-      <workItem from="1697272962947" duration="2634000" />
+      <workItem from="1697272962947" duration="3216000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -364,14 +347,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00109" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)">
-      <option name="closed" value="true" />
-      <created>1691599648345</created>
-      <option name="number" value="00109" />
-      <option name="presentableId" value="LOCAL-00109" />
-      <option name="project" value="LOCAL" />
-      <updated>1691599648345</updated>
     </task>
     <task id="LOCAL-00110" summary="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)">
       <option name="closed" value="true" />
@@ -613,7 +588,15 @@
       <option name="project" value="LOCAL" />
       <updated>1692131619987</updated>
     </task>
-    <option name="localTasksCounter" value="140" />
+    <task id="LOCAL-00140" summary="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
+      <option name="closed" value="true" />
+      <created>1697276181864</created>
+      <option name="number" value="00140" />
+      <option name="presentableId" value="LOCAL-00140" />
+      <option name="project" value="LOCAL" />
+      <updated>1697276181865</updated>
+    </task>
+    <option name="localTasksCounter" value="141" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -674,7 +657,8 @@
     <MESSAGE value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM)" />
     <MESSAGE value="CMN implements Assembler Editor (TODO : better presentation, compiling with label, linking with RAM/ROM and CPU)" />
     <MESSAGE value="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)" />
-    <option name="LAST_COMMIT_MESSAGE" value="CMN implements Assembler Editor (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE)" />
+    <MESSAGE value="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
+    <option name="LAST_COMMIT_MESSAGE" value="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
