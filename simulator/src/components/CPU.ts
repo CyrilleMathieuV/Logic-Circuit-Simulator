@@ -985,7 +985,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
         // console.log("***"+operandValue)
-        console.log("muxData " + _inputsAccumulatorDataSelector)
+        // console.log("muxData " + _inputsAccumulatorDataSelector)
         let _inputsAccumulatorData : LogicValue[]
         if (_operandsDataSelectValueIndex === 0) {
             _inputsAccumulatorData = operandValue
@@ -1054,6 +1054,7 @@ export class CPU extends CPUBase<CPURepr> {
         const _stackPointerALUinputB = [_stackPointerModification, false]
         //ArrayClampOrPad(_stackPointerALUinputB, this.numAddressInstructionBits, false)
         let _stackPointerALUoutputs= doALUOp(_stackPointerALUop, _stackPointerALUinputA, _stackPointerALUinputB, false)
+        console.log("SP " +_stackPointerALUoutputs.s)
         this._virtualStackPointerRegister.inputsD = _stackPointerALUoutputs.s
 
         if (!this._noJump) {
