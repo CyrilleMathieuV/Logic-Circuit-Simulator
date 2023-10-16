@@ -867,11 +867,11 @@ export class CPU extends CPUBase<CPURepr> {
         /*
         ISA_v5
         const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
-        const _inputsAccumulatorDataSelectorValue = [
+        const _inputsAccumulatorDataSelector = [
             (_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]),
             _operandsDataCommonSelect && opCodeValue[1]
         ]
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelectorValue, false)[1]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelector, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 0 : _operandsDataSelectValueIndex
 
@@ -902,11 +902,11 @@ export class CPU extends CPUBase<CPURepr> {
 
         const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
         //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
-        const _inputsAccumulatorDataSelectorValue = [
+        const _inputsAccumulatorDataSelector = [
             (!opCodeValue[3] && opCodeValue[2]) || (!opCodeValue[3] && !opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[2] && opCodeValue[1]),
             (opCodeValue[3] && opCodeValue[2]) || (opCodeValue[3] && !opCodeValue[0]) || (!opCodeValue[2] && !opCodeValue[1] && opCodeValue[0]) || (!opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0])
         ]
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelectorValue, false)[1]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelector, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
 
@@ -972,28 +972,29 @@ export class CPU extends CPUBase<CPURepr> {
 
         const ramwevalue = opCodeValue[0] && !opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3]
 
-        const _inputsAccumulatorDataSelectorValue = [
-            (opCodeValue[2] && opCodeValue[3]) || (!opCodeValue[1] && opCodeValue[3]) || (opCodeValue[0] && opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3]),
+        const _inputsAccumulatorDataSelector = [
+            !((opCodeValue[2] && opCodeValue[3]) || (!opCodeValue[1] && opCodeValue[3]) || (opCodeValue[0] && opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3])),
             (opCodeValue[2] && opCodeValue[3]) || (!opCodeValue[1] && opCodeValue[3]) || (!opCodeValue[0] && opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3])
         ]
 
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelectorValue, false)[1]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelector, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
 
      //   this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
 
         const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
-        // console.log("***"+_operandsDataSelectValueIndex)
+        // console.log("***"+operandValue)
+        console.log("muxData " + _inputsAccumulatorDataSelector)
         let _inputsAccumulatorData : LogicValue[]
         if (_operandsDataSelectValueIndex === 0) {
             _inputsAccumulatorData = operandValue
         } else if (_operandsDataSelectValueIndex === 1) {
-            console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
+            // console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
             _inputsAccumulatorData = this._virtualAccumulatorRegister.outputsQ
         } else if (_operandsDataSelectValueIndex === 2) {
             _inputsAccumulatorData = _ALUoutputs.s
-            console.log(_inputsAccumulatorData)
+            // console.log(_inputsAccumulatorData)
         } else if (_operandsDataSelectValueIndex === 3) {
             _inputsAccumulatorData = this.inputValues(this.inputs.Din).reverse()
         } else {
