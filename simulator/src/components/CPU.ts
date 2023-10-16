@@ -860,19 +860,14 @@ export class CPU extends CPUBase<CPURepr> {
         const opCodeIndex = displayValuesFromArray(opCodeValue, false)[1]
         const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
 
-        const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
-        const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
-        const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
-
-        const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
         /*
         ISA_v5
         const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
-        const _operandsDataSelectValue = [
+        const _inputsAccumulatorDataSelectorValue = [
             (_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]),
             _operandsDataCommonSelect && opCodeValue[1]
         ]
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelectorValue, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 0 : _operandsDataSelectValueIndex
 
@@ -897,12 +892,17 @@ export class CPU extends CPUBase<CPURepr> {
 
 
         // ISA_v6
+        const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
+        const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
+        const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
+
+        const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
         //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
-        const _operandsDataSelectValue = [
+        const _inputsAccumulatorDataSelectorValue = [
             (!opCodeValue[3] && opCodeValue[2]) || (!opCodeValue[3] && !opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[2] && opCodeValue[1]),
             (opCodeValue[3] && opCodeValue[2]) || (opCodeValue[3] && !opCodeValue[0]) || (!opCodeValue[2] && !opCodeValue[1] && opCodeValue[0]) || (!opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0])
         ]
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelectorValue, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
 
@@ -933,9 +933,9 @@ export class CPU extends CPUBase<CPURepr> {
         const c = this._virtualFlagsRegister.outputsQ[1]
         const z = this._virtualFlagsRegister.outputsQ[0]
 
-        const jumpControl = opCodeValue[2] && !opCodeValue[3]
-        this._noJump = !(((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && jumpControl)
-        this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
+        const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
+        this._noJump = !(((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart)
+        this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && noJumpPostPart
 
         this._virtualHaltSignalFlipflopD.inputD = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
 
@@ -959,11 +959,18 @@ export class CPU extends CPUBase<CPURepr> {
 
         // ISA_v8
         //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
-        const _operandsDataSelectValue = [
-            (opCodeValue[3] && opCodeValue[2]) || (opCodeValue[3] && !opCodeValue[1]) || (!opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]),
-            (opCodeValue[3] && opCodeValue[2]) || (opCodeValue[3] && !opCodeValue[1]) || (!opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0])
+
+        const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
+        const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
+        const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
+
+        const ramwevalue = opCodeValue[0] && !opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3]
+
+        const _inputsAccumulatorDataSelectorValue = [
+            (opCodeValue[2] && opCodeValue[3]) || (!opCodeValue[1] && opCodeValue[3]) || (opCodeValue[0] && opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3]),
+            (opCodeValue[2] && opCodeValue[3]) || (!opCodeValue[1] && opCodeValue[3]) || (!opCodeValue[0] && opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3])
         ]
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_operandsDataSelectValue, false)[1]
+        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelectorValue, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
 
@@ -971,34 +978,34 @@ export class CPU extends CPUBase<CPURepr> {
 
         const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
         //console.log(_operandsDataSelectValueIndex)
-        let _operandsData : LogicValue[]
+        let _inputsAccumulatorData : LogicValue[]
         if (_operandsDataSelectValueIndex === 0) {
-            _operandsData = this._operandsValue
+            _inputsAccumulatorData = this._operandsValue
         } else if (_operandsDataSelectValueIndex === 1) {
             //console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
-            _operandsData = this._virtualAccumulatorRegister.outputsQ
+            _inputsAccumulatorData = this._virtualAccumulatorRegister.outputsQ
         } else if (_operandsDataSelectValueIndex === 2) {
-            _operandsData = _ALUoutputs.s
+            _inputsAccumulatorData = _ALUoutputs.s
             //console.log(_operandsData)
         } else if (_operandsDataSelectValueIndex === 3) {
-            _operandsData = this.inputValues(this.inputs.Din).reverse()
+            _inputsAccumulatorData = this.inputValues(this.inputs.Din).reverse()
         } else {
-            _operandsData = this._virtualAccumulatorRegister.outputsQ
+            _inputsAccumulatorData = this._virtualAccumulatorRegister.outputsQ
         }
 
-        this._virtualAccumulatorRegister.inputsD = _operandsData
+        this._virtualAccumulatorRegister.inputsD = _inputsAccumulatorData
 
         this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
-        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_operandsData)
+        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_inputsAccumulatorData)
 
         const c = this._virtualFlagsRegister.outputsQ[1]
         const z = this._virtualFlagsRegister.outputsQ[0]
 
-        const jumpControl = opCodeValue[2] && !opCodeValue[3]
-        this._noJump = !((((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && jumpControl) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
-        this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && jumpControl
+        const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
+        this._noJump = !((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
+        this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && noJumpPostPart
 
-        this._virtualHaltSignalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && !(opCodeValue[4] || opCodeValue[5] || opCodeValue[6] || opCodeValue[7])
+        this._virtualHaltSignalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(this._operandsValue)
 
         if (this._enablePipeline) {
             this._virtualAccumulatorRegister.inputClock = clockSync
