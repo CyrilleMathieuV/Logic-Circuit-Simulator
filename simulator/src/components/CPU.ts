@@ -948,8 +948,12 @@ export class CPU extends CPUBase<CPURepr> {
                 this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
             } else {
                 //console.log(_programCounterALUinputB)
-                const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, _stackPointerSelect)
+                let _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, _stackPointerSelect)
                 //console.log(_programCounterALUoutputs.s)
+                // We must go back of one step cylcle
+                if (this._enablePipeline) {
+                    _programCounterALUoutputs = doALUOp("A-1", _programCounterALUoutputs.s, _programCounterALUinputB,false)
+                }
                 this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
             }
         }
