@@ -1009,11 +1009,52 @@ export class CPU extends CPUBase<CPURepr> {
         const c = this._virtualFlagsRegister.outputsQ[1]
         const z = this._virtualFlagsRegister.outputsQ[0]
 
+        // PROGRAM COUNTER LOGIC
         const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
         this._noJump = !((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
         this._backwardJump = opCodeValue[0] && !opCodeValue[1] && noJumpPostPart
 
+        this._virtualProgramCounterRegister.inputInc = this._noJump
+
+        const _virtualProgramCounterRegisterOutputs = this._enablePipeline? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
+
+        const _stackPointerModification = opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
+        const _stackPointerDecrement = !opCodeValue[0] && _stackPointerModification
+        const _stackPointerSelect = opCodeValue[0] && _stackPointerModification
+
+        const _stackPointerALUop = _stackPointerDecrement? "A-B" : "A+B"
+        const _stackPointerALUinputA = this._virtualStackPointerRegister.outputsQ
+        const _stackPointerALUinputB = [_stackPointerModification, false]
+        //ArrayClampOrPad(_stackPointerALUinputB, this.numAddressInstructionBits, false)
+        const _stackPointerALUoutputs= doALUOp(_stackPointerALUop, _stackPointerALUinputA, _stackPointerALUinputB,false)
+        console.log("SP " +_stackPointerALUoutputs.s)
+        this._virtualStackPointerRegister.inputsD = _stackPointerALUoutputs.s
+
+        this._virtualStack.inputWE = _stackPointerDecrement
+        this._virtualStack.inputsAddr = _stackPointerSelect? _stackPointerALUoutputs.s : this._virtualStackPointerRegister.outputsQ
+        this._virtualStack.inputsD = _virtualProgramCounterRegisterOutputs
+
+        //console.log(noJump)
+        const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
+        //console.log(this._backwardJump)
+        const _programCounterALUinputA = _stackPointerSelect ?  this._virtualStack.outputsQ : _virtualProgramCounterRegisterOutputs
+        //console.log(_programCounterALUinputA)
+        // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
+        const _programCounterALUinputB = operandValue.slice()
+        ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits,false)
+
         this._virtualHaltSignalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
+
+        if (!this._noJump) {
+            if (this._directAddressingMode) {
+                this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
+            } else {
+                //console.log(_programCounterALUinputB)
+                const _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, _stackPointerSelect)
+                //console.log(_programCounterALUoutputs.s)
+                this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
+            }
+        }
 
         if (this._enablePipeline) {
             this._virtualAccumulatorRegister.inputClock = clockSync
@@ -1031,51 +1072,8 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualHaltSignalFlipflopD.recalcVirtualValue()
         }
 
+
         // EXECUTE STAGE
-
-        // PROGRAM COUNTER LOGIC
-        this._virtualProgramCounterRegister.inputInc = this._noJump
-
-        //console.log(noJump)
-        const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
-        //console.log(this._backwardJump)
-        const _programCounterALUinputA = this._enablePipeline ? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
-        //console.log(_programCounterALUinputA)
-        // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
-        const _programCounterALUinputB = operandValue.slice()
-        ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits, false)
-
-        const _stackPointerModification = opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
-        const _stackPointerDecrement = !opCodeValue[0] && _stackPointerModification
-        const _stackPointerSelect = opCodeValue[0] && _stackPointerModification
-
-        const _stackPointerALUop = _stackPointerDecrement? "A-B" : "A+B"
-        const _stackPointerALUinputA = this._virtualStackPointerRegister.outputsQ
-        const _stackPointerALUinputB = [_stackPointerModification, false]
-        //ArrayClampOrPad(_stackPointerALUinputB, this.numAddressInstructionBits, false)
-        let _stackPointerALUoutputs= doALUOp(_stackPointerALUop, _stackPointerALUinputA, _stackPointerALUinputB, false)
-        console.log("SP " +_stackPointerALUoutputs.s)
-        this._virtualStackPointerRegister.inputsD = _stackPointerALUoutputs.s
-
-        if (!this._noJump) {
-            if (this._directAddressingMode) {
-                this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
-            } else {
-                //console.log(_programCounterALUinputB)
-                let _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB,false)
-                //console.log(_programCounterALUoutputs.s)
-                // We must go back of one step cylcle
-                if (this._enablePipeline) {
-                    _programCounterALUoutputs = doALUOp("A-1", _programCounterALUoutputs.s, _programCounterALUinputB,false)
-                    this._virtualStack.inputsD = this._virtualPreviousProgramCounterRegister.outputsQ
-                } else {
-                    this._virtualStack.inputsD = this._virtualProgramCounterRegister.outputsQ
-                }
-                this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
-                this._virtualStack.inputsAddr = _stackPointerSelect? this._virtualStackPointerRegister.outputsQ : _stackPointerALUoutputs.s
-                this._virtualStack.inputWE = _stackPointerDecrement
-            }
-        }
 
         if (this._enablePipeline) {
             this._virtualInstructionRegister.inputClock = clockSync
