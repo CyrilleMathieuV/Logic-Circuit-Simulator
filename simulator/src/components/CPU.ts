@@ -792,6 +792,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._virtualStack.inputClr = clrSignal
 
+
         // FETCH Stage
 
         const isa = this.inputValues(this.inputs.Isa)
@@ -856,119 +857,19 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualInstructionRegister.recalcVirtualValue()
         }
 
+
         // DECCODE Stage
+        // ISA_v8
+
         const opCodeValue = this._virtualInstructionRegister.outputsQ.slice(0, 4).reverse()
-        // const opCodeValue = this._virtualInstructionRegister.outputsQ.slice(0, 4)
         const opCodeIndex = displayValuesFromArray(opCodeValue, false)[1]
         const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
 
         const operandValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
 
-        /*
-        ISA_v5
-        const _operandsDataCommonSelect = !opCodeValue[3] && !opCodeValue[2]
-        const _inputsAccumulatorDataSelector = [
-            (_operandsDataCommonSelect && opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[1]) || (opCodeValue[3] && opCodeValue[2]),
-            _operandsDataCommonSelect && opCodeValue[1]
-        ]
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelector, false)[1]
-
-        _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 0 : _operandsDataSelectValueIndex
-
-        this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
-
-        const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
-
-        let _operandsData : LogicValue[]
-        if (_operandsDataSelectValueIndex === 0) {
-            _operandsData = this._virtualAccumulatorRegister.outputsQ
-        } else if (_operandsDataSelectValueIndex === 1) {
-            //console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
-            _operandsData = _ALUoutputs.s
-        } else if (_operandsDataSelectValueIndex === 2) {
-            _operandsData = this.inputValues(this.inputs.Din).reverse()
-            //console.log(_operandsData)
-        } else if (_operandsDataSelectValueIndex === 3) {
-            _operandsData = this._operandsValue
-        } else {
-            _operandsData = this._virtualAccumulatorRegister.outputsQ
-        }
-
-
-        // ISA_v6
         const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
         const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
         const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
-
-        const ramwevalue = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && opCodeValue[0]
-        //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
-        const _inputsAccumulatorDataSelector = [
-            (!opCodeValue[3] && opCodeValue[2]) || (!opCodeValue[3] && !opCodeValue[0]) || (opCodeValue[3] && !opCodeValue[2] && opCodeValue[1]),
-            (opCodeValue[3] && opCodeValue[2]) || (opCodeValue[3] && !opCodeValue[0]) || (!opCodeValue[2] && !opCodeValue[1] && opCodeValue[0]) || (!opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0])
-        ]
-        let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelector, false)[1]
-
-        _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
-
-        this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
-
-        const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
-        //console.log(_operandsDataSelectValueIndex)
-        let _operandsData : LogicValue[]
-        if (_operandsDataSelectValueIndex === 0) {
-            _operandsData = this._operandsValue
-        } else if (_operandsDataSelectValueIndex === 1) {
-            //console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
-            _operandsData = this._virtualAccumulatorRegister.outputsQ
-        } else if (_operandsDataSelectValueIndex === 2) {
-            _operandsData = _ALUoutputs.s
-            //console.log(_operandsData)
-        } else if (_operandsDataSelectValueIndex === 3) {
-            _operandsData = this.inputValues(this.inputs.Din).reverse()
-        } else {
-            _operandsData = this._virtualAccumulatorRegister.outputsQ
-        }
-
-        this._virtualAccumulatorRegister.inputsD = _operandsData
-
-        this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
-        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_operandsData)
-
-        const c = this._virtualFlagsRegister.outputsQ[1]
-        const z = this._virtualFlagsRegister.outputsQ[0]
-
-        const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
-        this._noJump = !(((((opCodeValue[0] && c) || (!opCodeValue[0] && z)) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart)
-        this._backwardJump = (opCodeValue[0] && !opCodeValue[1]) && noJumpPostPart
-
-        this._virtualHaltSignalFlipflopD.inputD = opCodeValue[3] && !opCodeValue[2] && opCodeValue[1] && !opCodeValue[0]
-
-        if (this._enablePipeline) {
-            this._virtualAccumulatorRegister.inputClock = clockSync
-            this._virtualAccumulatorRegister.recalcVirtualValue()
-            this._virtualFlagsRegister.inputClock = clockSync
-            this._virtualFlagsRegister.recalcVirtualValue()
-            this._virtualHaltSignalFlipflopD.inputClock = clockSync
-            this._virtualHaltSignalFlipflopD.recalcVirtualValue()
-        } else {
-            this._virtualAccumulatorRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
-            this._virtualAccumulatorRegister.recalcVirtualValue()
-            this._virtualFlagsRegister.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
-            this._virtualFlagsRegister.recalcVirtualValue()
-            this._virtualHaltSignalFlipflopD.inputClock = clockSync && this._virtualDecodeFlipflopD.outputQ
-            this._virtualHaltSignalFlipflopD.recalcVirtualValue()
-        }
-
-*/
-
-        // ISA_v8
-        //const _operandsDataCommonSelect = !opCodeValue[2] && !opCodeValue[3]
-
-        const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
-        const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
-        const _ALUop = isUnknown(_ALUopIndex) ? "A+B" : ALUOps[_ALUopIndex]
-
-        //console.log(opCodeValue[0], opCodeValue[1], opCodeValue[2], opCodeValue[3])
 
         const ramwevalue = opCodeValue[0] && !opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3]
 
@@ -980,8 +881,6 @@ export class CPU extends CPUBase<CPURepr> {
         let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelector, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
-
-     //   this._operandsValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
 
         const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
         // console.log("***"+operandValue)
@@ -1010,12 +909,7 @@ export class CPU extends CPUBase<CPURepr> {
         const z = this._virtualFlagsRegister.outputsQ[0]
 
         // PROGRAM COUNTER LOGIC
-        const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
-        this._noJump = !((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
-        this._backwardJump = opCodeValue[0] && !opCodeValue[1] && noJumpPostPart
-
-        this._virtualProgramCounterRegister.inputInc = this._noJump
-
+        // STACK MANAGEMENT
         const _virtualProgramCounterRegisterOutputs = this._enablePipeline? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
 
         const _stackPointerModification = opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
@@ -1034,11 +928,17 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualStack.inputsAddr = _stackPointerSelect? _stackPointerALUoutputs.s : this._virtualStackPointerRegister.outputsQ
         this._virtualStack.inputsD = _virtualProgramCounterRegisterOutputs
 
+        const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
+        this._noJump = !((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
+        this._backwardJump = opCodeValue[0] && !opCodeValue[1] && noJumpPostPart
+
+        this._virtualProgramCounterRegister.inputInc = this._noJump
+
         //console.log(noJump)
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
         //console.log(this._backwardJump)
-        const _programCounterALUinputA = _stackPointerSelect ?  this._virtualStack.outputsQ : _virtualProgramCounterRegisterOutputs
-        //console.log(_programCounterALUinputA)
+        const _programCounterALUinputA = _stackPointerSelect? this._virtualStack.outputsQ : _virtualProgramCounterRegisterOutputs
+        console.log(_programCounterALUinputA)
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const _programCounterALUinputB = operandValue.slice()
         ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits,false)
