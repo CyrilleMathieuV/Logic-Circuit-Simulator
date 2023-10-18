@@ -669,7 +669,6 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._virtualStackPointerRegister = new VirtualRegister(2, EdgeTrigger.falling)
         this._virtualStack = new VirtualRAM(this.numAddressInstructionBits,2)
-
         //this._virtualSpecialVoidProgramCounterFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
         this._virtualFetchFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
@@ -810,7 +809,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualStackPointerRegister.inputPre = clrSignal
 
         this._virtualStack.inputClr = clrSignal
-
+        this._virtualStack.inputsAddr = this._virtualStackPointerRegister.outputsQ
 
         // FETCH Stage
 
@@ -937,15 +936,17 @@ export class CPU extends CPUBase<CPURepr> {
 
         const _stackPointerALUop = _stackPointerDecrement? "A-B" : "A+B"
         const _stackPointerALUinputA = this._virtualStackPointerRegister.outputsQ
-        const _stackPointerALUinputB = [_stackPointerModification, false]
-        //ArrayClampOrPad(_stackPointerALUinputB, this.numAddressInstructionBits, false)
+        const _stackPointerALUinputB = [_stackPointerModification]
+        ArrayClampOrPad(_stackPointerALUinputB, 2, false)
         const _stackPointerALUoutputs= doALUOp(_stackPointerALUop, _stackPointerALUinputA, _stackPointerALUinputB,false)
-        console.log("SP " +_stackPointerALUoutputs.s)
+        //console.log("SP " +  _stackPointerALUoutputs.s)
         this._virtualStackPointerRegister.inputsD = _stackPointerALUoutputs.s
 
+        console.log("PC selected " + _virtualProgramCounterSelectedRegisterOutputs)
+
+        this._virtualStack.inputsD = _virtualProgramCounterSelectedRegisterOutputs
         this._virtualStack.inputWE = _stackPointerDecrement
         this._virtualStack.inputsAddr = _stackPointerSelect? _stackPointerALUoutputs.s : this._virtualStackPointerRegister.outputsQ
-        this._virtualStack.inputsD = _virtualProgramCounterSelectedRegisterOutputs
 
         const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
         this._noJump = !((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
@@ -956,8 +957,8 @@ export class CPU extends CPUBase<CPURepr> {
         //console.log(noJump)
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
         //console.log(this._backwardJump)
-        const _programCounterALUinputA = _stackPointerSelect? this._virtualStack.outputsQ : _virtualProgramCounterSelectedRegisterOutputs
-        console.log(_programCounterALUinputA)
+        const _programCounterALUinputA= _stackPointerSelect? this._virtualStack.value.out : _virtualProgramCounterSelectedRegisterOutputs
+        // console.log(this._virtualStack.value.out)
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const _programCounterALUinputB = operandValue.slice()
         ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits,false)
@@ -1011,7 +1012,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualStackPointerRegister.inputClock = clockSync
             this._virtualStackPointerRegister.recalcVirtualValue()
             this._virtualStack.inputClock = clockSync
-            this._virtualStack.recalcVirtualValue()
+            this._virtualStack.value = this._virtualStack.recalcVirtualValue()
         } else {
             const _virtualFetchFlipflopDoutputQ = this._virtualFetchFlipflopD.outputQ
             const _virtualDecodeFlipflopDoutputQ = this._virtualDecodeFlipflopD.outputQ
@@ -1035,7 +1036,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualStackPointerRegister.inputClock = clockSync && this._virtualExecuteFlipflopD.outputQ
             this._virtualStackPointerRegister.recalcVirtualValue()
             this._virtualStack.inputClock = clockSync && this._virtualExecuteFlipflopD.outputQ
-            this._virtualStack.recalcVirtualValue()
+            this._virtualStack.value = this._virtualStack.recalcVirtualValue()
         }
 
         const ramwesyncvalue = this._enablePipeline ? clockSync : clockSync && this._virtualExecuteFlipflopD.outputQ
@@ -1373,7 +1374,7 @@ export class CPU extends CPUBase<CPURepr> {
 
                 if (!isUnknown(this._virtualStack.currentAddress())) {
                     const currentVirtualStackAddress = this._virtualStack.currentAddress() as number
-                    if (currentVirtualStackAddress >= 0 && currentVirtualStackAddress < 3) {
+                    if (currentVirtualStackAddress >= 0 && currentVirtualStackAddress < 4) {
                         const arrowY = contentTop + currentVirtualStackAddress * cellHeight + cellHeight / 2
                         const arrowRight = contentLeft - 3
                         const arrowWidth = 8
