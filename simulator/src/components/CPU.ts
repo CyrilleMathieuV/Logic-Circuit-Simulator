@@ -910,7 +910,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         // PROGRAM COUNTER LOGIC
         // STACK MANAGEMENT
-        const _virtualProgramCounterRegisterOutputs = this._enablePipeline? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
+        const _virtualProgramCounterSelectedRegisterOutputs = this._enablePipeline? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
 
         const _stackPointerModification = opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
         const _stackPointerDecrement = !opCodeValue[0] && _stackPointerModification
@@ -926,7 +926,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._virtualStack.inputWE = _stackPointerDecrement
         this._virtualStack.inputsAddr = _stackPointerSelect? _stackPointerALUoutputs.s : this._virtualStackPointerRegister.outputsQ
-        this._virtualStack.inputsD = _virtualProgramCounterRegisterOutputs
+        this._virtualStack.inputsD = _virtualProgramCounterSelectedRegisterOutputs
 
         const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
         this._noJump = !((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
@@ -937,13 +937,11 @@ export class CPU extends CPUBase<CPURepr> {
         //console.log(noJump)
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
         //console.log(this._backwardJump)
-        const _programCounterALUinputA = _stackPointerSelect? this._virtualStack.outputsQ : _virtualProgramCounterRegisterOutputs
+        const _programCounterALUinputA = _stackPointerSelect? this._virtualStack.outputsQ : _virtualProgramCounterSelectedRegisterOutputs
         console.log(_programCounterALUinputA)
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const _programCounterALUinputB = operandValue.slice()
         ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits,false)
-
-        this._virtualHaltSignalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
 
         if (!this._noJump) {
             if (this._directAddressingMode) {
@@ -955,6 +953,8 @@ export class CPU extends CPUBase<CPURepr> {
                 this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
             }
         }
+
+        this._virtualHaltSignalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
 
         if (this._enablePipeline) {
             this._virtualAccumulatorRegister.inputClock = clockSync
