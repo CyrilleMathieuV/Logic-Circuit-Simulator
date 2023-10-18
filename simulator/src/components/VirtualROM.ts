@@ -1,10 +1,17 @@
 import { ArrayFillWith, InteractionResult, LogicValue, Unknown, allBooleans, binaryStringRepr, hexStringRepr, isAllZeros, isArray, isUnknown, typeOrUndefined, wordFromBinaryOrHexRepr, EdgeTrigger } from "../utils"
-import { displayValuesFromArray } from "../drawutils"
+import {
+    COLOR_COMPONENT_BORDER,
+    COLOR_EMPTY,
+    colorForBoolean,
+    displayValuesFromArray,
+    strokeSingleLine,
+} from "../drawutils"
 import { ParametrizedComponentBase, Repr, ResolvedParams, defineAbstractParametrizedComponent, defineParametrizedComponent, groupHorizontal, groupVertical, param } from "./Component"
 import { VirtualRAM } from "./VirtualRAM"
 import { VirtualSyncComponent } from "./VirtualFlipflopOrLatch";
 import { VirtualRegisterBaseValue } from "./VirtualRegister";
 import { number, string } from "fp-ts";
+import {GraphicsRendering} from "./Drawable";
 
 
 export type VirtualROMRAMBaseValue = {
@@ -56,7 +63,7 @@ export abstract class VirtualROMRAMBase {
         return mem
     }
 
-    protected currentAddress(): number | Unknown {
+    public currentAddress(): number | Unknown {
         const addrBits = this.inputsAddr
         const [__, addr] = displayValuesFromArray(addrBits, false)
         return addr
@@ -70,6 +77,7 @@ export abstract class VirtualROMRAMBase {
         this.outputsQ = newValue.out
     }
 }
+
 
 
 export class VirtualROM extends VirtualROMRAMBase {

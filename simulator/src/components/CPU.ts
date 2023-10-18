@@ -10,7 +10,7 @@ import {
     drawWireLineToComponent,
     formatWithRadix,
     GRID_STEP,
-    COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED,
+    COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED, colorForBoolean, strokeSingleLine,
 } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
@@ -54,6 +54,7 @@ import { VirtualRegister } from "./VirtualRegister";
 import { VirtualCounter } from "./VirtualCounter";
 import { VirtualRAM } from "./VirtualRAM";
 import { VirtualComponent } from "./VirtualComponent";
+import {number} from "fp-ts";
 
 export const CPUOpCodes = [
     "NOP", "STA", "LDA", "LDK",
@@ -133,6 +134,7 @@ export const CPUBaseDef =
             showOperands: typeOrUndefined(t.boolean),
             enablePipeline: typeOrUndefined(t.boolean),
             showClockCycle : typeOrUndefined(t.boolean),
+            showStack : typeOrUndefined(t.boolean),
             addProgramRAM: typeOrUndefined(t.boolean),
             trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
             //extOpCode: typeOrUndefined(t.boolean),
@@ -143,6 +145,7 @@ export const CPUBaseDef =
             showOperands: true,
             enablePipeline: false,
             showClockCycle: true,
+            showStack: true,
             addProgramRAM: false,
             trigger: EdgeTrigger.falling,
         },
@@ -189,16 +192,16 @@ export const CPUBaseDef =
                     Isaadr: groupHorizontal("n", -midX, -inputY, numAddressInstructionBits),
                     Dadr: groupHorizontal("n", midX, -inputY, numAddressDataBits),
                     Dout: groupVertical("e", inputX, -midY, numDataBits),
-                    RAMweSync: [inputX, 1, "e", "RAM WE sync"],
-                    RAMwe: [inputX, 3, "e", "RAM WE"],
-                    ResetSync: [inputX, 5, "e", "Reset sync"],
-                    Sync: [inputX, 7, "e", "Sync"],
-                    Z: [inputX, 9, "e", "Z (Zero)"],
+                    RAMweSync: [inputX, -1, "e", "RAM WE sync"],
+                    RAMwe: [inputX, 1, "e", "RAM WE"],
+                    ResetSync: [inputX, 3, "e", "Reset sync"],
+                    Sync: [inputX, 5, "e", "Sync"],
+                    Z: [inputX, 7, "e", "Z (Zero)"],
                     //V: [inputX, 11, "e", "V (oVerflow)"],
-                    Cout: [inputX, 11, "e", `Cout`],
+                    Cout: [inputX, 9, "e", `Cout`],
+                    StackOUflow: [inputX, 11, "e", "Run state"],
                     HaltSignal: [inputX, 13, "e", `Halt`],
                     RunningState: [inputX, 15, "e", "Run state"],
-                    StackOverflow: [inputX, 17, "e", "Run state"],
                 },
             }
         },
@@ -216,9 +219,9 @@ export const CPUBaseDef =
                 z: false_,
                 //v: false_,
                 cout: false_,
+                stackouflow: false_,
                 haltsignal: false,
-                runningstate: false_,
-                stackoverflow: false_
+                runningstate: false_
             }
             let initialState
             if (saved === undefined) {
@@ -235,9 +238,9 @@ export const CPUBaseDef =
                     z: false_,
                     //v: false_,
                     cout: false_,
+                    stackouflow: false_,
                     haltsignal: false_,
-                    runningstate: false_,
-                    stackoverflow: false_
+                    runningstate: false_
                 }
             }
             //const state = saved.state === undefined ? defaults.state : toLogicValue(saved.state)
@@ -281,6 +284,8 @@ export abstract class CPUBase<
 
     protected _showClockCycle: boolean
 
+    protected _showStack: boolean
+
     protected _addProgramRAM: boolean
 
     public _opCodeOperandsInStages : any
@@ -303,6 +308,8 @@ export abstract class CPUBase<
         this._enablePipeline = saved?.enablePipeline ?? CPUDef.aults.enablePipeline
 
         this._showClockCycle = saved?.showClockCycle ?? CPUDef.aults.showClockCycle
+
+        this._showStack = saved?.showStack ?? CPUDef.aults.showStack
 
         this._addProgramRAM = saved?.addProgramRAM ?? CPUDef.aults.addProgramRAM
 
@@ -327,7 +334,7 @@ export abstract class CPUBase<
             cout: false_,
             haltsignal: false_,
             runningstate: false_,
-            stackoverflow: false_
+            stackouflow: false_
         }
         return newState as CPUBaseValue
     }
@@ -345,9 +352,9 @@ export abstract class CPUBase<
             z: val,
             //v: val,
             cout: val,
+            stackouflow: val,
             haltsignal: val,
-            runningstate: val,
-            stackoverflow: val
+            runningstate: val
         }
         return newState as CPUBaseValue
     }
@@ -375,6 +382,7 @@ export abstract class CPUBase<
             showOperands: (this._showOperands !== CPUDef.aults.showOperands) ? this._showOperands : undefined,
             enablePipeline: (this._enablePipeline !== CPUDef.aults.enablePipeline) ? this._enablePipeline : undefined,
             showClockCycle: (this._showClockCycle !== CPUDef.aults.showClockCycle) ? this._showClockCycle : undefined,
+            showStack: (this._showStack !== CPUDef.aults.showStack) ? this._showStack : undefined,
             addProgramRAM: (this._addProgramRAM !== CPUDef.aults.addProgramRAM) ? this._addProgramRAM : undefined,
             trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
@@ -400,6 +408,11 @@ export abstract class CPUBase<
     private doSetShowClockCycle(showClockCycle: boolean) {
         this._showClockCycle = showClockCycle
         this.setNeedsRedraw("show clockCycle changed")
+    }
+
+    private doSetShowStack(showStack: boolean) {
+        this._showStack = showStack
+        this.setNeedsRedraw("show stack changed")
     }
 
     public doAddProgramRAM(addProgramRAM: boolean) {
@@ -445,6 +458,11 @@ export abstract class CPUBase<
             this.doSetShowClockCycle(!this._showClockCycle)
         })
 
+        const iconStack = this._showStack ? "check" : "none"
+        const toggleShowStackItem = MenuData.item(iconStack, s.toggleShowStack, () => {
+            this.doSetShowStack(!this._showStack)
+        })
+
         const iconAddProgramRAM = this._addProgramRAM ? "add" : "none"
         const toggleAddProgramRAMItem = MenuData.item(iconAddProgramRAM, s.toggleAddProgramRAM, () => {
             this.doAddProgramRAM(!this._addProgramRAM)
@@ -458,6 +476,7 @@ export abstract class CPUBase<
             ["mid", toggleEnablePipelineItem],
             ["mid", MenuData.sep()],
             ["mid", toggleShowClockCycleItem],
+            ["mid", toggleShowStackItem],
             ["mid", MenuData.sep()],
             ["mid", toggleAddProgramRAMItem],
             ["mid", MenuData.sep()],
@@ -733,7 +752,7 @@ export class CPU extends CPUBase<CPURepr> {
        /*
         BE CAREFUL WITH .reverse()
         IT AFFECTS THE OBJECT !!!
-         */
+        */
         // RUN CONTROL LOGIC
         const prevClock = this._lastClock
         const clockSpeed = this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
@@ -1042,9 +1061,9 @@ export class CPU extends CPUBase<CPURepr> {
                 z: false_,
                 //v: false_,
                 cout: false_,
+                stackouflow: false_,
                 haltsignal: false_,
                 runningstate: false_,
-                stackoverflow: false_,
             }
         } else {
             newState = {
@@ -1058,9 +1077,9 @@ export class CPU extends CPUBase<CPURepr> {
                 z: this._virtualFlagsRegister.outputsQ[0],
                 //v: false_,
                 cout: this._virtualFlagsRegister.outputsQ[1],
+                stackouflow: false_,
                 haltsignal: this._virtualHaltSignalFlipflopD.outputQ,
                 runningstate: runningState,
-                stackoverflow: false_,
             }
         }
 
@@ -1079,9 +1098,9 @@ export class CPU extends CPUBase<CPURepr> {
         //this.outputs.Z.value = allZeros(newValue.dout)
         //this.outputs.V.value = newValue.v
         this.outputs.Cout.value = newValue.cout
+        this.outputs.StackOUflow.value = newValue.stackouflow
         this.outputs.HaltSignal.value = newValue.haltsignal
         this.outputs.RunningState.value = newValue.runningstate
-        this.outputs.StackOverflow.value = newValue.stackoverflow
     }
 /*
     public makeStateAfterClock(): CPUBaseValue {
@@ -1152,9 +1171,9 @@ export class CPU extends CPUBase<CPURepr> {
         drawWireLineToComponent(g, this.outputs.Z, right, this.outputs.Z.posYInParentTransform)
         //drawWireLineToComponent(g, this.outputs.V, right, this.outputs.V.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.Cout, right, this.outputs.Cout.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.StackOUflow, right, this.outputs.StackOUflow.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.HaltSignal, right, this.outputs.HaltSignal.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.RunningState, right, this.outputs.RunningState.posYInParentTransform)
-        drawWireLineToComponent(g, this.outputs.StackOverflow, right, this.outputs.RunningState.posYInParentTransform)
 
         // outline
         g.fillStyle = COLOR_BACKGROUND
@@ -1208,9 +1227,9 @@ export class CPU extends CPUBase<CPURepr> {
             drawLabel(ctx, this.orient, "Z", "e", right, this.outputs.Z, undefined, true)
             //drawLabel(ctx, this.orient, "V", "e", right, this.outputs.V, undefined, true)
             drawLabel(ctx, this.orient, "Cout", "e", right, this.outputs.Cout, undefined, true)
+            drawLabel(ctx, this.orient, "Stack OUflow", "e", right, this.outputs.StackOUflow, undefined, true)
             drawLabel(ctx, this.orient, "Halt", "e", right, this.outputs.HaltSignal, undefined, true)
             drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState, undefined, true)
-            drawLabel(ctx, this.orient, "Stack Overflow", "e", right, this.outputs.StackOverflow, undefined, true)
 
             const counter = displayValuesFromArray(this._virtualOperationStageCounter.outputsQ, false)[1]
             const stringRep = formatWithRadix(counter, 10, 16, false)
@@ -1227,7 +1246,7 @@ export class CPU extends CPUBase<CPURepr> {
                     const valueCenterDeltaY = (this.orient == "n") ? 100 : (this.orient == "s") ? -100 : 0
 
                     let valueCenterX = this.posX
-                    let valueCenterY = Orientation.isVertical(this.orient) ? this.inputs.Isa.group.posYInParentTransform : this.inputs.Isa.group.posYInParentTransform - 50
+                    let valueCenterY = Orientation.isVertical(this.orient) ? this.inputs.Isa.group.posYInParentTransform : this.inputs.Isa.group.posYInParentTransform - 60
                     switch (eachStage) {
                         case "FETCH":
                             valueCenterX = valueCenterX - valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)
@@ -1298,8 +1317,86 @@ export class CPU extends CPUBase<CPURepr> {
                 g.textBaseline = "middle"
                 g.fillText(stringRep, ...valueCenter)
             }
+
+            if (this._showStack) {
+                const isVertical = Orientation.isVertical(this.orient)
+                const addressedContentHeight = 12
+                const contentCenterY = this.posY - addressedContentHeight / 2
+
+                const cellWidth = 10
+                const cellHeight = 10
+
+                const numCellsToDraw = this._virtualStack.numWords
+                const numDataBits = this._virtualStack.numDataBits
+
+                let valueCenterX = this.posX
+                let valueCenterY = Orientation.isVertical(this.orient) ? this.inputs.Isa.group.posYInParentTransform : this.inputs.Isa.group.posYInParentTransform + 60
+
+                const valueCenterDeltaX = 0
+                const valueCenterDeltaY = (this.orient == "n") ? 100 : (this.orient == "s") ? -100 : 0
+
+                valueCenterX = valueCenterX + valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)
+                valueCenterY = valueCenterY + valueCenterDeltaY
+
+                const contentTop = valueCenterY - numCellsToDraw / 2 * cellHeight
+                const contentLeft = valueCenterX - numDataBits / 2 * cellWidth
+                const contentRight = contentLeft + numDataBits * cellWidth
+                const contentBottom = contentTop + numCellsToDraw * cellHeight
+
+                // by default, paint everything as zero
+                g.fillStyle = COLOR_EMPTY
+                g.fillRect(contentLeft, contentTop, contentRight - contentLeft, contentBottom - contentTop)
+
+                for (let i = 0; i < numCellsToDraw; i++) {
+                    for (let j = 0; j < numDataBits; j++) {
+                        const v = this._virtualStack.value.mem[i][numDataBits - j - 1]
+                        if (v !== false) {
+                            g.fillStyle = colorForBoolean(v)
+                            g.fillRect(contentLeft + j * cellWidth, contentTop + i * cellHeight, cellWidth, cellHeight)
+                        }
+                    }
+                }
+
+                g.strokeStyle = COLOR_COMPONENT_BORDER
+                g.lineWidth = 0.5
+                for (let i = 1; i < numCellsToDraw; i++) {
+                    const y = contentTop + i * cellHeight
+                    strokeSingleLine(g, contentLeft, y, contentRight, y)
+                }
+                for (let j = 1; j < numDataBits; j++) {
+                    const x = contentLeft + j * cellWidth
+                    strokeSingleLine(g, x, contentTop, x, contentBottom)
+                }
+                const borderLineWidth = 2
+                g.lineWidth = borderLineWidth
+                g.strokeRect(contentLeft - borderLineWidth / 2, contentTop - borderLineWidth / 2, contentRight - contentLeft + borderLineWidth, contentBottom - contentTop + borderLineWidth)
+
+                if (!isUnknown(this._virtualStack.currentAddress())) {
+                    const currentVirtualStackAddress = this._virtualStack.currentAddress() as number
+                    if (currentVirtualStackAddress >= 0 && currentVirtualStackAddress < 3) {
+                        const arrowY = contentTop + currentVirtualStackAddress * cellHeight + cellHeight / 2
+                        const arrowRight = contentLeft - 3
+                        const arrowWidth = 8
+                        const arrowHalfHeight = 3
+                        g.beginPath()
+                        g.moveTo(arrowRight, arrowY)
+                        g.lineTo(arrowRight - arrowWidth, arrowY + arrowHalfHeight)
+                        g.lineTo(arrowRight - arrowWidth + 2, arrowY)
+                        g.lineTo(arrowRight - arrowWidth, arrowY - arrowHalfHeight)
+                        g.closePath()
+                        g.fillStyle = COLOR_COMPONENT_BORDER
+                        g.fill()
+                    }
+                }
+
+                g.fillStyle = COLOR_COMPONENT_INNER_LABELS
+                g.font = "11px sans-serif"
+                drawLabel(ctx, this.orient, "Stack", "e", valueCenterX, valueCenterY, undefined)
+            }
+
             this.doDrawGenericCaption(g, ctx)
         })
+
         if (this._addProgramRAM) {
 
         } else {
