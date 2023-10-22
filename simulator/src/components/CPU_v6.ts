@@ -143,7 +143,7 @@ export const CPUBaseDef_v6 =
             showStage: typeOrUndefined(t.boolean),
             showOpCode: typeOrUndefined(t.boolean),
             showOperands: typeOrUndefined(t.boolean),
-            enablePipeline: typeOrUndefined(t.boolean),
+            disablePipeline: typeOrUndefined(t.boolean),
             showClockCycle : typeOrUndefined(t.boolean),
             addProgramRAM: typeOrUndefined(t.boolean),
             trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
@@ -153,7 +153,7 @@ export const CPUBaseDef_v6 =
             showStage: true,
             showOpCode: true,
             showOperands: true,
-            enablePipeline: false,
+            disablePipeline: false,
             showClockCycle: true,
             addProgramRAM: false,
             trigger: EdgeTrigger.falling,
@@ -309,7 +309,7 @@ export abstract class CPUBase_v6<
         this._showOpCode = saved?.showOpCode ?? CPUDef_v6.aults.showOpCode
         this._showOperands = saved?.showOperands ?? CPUDef_v6.aults.showOperands
 
-        this._enablePipeline = saved?.enablePipeline ?? CPUDef_v6.aults.enablePipeline
+        this._enablePipeline = saved?.disablePipeline ?? CPUDef_v6.aults.disablePipeline
 
         this._showClockCycle = saved?.showClockCycle ?? CPUDef_v6.aults.showClockCycle
 
@@ -381,7 +381,7 @@ export abstract class CPUBase_v6<
             showStage: (this._showStage !== CPUDef_v6.aults.showStage) ? this._showStage : undefined,
             showOpCode: (this._showOpCode !== CPUDef_v6.aults.showOpCode) ? this._showOpCode : undefined,
             showOperands: (this._showOperands !== CPUDef_v6.aults.showOperands) ? this._showOperands : undefined,
-            enablePipeline: (this._enablePipeline !== CPUDef_v6.aults.enablePipeline) ? this._enablePipeline : undefined,
+            disablePipeline: (this._enablePipeline !== CPUDef_v6.aults.disablePipeline) ? this._enablePipeline : undefined,
             showClockCycle: (this._showClockCycle !== CPUDef_v6.aults.showClockCycle) ? this._showClockCycle : undefined,
             addProgramRAM: (this._addProgramRAM !== CPUDef_v6.aults.addProgramRAM) ? this._addProgramRAM : undefined,
             trigger: (this._trigger !== CPUDef_v6.aults.trigger) ? this._trigger : undefined,

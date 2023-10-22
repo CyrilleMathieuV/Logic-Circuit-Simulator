@@ -162,7 +162,7 @@ const componentsMenu: Array<Section> = [{
 
         AdderArrayDef.button({ bits: 4 }, "AdderArray"),
         ALUDef.button({ bits: 4, ext: false }, "ALU"),
-        CPUDef.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, addressInstructionBits : 8 }, "CPU"),
+        CPUDef.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, stackBits: 2, addressInstructionBits : 8 }, "CPU"),
         CPUDef_v6.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, addressInstructionBits : 8 }, "CPU_v6"),
 
         MuxDef.button({ from: 4, to: 2 }, "Mux"),
