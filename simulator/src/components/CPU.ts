@@ -996,13 +996,15 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualStack.inputWE = _stackPointerDecrement
         this._virtualStack.inputsAddr = _stackPointerIncrement? _stackPointerALUoutputs.s : this._virtualStackPointerRegister.outputsQ
 
-        const _stackPointerPreOUflowState = !(logicalOROnEveryBits(this._virtualStackPointerRegister.outputsQ)) && _stackPointerDecrement
-        console.log()
-        const _stackPointerOUflowState = logicalANDOnEveryBits(this._virtualStackPointerRegister.outputsQ) && _stackPointerIncrement
+        const _stackPointerRegisterNotOrOnOutputs = !(logicalOROnEveryBits(this._virtualStackPointerRegister.outputsQ))
+        const _stackPointerRegisterAndOnOutputs = logicalANDOnEveryBits(this._virtualStackPointerRegister.outputsQ)
 
-        this._virtualStackPointerPreOUflowFlipflopD.inputD = _stackPointerPreOUflowState
-        this._virtualStackPointerOUflowFlipflopD.inputD = (((logicalANDOnEveryBits(this._virtualStackPointerRegister.outputsQ) && _stackPointerDecrement) && this._virtualStackPointerPreOUflowFlipflopD.outputQ)
-            || (_stackPointerOUflowState && this._virtualStackPointerPreOUflowFlipflopD.outputQ̅ )) || this._virtualStackPointerOUflowFlipflopD.outputQ
+        this._virtualStackPointerPreOUflowFlipflopD.inputD = _stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement
+        this._virtualStackPointerPreOUflowFlipflopD.inputClock = _stackPointerRegisterAndOnOutputs && _stackPointerIncrement && this._virtualStackPointerPreOUflowFlipflopD.outputQ
+        this._virtualStackPointerPreOUflowFlipflopD.recalcVirtualValue()
+
+        this._virtualStackPointerOUflowFlipflopD.inputD = ((_stackPointerRegisterAndOnOutputs && _stackPointerDecrement && this._virtualStackPointerPreOUflowFlipflopD.outputQ)
+            || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && this._virtualStackPointerPreOUflowFlipflopD.outputQ̅ )) || this._virtualStackPointerOUflowFlipflopD.outputQ
 
         const _jumpPostPart = opCodeValue[2] && !opCodeValue[3]
         this._jump = ((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && _jumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
@@ -1070,8 +1072,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualStack.inputClock = clockSync
             this._virtualStack.value = this._virtualStack.recalcVirtualValue()
 
-            this._virtualStackPointerPreOUflowFlipflopD.inputClock =
-                (clockSync && _stackPointerPreOUflowState) || (_stackPointerOUflowState && this._virtualStackPointerPreOUflowFlipflopD.outputQ)
+            this._virtualStackPointerPreOUflowFlipflopD.inputClock = clockSync && _stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement
             this._virtualStackPointerPreOUflowFlipflopD.recalcVirtualValue()
 
             this._virtualStackPointerOUflowFlipflopD.inputClock = clockSync
@@ -1101,8 +1102,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualStack.inputClock = clockSync && this._virtualExecuteFlipflopD.outputQ
             this._virtualStack.value = this._virtualStack.recalcVirtualValue()
 
-            this._virtualStackPointerPreOUflowFlipflopD.inputClock =
-                (clockSync && _stackPointerPreOUflowState && this._virtualExecuteFlipflopD.outputQ) || (_stackPointerOUflowState && this._virtualStackPointerPreOUflowFlipflopD.outputQ)
+            this._virtualStackPointerPreOUflowFlipflopD.inputClock = clockSync && _stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement
             this._virtualStackPointerPreOUflowFlipflopD.recalcVirtualValue()
 
             this._virtualStackPointerOUflowFlipflopD.inputClock = clockSync && this._virtualExecuteFlipflopD.outputQ
@@ -1148,7 +1148,7 @@ export class CPU extends CPUBase<CPURepr> {
                 z: this._virtualFlagsRegister.outputsQ[0],
                 //v: false_,
                 cout: this._virtualFlagsRegister.outputsQ[1],
-                stackouflow: false_,
+                stackouflow: this._virtualStackPointerOUflowFlipflopD.outputQ,
                 haltsignal: this._virtualHaltSignalFlipflopD.outputQ,
                 runningstate: runningState,
             }
