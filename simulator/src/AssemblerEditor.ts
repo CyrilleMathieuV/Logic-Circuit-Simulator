@@ -402,7 +402,6 @@ export class AssemblerEditor {
         this.generateBrutSourceCode()
         this.computeLinesOperand()
         this.generateBrutSourceCode()
-
     }
 
     private uploadToMemRAMROM(SelectedRAMROMRef: string) {

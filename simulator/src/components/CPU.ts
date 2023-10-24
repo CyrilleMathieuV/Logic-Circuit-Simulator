@@ -903,7 +903,6 @@ export class CPU extends CPUBase<CPURepr> {
         this._opCodeOperandsInStages["FETCH"] = isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2)
 
         this._virtualRunStopFlipflopD.inputD = this._virtualRunStopFlipflopD.outputQ̅
-        //console.log(this._virtualHaltSignalFlipflopD.outputQ && clockSync)
         this._virtualRunStopFlipflopD.inputClock = (this._virtualHaltSignalFlipflopD.outputQ && clockSync) || this.inputs.RunStop.value
         this._virtualRunStopFlipflopD.recalcVirtualValue()
 
