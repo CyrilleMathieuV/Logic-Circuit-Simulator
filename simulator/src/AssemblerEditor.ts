@@ -45,9 +45,9 @@ type Instruction = {
 }
 
 const goToDownOpCode = ["JMD", "BRZ", "BRC", "JSR"] as string[]
-const goToUpOpCode = ["JMU", "RET"] as string[]
+const goToUpOpCode = ["JMU"] as string[]
 let goToOpCode = goToDownOpCode.concat(goToUpOpCode)
-const noOperandOpCode = ["NOP"] as string[]
+const noOperandOpCode = ["NOP", "RET"] as string[]
 
 export class AssemblerEditor {
     public editor: LogicEditor
@@ -912,7 +912,7 @@ export class AssemblerEditor {
                 const instruction: Instruction = {
                     label : _label.value,
                     opCode : _opcode.options.selectedIndex,
-                    operand : goToUpOpCode.includes(CPUOpCode)? (this._assemblerOperandLength ** 2 - 1) - _operand.options.selectedIndex : _operand.options.selectedIndex,
+                    operand : goToUpOpCode.includes(CPUOpCode)? (this._assemblerOperandLength ** 2 - 1) - _operand.options.selectedIndex : noOperandOpCode.includes(CPUOpCode)? 0 :_operand.options.selectedIndex,
                     comment : _comment.value
                 }
 
