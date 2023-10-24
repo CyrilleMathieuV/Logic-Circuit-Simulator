@@ -604,9 +604,9 @@ export class CPU extends CPUBase<CPURepr> {
 
     protected _mustGetFetchInstructionAgain : boolean
 
-    protected _virtualResetStateFlipflopD : VirtualFlipflopD
-
     protected _virtualPipelineStateFlipflopD : VirtualFlipflopD
+
+    protected _virtualResetStateFlipflopD : VirtualFlipflopD
 
     protected _virtualRunStopFlipflopD : VirtualFlipflopD
 
@@ -633,7 +633,7 @@ export class CPU extends CPUBase<CPURepr> {
 
     protected _virtualOperationStageCounter : VirtualCounter
 
-    private _noJump : LogicValue = true
+    private _jump : LogicValue = true
     private _backwardJump : LogicValue = Unknown
     private _operandsValue : LogicValue[] = ArrayFillWith(false, this.numDataBits)
 
@@ -648,9 +648,9 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._mustGetFetchInstructionAgain = true
 
-        this._virtualResetStateFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-
         this._virtualPipelineStateFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+
+        this._virtualResetStateFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
         this._virtualRunStopFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
 
@@ -787,12 +787,11 @@ export class CPU extends CPUBase<CPURepr> {
         const runningState = this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value && !this._virtualRunStopFlipflopD.outputQ̅: this._virtualRunStopFlipflopD.outputQ
         //console.log((this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅)
 
-        this._virtualPipelineStateFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+        this._virtualPipelineStateFlipflopD.inputD = this.inputs.DisablePipeline.value
 
         this._virtualRunStopFlipflopD.inputD = this._virtualRunStopFlipflopD.outputQ̅
         //console.log(this._virtualHaltSignalFlipflopD.outputQ && clockSync)
         this._virtualRunStopFlipflopD.inputClock = (this._virtualHaltSignalFlipflopD.outputQ && clockSync) || this.inputs.RunStop.value
-
         this._virtualRunStopFlipflopD.recalcVirtualValue()
 
         /*
@@ -816,11 +815,12 @@ export class CPU extends CPUBase<CPURepr> {
 
         // CLR Button
 
-        this._virtualResetStateFlipflopD.inputPre = clrSignal
-
         this._virtualPipelineStateFlipflopD.inputClr = clrSignal
 
+        this._virtualResetStateFlipflopD.inputPre = clrSignal
+
         this._virtualRunStopFlipflopD.inputClr = clrSignal
+
         this._virtualHaltSignalFlipflopD.inputClr = clrSignal
 
         this._virtualProgramCounterRegister.inputClr = clrSignal
@@ -844,17 +844,18 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualStack.inputsAddr = this._virtualStackPointerRegister.outputsQ
         this._virtualStackPointerPreOUflowFlipflopD.inputClr = clrSignal
         this._virtualStackPointerOUflowFlipflopD.inputClr = clrSignal
-
+        
         this._virtualResetStateFlipflopD.inputD = false
-        this._virtualResetStateFlipflopD.inputClock = clockSync
-        this._virtualResetStateFlipflopD.recalcVirtualValue()
-
+        
         this._virtualPipelineStateFlipflopD.inputD = this.inputs.DisablePipeline.value
         this._virtualPipelineStateFlipflopD.inputClock = clrSignal && this._virtualResetStateFlipflopD.outputQ
         this._virtualPipelineStateFlipflopD.recalcVirtualValue()
 
-        const disablePipeline = this._virtualPipelineStateFlipflopD.outputQ
+        this._virtualResetStateFlipflopD.inputClock = clockSync
+        this._virtualResetStateFlipflopD.recalcVirtualValue()
 
+        const disablePipeline = this._virtualPipelineStateFlipflopD.outputQ
+       
         // FETCH Stage
 
         const isa = this.inputValues(this.inputs.Isa)
@@ -979,7 +980,7 @@ export class CPU extends CPUBase<CPURepr> {
         const _stackPointerIncrement = opCodeValue[0] && _stackPointerModification
 
         const _stackPointerALUinputA = this._virtualStackPointerRegister.outputsQ
-        const _stackPointerALUinputB = [_stackPointerModification]
+        const _stackPointerALUinputB = [true]
         ArrayClampOrPad(_stackPointerALUinputB, this.numStackBits, false)
         const _stackPointerALUoutputs= doALUOp("A+B", _stackPointerALUinputA, _stackPointerALUinputB,false)
         //console.log("SP " +  _stackPointerALUoutputs.s)
@@ -987,24 +988,29 @@ export class CPU extends CPUBase<CPURepr> {
 
         //console.log("PC selected " + _virtualProgramCounterSelectedRegisterOutputs)
 
+        this._virtualStackPointerRegister.inputsD = this._virtualStackPointerRegister.outputsQ
+        this._virtualStackPointerRegister.inputInc = _stackPointerIncrement
+        this._virtualStackPointerRegister.inputDec = _stackPointerDecrement
+
         this._virtualStack.inputsD = _virtualProgramCounterSelectedRegisterOutputs
         this._virtualStack.inputWE = _stackPointerDecrement
         this._virtualStack.inputsAddr = _stackPointerIncrement? _stackPointerALUoutputs.s : this._virtualStackPointerRegister.outputsQ
 
         const _stackPointerPreOUflowState = !(logicalOROnEveryBits(this._virtualStackPointerRegister.outputsQ)) && _stackPointerDecrement
+        console.log()
         const _stackPointerOUflowState = logicalANDOnEveryBits(this._virtualStackPointerRegister.outputsQ) && _stackPointerIncrement
 
         this._virtualStackPointerPreOUflowFlipflopD.inputD = _stackPointerPreOUflowState
         this._virtualStackPointerOUflowFlipflopD.inputD = (((logicalANDOnEveryBits(this._virtualStackPointerRegister.outputsQ) && _stackPointerDecrement) && this._virtualStackPointerPreOUflowFlipflopD.outputQ)
             || (_stackPointerOUflowState && this._virtualStackPointerPreOUflowFlipflopD.outputQ̅ )) || this._virtualStackPointerOUflowFlipflopD.outputQ
 
-        const noJumpPostPart = opCodeValue[2] && !opCodeValue[3]
-        this._noJump = !((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && noJumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
-        this._backwardJump = opCodeValue[0] && !opCodeValue[1] && noJumpPostPart
+        const _jumpPostPart = opCodeValue[2] && !opCodeValue[3]
+        this._jump = ((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && _jumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
+        this._backwardJump = opCodeValue[0] && !opCodeValue[1] && _jumpPostPart
 
-        this._virtualProgramCounterRegister.inputInc = this._noJump
+        this._virtualProgramCounterRegister.inputInc = !this._jump
 
-        //console.log(noJump)
+        //console.log(_jump)
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
         //console.log(this._backwardJump)
         const _programCounterALUinputA= _stackPointerIncrement? this._virtualStack.value.out : _virtualProgramCounterSelectedRegisterOutputs
@@ -1013,7 +1019,7 @@ export class CPU extends CPUBase<CPURepr> {
         const _programCounterALUinputB = operandValue.slice()
         ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits,false)
 
-        if (!this._noJump) {
+        if (this._jump) {
             if (this._directAddressingMode) {
                 this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
             } else {
@@ -1070,8 +1076,6 @@ export class CPU extends CPUBase<CPURepr> {
 
             this._virtualStackPointerOUflowFlipflopD.inputClock = clockSync
             this._virtualStackPointerOUflowFlipflopD.recalcVirtualValue()
-
-
         } else {
             const _virtualFetchFlipflopDoutputQ = this._virtualFetchFlipflopD.outputQ
             const _virtualDecodeFlipflopDoutputQ = this._virtualDecodeFlipflopD.outputQ

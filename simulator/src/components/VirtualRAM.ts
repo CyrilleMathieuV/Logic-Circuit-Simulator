@@ -47,7 +47,7 @@ export class VirtualRAM extends VirtualROMRAMBase {
         const numWords = this.numWords
         if (clear === true) {
             // clear is true, preset is false, set output to 0
-            console.log("RAM RST !!!")
+            //console.log("RAM RST !!!")
             return VirtualRAM.virtualValueFilledWith(false, numWords, this.numDataBits)
         }
 
@@ -63,13 +63,13 @@ export class VirtualRAM extends VirtualROMRAMBase {
         if (we !== true || !Flipflop.isClockTrigger(this.trigger, prevClock, clock)) {
             // nothing to write, just update output
             const out = isUnknown(addr) ? ArrayFillWith(Unknown, this.numDataBits) : oldState.mem[addr]
-            console.log("! RAM SDT !")
+            //console.log("! RAM SDT !")
             return { mem: oldState.mem, out }
         }
 
         // we write
         if (isUnknown(addr)) {
-            console.log("! RAM ADR ???")
+            //console.log("! RAM ADR ???")
             return VirtualRAM.virtualValueFilledWith(Unknown, numWords, this.numDataBits)
         }
 
@@ -83,7 +83,7 @@ export class VirtualRAM extends VirtualROMRAMBase {
                 newState[i] = oldState.mem[i]
             }
         }
-        console.log("!!! RAM UPDATED !!!!!!!")
+        //console.log("!!! RAM UPDATED !!!!!!!")
         return { mem: newState, out: newData }
     }
 }
