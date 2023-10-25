@@ -985,12 +985,13 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualStack.inputWE = _stackPointerDecrement
         this._virtualStack.inputsAddr = _stackPointerIncrement? _stackPointerALUoutputs.s : this._virtualStackPointerRegister.outputsQ
 
-        const _stackPointerRegisterNotOrOnOutputs = !(logicalOROnEveryBits(this._virtualStackPointerRegister.outputsQ))
-        const _stackPointerRegisterAndOnOutputs = logicalANDOnEveryBits(this._virtualStackPointerRegister.outputsQ)
+        const _stackPointerRegisterNotOrOnOutputs= !(logicalOROnEveryBits(this._virtualStackPointerRegister.outputsQ))
+        const _stackPointerRegisterAndOnOutputs= logicalANDOnEveryBits(this._virtualStackPointerRegister.outputsQ)
 
-        this._virtualStackPointerPreOUflowFlipflopD.inputD = _stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement
+        const _virtualStackPointerPreOUflowFlipflopDoutputQ= this._virtualStackPointerPreOUflowFlipflopD.outputQ
+        this._virtualStackPointerPreOUflowFlipflopD.inputD = (_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || !(_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _virtualStackPointerPreOUflowFlipflopDoutputQ)
 
-        const _virtualStackPointerOUflowFlipflopDoutputQ  = this._virtualStackPointerPreOUflowFlipflopD.outputQ
+        const _virtualStackPointerOUflowFlipflopDoutputQ= this._virtualStackPointerOUflowFlipflopD.outputQ
         this._virtualStackPointerOUflowFlipflopD.inputD = ((_stackPointerRegisterAndOnOutputs && _stackPointerDecrement && this._virtualStackPointerPreOUflowFlipflopD.outputQ)
             || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && this._virtualStackPointerPreOUflowFlipflopD.outputQ̅ )) || _virtualStackPointerOUflowFlipflopDoutputQ
 
@@ -1035,8 +1036,8 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualHaltSignalFlipflopD.inputClock = clockSync
         this._virtualHaltSignalFlipflopD.recalcVirtualValue()
 
-        const _virtualFetchFlipflopDoutputoutputQ̅ = this._virtualRunStopFlipflopD.outputQ̅
-        this._virtualRunStopFlipflopD.inputD = _virtualFetchFlipflopDoutputoutputQ̅
+        const _virtualFetchFlipflopDoutputQ̅ = this._virtualRunStopFlipflopD.outputQ̅
+        this._virtualRunStopFlipflopD.inputD = _virtualFetchFlipflopDoutputQ̅
         this._virtualRunStopFlipflopD.inputClock = (clockSync && this._virtualHaltSignalFlipflopD.outputQ) || this.inputs.RunStop.value
         this._virtualRunStopFlipflopD.recalcVirtualValue()
 
@@ -1090,7 +1091,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualStack.inputClock = clockSync
             this._virtualStack.value = this._virtualStack.recalcVirtualValue()
 
-            this._virtualStackPointerPreOUflowFlipflopD.inputClock = clockSync && _stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement
+            this._virtualStackPointerPreOUflowFlipflopD.inputClock = clockSync && ((_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _virtualStackPointerPreOUflowFlipflopDoutputQ))
             this._virtualStackPointerPreOUflowFlipflopD.recalcVirtualValue()
 
             this._virtualStackPointerOUflowFlipflopD.inputClock = clockSync
@@ -1122,10 +1123,10 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualStack.inputClock = clockSyncExecute
             this._virtualStack.value = this._virtualStack.recalcVirtualValue()
 
-            this._virtualStackPointerPreOUflowFlipflopD.inputClock = clockSyncExecute && _stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement
+            this._virtualStackPointerPreOUflowFlipflopD.inputClock = clockSyncExecute && ((_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _virtualStackPointerPreOUflowFlipflopDoutputQ))
             this._virtualStackPointerPreOUflowFlipflopD.recalcVirtualValue()
 
-            this._virtualStackPointerOUflowFlipflopD.inputClock = clockSyncExecute && this._virtualExecuteFlipflopD.outputQ
+            this._virtualStackPointerOUflowFlipflopD.inputClock = clockSyncExecute
             this._virtualStackPointerOUflowFlipflopD.recalcVirtualValue()
         }
 
