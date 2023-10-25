@@ -154,11 +154,11 @@ export const CPUBaseDef =
             addressInstructionBits: param(4, [4, 8]),
             dataBits: param(4, [4]),
             addressDataBits: param(4, [4]),
-            stackBits: param(2, [2]),
+            stackBits: param(2, [1, 2, 3]),
             // future use
             // extOpCode: paramBool(), // has the extended opcode
         },
-        validateParams: ({ addressInstructionBits, dataBits, addressDataBits , stackBits}) => ({
+        validateParams: ({ addressInstructionBits, dataBits, addressDataBits, stackBits}) => ({
             numAddressInstructionBits: addressInstructionBits,
             numDataBits: dataBits,
             numAddressDataBits: addressDataBits,
@@ -485,10 +485,12 @@ export abstract class CPUBase<
             //["mid", toggleEnablePipelineItem],
             //["mid", MenuData.sep()],
             ["mid", toggleShowClockCycleItem],
+            ["mid", MenuData.sep()],
             ["mid", toggleShowStackItem],
+            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumStackBits, this.numStackBits, "stackBits"),
             ["mid", MenuData.sep()],
-            ["mid", toggleAddProgramRAMItem],
-            ["mid", MenuData.sep()],
+            //["mid", toggleAddProgramRAMItem],
+            //["mid", MenuData.sep()],
             this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
             ...this.makeCPUSpecificContextMenuItems(),
             ["mid", MenuData.sep()],
@@ -1333,28 +1335,29 @@ export class CPU extends CPUBase<CPURepr> {
                     const valueCenterDeltaY = (this.orient == "n") ? 100 : (this.orient == "s") ? -100 : 0
 
                     let valueCenterX = this.posX
-                    let valueCenterY = Orientation.isVertical(this.orient) ? this.inputs.Isa.group.posYInParentTransform : this.inputs.Isa.group.posYInParentTransform - 60
+                    let valueCenterY = Orientation.isVertical(this.orient) ? this.inputs.Isa.group.posYInParentTransform : this.inputs.Isa.group.posYInParentTransform - 130
                     switch (eachStage) {
                         case "FETCH":
-                            valueCenterX = valueCenterX - valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)
+                            valueCenterX = valueCenterX - valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 55 : 25 : 0)
                             valueCenterY = valueCenterY - valueCenterDeltaY
                             break
                         case "DECODE":
-                            valueCenterX = valueCenterX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)
+                            valueCenterX = valueCenterX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 55 : 25 : 0)
                             break
                         case "EXECUTE":
-                            valueCenterX = valueCenterX + valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)
+                            valueCenterX = valueCenterX + valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 55 : 25 : 0)
                             valueCenterY = valueCenterY + valueCenterDeltaY
                             break
                     }
 
                     const fontSize = 14
-                    const valueCenterBox = ctx.rotatePoint(valueCenterX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? -fontSize : fontSize : 0), valueCenterY + (Orientation.isVertical(this.orient) ? 0 : fontSize))
+                    const valueCenterBox = ctx.rotatePoint(valueCenterX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? -fontSize : fontSize : 0
+                    ), valueCenterY + (Orientation.isVertical(this.orient) ? 0 : fontSize))
                     g.fillStyle = stageColorBackground
                     const frameWidth = 100
                     FlipflopOrLatch.drawStoredValueFrame(g, ...valueCenterBox, frameWidth, 50, false)
 
-                    const valueCenter = ctx.rotatePoint(valueCenterX, valueCenterY)
+                    const valueCenter = ctx.rotatePoint(valueCenterX, valueCenterY + (Orientation.isVertical(this.orient) ? 0 : (this.orient == "w") ? 28 : 0))
                     g.fillStyle = stageColorText
                     g.font = `bold ${fontSize}px monospace`
                     g.textAlign = "center"
@@ -1367,7 +1370,7 @@ export class CPU extends CPUBase<CPURepr> {
                         }
                     }
                     if (this._showOpCode) {
-                        const valueCenterInstruction = ctx.rotatePoint(valueCenterX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? -30 : 30 : 0), valueCenterY + (Orientation.isVertical(this.orient) ? 0 : 30))
+                        const valueCenterInstruction = ctx.rotatePoint(valueCenterX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? -30 : 30 : 0), valueCenterY + (Orientation.isVertical(this.orient) ? 0 : (this.orient == "w") ? -2 : 30))
                         //console.log(this._opCodeOperandsInStages)
                         const opCodeName = this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "opCode")
                         const operandsString = this._showOperands ? this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "operands") : ""
@@ -1392,7 +1395,7 @@ export class CPU extends CPUBase<CPURepr> {
             if (this._showClockCycle) {
                 const fontSize = 20
                 const valueCenterDeltaY = Orientation.isVertical(this.orient) ? 120 : 90
-                const valueCenter = ctx.rotatePoint(this.inputs.ManStep.posXInParentTransform + 10, this.inputs.ManStep.posYInParentTransform - valueCenterDeltaY)
+                const valueCenter = ctx.rotatePoint(Orientation.isVertical(this.orient) ? this.inputs.RunStop.posXInParentTransform : this.inputs.ManStep.posXInParentTransform, this.inputs.RunStop.posYInParentTransform - valueCenterDeltaY)
 
                 g.fillStyle = COLOR_EMPTY
                 const frameWidth = 100 - fontSize / 2
@@ -1406,29 +1409,27 @@ export class CPU extends CPUBase<CPURepr> {
             }
 
             if (this._showStack) {
-                const isVertical = Orientation.isVertical(this.orient)
                 const addressedContentHeight = 12
-                const contentCenterY = this.posY - addressedContentHeight / 2
 
-                const cellWidth = 10
-                const cellHeight = 10
+                const valueCenterDeltaX = Orientation.isVertical(this.orient) ? (this.orient == "n") ? 55 : -55 : 0
+                const valueCenterDeltaY = (this.orient == "n") ? -115 : (this.orient == "s") ? 35 : (this.orient == "e") ? -30 : -50
+
+                const valueCenter = ctx.rotatePoint(Orientation.isVertical(this.orient) ? this.inputs.RunStop.posXInParentTransform : this.inputs.ManStep.posXInParentTransform, this.inputs.Isa.group.posYInParentTransform)
 
                 const numCellsToDraw = this._virtualStack.numWords
                 const numDataBits = this._virtualStack.numDataBits
 
-                let valueCenterX = this.posX
-                let valueCenterY = Orientation.isVertical(this.orient) ? this.inputs.Isa.group.posYInParentTransform : this.inputs.Isa.group.posYInParentTransform + 60
+                const cellWidth = 8 * 10 / numDataBits
+                //const cellHeight = 4 * 10 / numCellsToDraw
+                const cellHeight = 10
 
-                const valueCenterDeltaX = 0
-                const valueCenterDeltaY = (this.orient == "n") ? 100 : (this.orient == "s") ? -100 : 0
+                const valueCenterX = valueCenter[0] + valueCenterDeltaX
+                const valueCenterY = valueCenter[1] + valueCenterDeltaY + ((this.orient == "s" || this.orient == "w") ? 0 : (8 * cellHeight - numCellsToDraw * cellHeight))
 
-                valueCenterX = valueCenterX + valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)
-                valueCenterY = valueCenterY + valueCenterDeltaY
-
-                const contentTop = valueCenterY - numCellsToDraw / 2 * cellHeight
                 const contentLeft = valueCenterX - numDataBits / 2 * cellWidth
-                const contentRight = contentLeft + numDataBits * cellWidth
+                const contentTop = valueCenterY
                 const contentBottom = contentTop + numCellsToDraw * cellHeight
+                const contentRight = contentLeft + numDataBits * cellWidth
 
                 // by default, paint everything as zero
                 g.fillStyle = COLOR_EMPTY
@@ -1475,10 +1476,11 @@ export class CPU extends CPUBase<CPURepr> {
                         g.fill()
                     }
                 }
-
+/*
                 g.fillStyle = COLOR_COMPONENT_INNER_LABELS
                 g.font = "11px sans-serif"
-                drawLabel(ctx, this.orient, "Stack", "e", valueCenterX, valueCenterY, undefined)
+                drawLabel(ctx, this.orient, "Stack", "n", valueCenter[0], valueCenter[1], undefined)
+ */
             }
 
             this.doDrawGenericCaption(g, ctx)

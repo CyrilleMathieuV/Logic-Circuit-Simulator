@@ -259,6 +259,7 @@ const Strings_fr = {
                 ParamNumBits: tuple("Nombre de bits", template("${val} bit$s{val}")),
                 ParamNumWords: tuple("Nombre de lignes", template("${val} ligne$s{val}")),
                 ParamNumAddressBits: tuple("Largeur d'adresses", template("${val} bit$s{val}")),
+                ParamNumStackBits: tuple("Taille de la pile", template("${val} bit$s{val}")),
             },
 
             InputCarryInDesc: "Cin (retenue précédente)",
@@ -1099,6 +1100,7 @@ const Strings_en: Strings = {
                 ParamNumBits: tuple("Number of Bits", template("${val} Bit$s{val}")),
                 ParamNumWords: tuple("Number of Lines", template("${val} Line$s{val}")),
                 ParamNumAddressBits: tuple("Adrresses width", template("${val} Bit$s{val}")),
+                ParamNumStackBits: tuple("Size of Stack", template("${val} bit$s{val}")),
             },
 
             InputCarryInDesc: "Cin (Previous Carry)",
