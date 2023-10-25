@@ -655,7 +655,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualPipelineStateFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
         this._virtualPipelineStateFlipflopD.inputClr = true
 
-        this._pipeline = this._virtualPipelineStateFlipflopD.outputQ̅
+        this._pipeline = this._virtualPipelineStateFlipflopD.outputQ
 
         this._virtualRunStopFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
         this._virtualRunStopFlipflopD.inputClr = true
@@ -847,7 +847,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._virtualOperationStageCounter.inputClr = clrSignal
 
-        this._pipeline = this._virtualPipelineStateFlipflopD.outputQ̅
+        this._pipeline = this._virtualPipelineStateFlipflopD.outputQ
 
         // FETCH Stage
 
@@ -1491,14 +1491,18 @@ export class CPU extends CPUBase<CPURepr> {
     }
 
     protected override doDrawGenericCaption(g: GraphicsRendering, ctx: DrawContextExt) {
-        if (this._directAddressingMode) {
-            const fontSize = 11
-            g.font = `bold ${fontSize}px sans-serif`
-            g.fillStyle = COLOR_DARK_RED
-            g.textAlign = "center"
-            g.textBaseline = "middle"
-            const valueCenter = ctx.rotatePoint(this.outputs.Isaadr.group.posXInParentTransform + (Orientation.isVertical(this.orient)? 15 : 0), this.outputs.Isaadr.group.posYInParentTransform + (Orientation.isVertical(this.orient)? 63 : 35))
-            g.fillText("Adressage direct", ...valueCenter)
+        if (this.numAddressInstructionBits != this.numDataBits) {
+            this.doSetDirectAddressingMode(false)
+        } else {
+            if (this._directAddressingMode) {
+                const fontSize = 11
+                g.font = `bold ${fontSize}px sans-serif`
+                g.fillStyle = COLOR_DARK_RED
+                g.textAlign = "center"
+                g.textBaseline = "middle"
+                const valueCenter = ctx.rotatePoint(this.outputs.Isaadr.group.posXInParentTransform + (Orientation.isVertical(this.orient)? 15 : 0), this.outputs.Isaadr.group.posYInParentTransform + (Orientation.isVertical(this.orient)? 63 : 35))
+                g.fillText("Adressage direct", ...valueCenter)
+            }
         }
     }
 
@@ -1529,12 +1533,11 @@ export class CPU extends CPUBase<CPURepr> {
     protected override makeCPUSpecificContextMenuItems(): MenuItems {
         const s = S.Components.CPU.contextMenu
         const iconDirectAddressingMode = this._directAddressingMode? "check" : "none"
-        const toggleDirectAddressingMode: MenuItems = this.numAddressInstructionBits != 4 ? [] : [
+        const toggleDirectAddressingMode: MenuItems = this.numAddressInstructionBits != this.numDataBits ? [] : [
             ["mid", MenuData.item(iconDirectAddressingMode, s.toggleDirectAddressingMode,
                 () => {this.doSetDirectAddressingMode(!this._directAddressingMode)}
             )],
         ]
-
         return [
             ...toggleDirectAddressingMode,
         ]
