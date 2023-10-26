@@ -176,7 +176,7 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
 
     private _menu: ComponentMenu | undefined = undefined
     private _topBar: TopBar | undefined = undefined
-    private _messageBar: MessageBar | undefined = undefined
+    public _messageBar: MessageBar | undefined = undefined
     private _toolCursor: string | null = null
     private _highlightedItems: HighlightedItems | undefined = undefined
     private _nextAnimationFrameHandle: number | null = null

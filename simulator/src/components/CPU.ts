@@ -797,7 +797,7 @@ export class CPU extends CPUBase<CPURepr> {
         const runningState = this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value && this._virtualRunStopFlipflopD.outputQ̅ : this._virtualRunStopFlipflopD.outputQ
         const haltSignal = this._virtualHaltSignalFlipflopD.outputQ || (this._virtualResetStateFlipflopD.outputQ̅  && this._virtualRunStopFlipflopD.outputQ̅ )
         //console.log((this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅)
-        console.log(this._virtualRunStopFlipflopD.outputQ̅ )
+        //console.log(this._virtualRunStopFlipflopD.outputQ̅ )
         /*
         if (VirtualFlipflop.isVirtualClockTrigger(this._virtualRunStopFlipflopD.trigger, prevClock, clockSync)) {
             if (prevClock) {

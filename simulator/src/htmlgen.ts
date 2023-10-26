@@ -120,6 +120,8 @@ export const a = elemBuilder("a")
 export const b = elemBuilder("b")
 export const i = elemBuilder("i")
 
+export const p = elemBuilder("p")
+
 export const ul = elemBuilder("ul")
 export const ol = elemBuilder("ol")
 export const li = elemBuilder("li")

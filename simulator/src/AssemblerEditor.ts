@@ -1,14 +1,44 @@
 import { LogicEditor, MouseAction } from "./LogicEditor"
-import { binaryStringRepr, TimeoutHandle, Unknown } from "./utils"
+import {binaryStringRepr, isString, JSONParseObject, RepeatFunction, TimeoutHandle, Unknown} from "./utils"
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
 import { EditorSelection, UIEventManager } from "./UIEventManager"
 import { CPU, CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
 import { IconName, inlineIconSvgFor } from "./images"
-import { button, cls, i, raw, li, div, ol, select, option, value, style, draggable, id, input, applyModifierTo, selected, start, disabled, hidden, maxlength, selectedIndex } from "./htmlgen"
+import {
+    p,
+    button,
+    cls,
+    i,
+    raw,
+    li,
+    div,
+    ol,
+    select,
+    option,
+    value,
+    style,
+    draggable,
+    id,
+    input,
+    applyModifierTo,
+    selected,
+    start,
+    disabled,
+    hidden,
+    maxlength,
+    selectedIndex,
+    Modifier,
+} from "./htmlgen"
 import { ROM } from "./components/ROM"
 import { RAM } from "./components/RAM"
 import { Component } from "./components/Component"
 import { COLOR_BACKGROUND_INVALID, COLOR_MOUSE_OVER_DANGER } from "./drawutils"
+import {Library, Serialization, stringifySmart} from "./Serialization";
+import {saveAs} from "file-saver";
+import pngMeta from "png-metadata-writer";
+import {S} from "./strings";
+import {MessageBar} from "./MessageBar";
+import {migrateData} from "./DataMigration";
 
 // sources
 // https://web.dev/drag-and-drop/
@@ -30,7 +60,6 @@ import { COLOR_BACKGROUND_INVALID, COLOR_MOUSE_OVER_DANGER } from "./drawutils"
 // https://www.freecodecamp.org/news/insert-into-javascript-array-at-specific-index/
 // https://unicorntears.dev/posts/queryselectorall-vs-getelementsbyclassname/#:~:text=querySelectorAll()%20retrieves%20a%20list,live%20HTML%20collection%20of%20elements.
 
-
 type HtmlSection = {
     control: HTMLDivElement
     header: HTMLDivElement
@@ -44,6 +73,13 @@ type Instruction = {
     comment: string
 }
 
+const MAX_UNDO_PROGRAM_SNAPSHOTS = 100
+
+export type UndoProgramState = {
+    canUndoProgram: boolean
+    canRedoProgram: boolean
+}
+
 const goToDownOpCode = ["JMD", "BRZ", "BRC", "JSR"] as string[]
 const goToUpOpCode = ["JMU"] as string[]
 let goToOpCode = goToDownOpCode.concat(goToUpOpCode)
@@ -53,6 +89,9 @@ export class AssemblerEditor {
     public editor: LogicEditor
 
     //private readonly mainDiv: HTMLDivElement
+
+    private readonly titleDiv: HTMLDivElement
+    private readonly titleName : HTMLHeadingElement
 
     private readonly controlDiv: HTMLDivElement
     private readonly undoButton: HTMLButtonElement
@@ -86,6 +125,9 @@ export class AssemblerEditor {
     private _opcodes: typeof CPUOpCodes
 
     private _program: Instruction[]
+
+    private _undoProgramSnapshots : Instruction[][]
+    private _redoProgramSnapshots : Instruction[][]
 
     private _ROMRAMsList: Component[]
     private _CPUsList: Component[]
@@ -142,7 +184,15 @@ export class AssemblerEditor {
         this._opcodes = CPUOpCodes
         this._program = []
 
-        this.controlDivRAMROMSelect = select().render()
+        this._undoProgramSnapshots = []
+        this._redoProgramSnapshots = []
+
+        this.titleName = p(style("font-weight:bold"), "Assembler editor").render()
+
+        this.titleDiv = div(
+            style("position: absolute; left: 0; top: 0; width: 100%; height: 30px;"),
+            this.titleName
+        ).render()
 
         this.undoButton = button(
             i(cls("svgicon"),
@@ -150,7 +200,7 @@ export class AssemblerEditor {
             style("height:25px; width:25px; padding:0; align-items: center;")
         ).render()
         this.undoButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-            // TO DO
+            this.undoProgram()
         }))
         this.redoButton = button(
             i(cls("svgicon"),
@@ -158,9 +208,10 @@ export class AssemblerEditor {
             style("height:25px; width:25px; padding:0; align-items: center;")
         ).render()
         this.redoButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-            // TO DO
+            this.redoProgram()
         }))
 
+        this.controlDivRAMROMSelect = select().render()
         this.getRAMROMList()
         this.controlDivRAMROMSelect.addEventListener('change', this.editor.wrapHandler((handler) => {
             applyModifierTo(this.controlDivRAMROMSelect.options[this.controlDivRAMROMSelect.options.selectedIndex], selected(""))
@@ -168,6 +219,7 @@ export class AssemblerEditor {
         this.controlDivRAMROMSelect.addEventListener('changeSelected', this.editor.wrapHandler((handler) => {
             applyModifierTo(this.controlDivRAMROMSelect.options[this.controlDivRAMROMSelect.options.selectedIndex], selected(""))
         }))
+
         this.downloadFromMemRAMROMSelectedButton = button(
             i(cls("svgicon"),
                 raw(inlineIconSvgFor("inputcircle"))),
@@ -209,7 +261,9 @@ export class AssemblerEditor {
             style("height:25px; width:25px; padding:0; align-items: center;")
         ).render()
         this.openFromFileButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-            // TO DO
+            this.editor.runFileChooser("text/plain|image/png|application/json", file => {
+                this.tryLoadProgramFrom(file)
+            })
         }))
         this.downloadToFileButton = button(
             i(cls("svgicon"),
@@ -217,29 +271,49 @@ export class AssemblerEditor {
             style("height:25px; width:25px; padding:0; align-items: center;")
         ).render()
         this.downloadToFileButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-            // TO DO
+            this.saveProgramToFile()
         }))
 
-        this.showButton = button(
-            i(cls("svgicon"),
-                raw(inlineIconSvgFor("eye"))),
-            style("height:25px; width:25px; padding:0; align-items: center;")
-        ).render()
-        this.showButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-            // TO DO
-        }))
         this.hideButton = button(
             i(cls("svgicon"),
                 raw(inlineIconSvgFor("close"))),
             style("height:25px; width:25px; padding:0; align-items: center;")
         ).render()
+
         this.hideButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-            // TO DO
+            applyModifierTo(editor.html.assemblerEditor, style("width: 125px; height:55px"))
+            applyModifierTo(this.headerDiv, style("display:none"))
+            applyModifierTo(this.programDiv, style("display:none"))
+            const controlDivChildren = this.controlDiv.childNodes
+            for (let el of controlDivChildren) {
+                applyModifierTo(el as Element, style("display:none"))
+            }
+            applyModifierTo(this.showButton, style("height:25px; width:25px; padding:0; align-items: center;"))
+        }))
+
+        this.showButton = button(
+            i(cls("svgicon"),
+                raw(inlineIconSvgFor("eye"))),
+            style("display:none")
+        ).render()
+
+        this.showButton.addEventListener('click', this.editor.wrapHandler((handler) => {
+            applyModifierTo(editor.html.assemblerEditor, style("width: 680px"))
+            applyModifierTo(this.headerDiv, style("position: absolute; left: 0; top: 60px; width: 100%; height: 30px;"))
+            applyModifierTo(this.programDiv, style("position: absolute; top: 90px; width: 670px; left:0; padding: 3px 5px; display: block; align-items: stretch;"))
+            const controlDivChildren = this.controlDiv.childNodes
+            for (let el of controlDivChildren) {
+                applyModifierTo(el as Element, style("height:25px; width:25px; padding:0; align-items: center;"))
+            }
+            applyModifierTo(this.controlDivRAMROMSelect, style("height:20px; width:50px; padding:0; align-items: center;"))
+            applyModifierTo(this.controlDivCPUSelect, style("height:20px; width:50px; padding:0; align-items: center;"))
+            applyModifierTo(this.hideButton, style("height:25px; width:25px; padding:0; align-items: center;"))
+            applyModifierTo(this.showButton, style("display:none"))
         }))
 
         this.controlDiv = div(
             cls("controlprogram"),
-            style("position: absolute; left: 0; top: 0; width: 100%; height: 30px;"),
+            style("position: absolute; left: 0; top: 30px; width: 100%; height: 30px;"),
             this.undoButton,
             this.redoButton,
             this.controlDivRAMROMSelect,
@@ -249,18 +323,18 @@ export class AssemblerEditor {
             this.addressModeButton,
             this.openFromFileButton,
             this.downloadToFileButton,
-            this.showButton,
             this.hideButton,
+            this.showButton,
         ).render()
 
-        this.lineNumberHeaderDiv = div(style("width: 10px; border-right: 1px black;"),"#").render()
+        this.lineNumberHeaderDiv = div(style("width: 50px; border-right: 1px black; text-align: center"),"#").render()
         this.labelHeaderDiv = div(style("width: 75px; border-right: 1px black;"),"# label").render()
         this.labelOpCodeDiv = div(style("width: 55px"),"OpCode").render()
         this.labelOperandDiv = div(style("width: 80px"),"Operand").render()
         this.commentHeaderDiv = div(style("width: 300px; border-right: 1px black;"),"# comment").render()
         this.headerDiv = div(
             cls("headerprogram"),
-            style("position: absolute; left: 0; top: 30px; width: 100%; height: 30px;"),
+            style("position: absolute; left: 0; top: 60px; width: 100%; height: 30px;"),
             this.lineNumberHeaderDiv,
             this.labelHeaderDiv,
             this.labelOpCodeDiv,
@@ -268,12 +342,13 @@ export class AssemblerEditor {
             this.commentHeaderDiv,
         ).render()
 
-        this.programOl = ol(cls(""), start("0"), id("instructionList"),style("position: absolute; left: 0; top: 0px; width: 655px;")).render()
-        this.programDiv = div(cls("program"), style("position: relative; top: 60px; width: 670px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
+        this.programOl = ol(cls(""), start("0"), id("instructionList"),style("position: relative; left: 0; top: 0px; width: 655px; height: 700px")).render()
+        this.programDiv = div(cls("program"), style("position: absolute; top: 90px; width: 670px; left:0; padding: 3px 5px; display: block; align-items: stretch;"), this.programOl).render()
 
         //this.mainDiv = div(cls("assembler"), style("flex:none; position: absolute;"), this.controlDiv, this.headerDiv, this.programDiv).render()
 
         //editor.html.assemblerEditor.insertAdjacentElement("afterbegin", this.mainDiv)
+        editor.html.assemblerEditor.appendChild(this.titleDiv)
         editor.html.assemblerEditor.appendChild(this.controlDiv)
         editor.html.assemblerEditor.appendChild(this.headerDiv)
         editor.html.assemblerEditor.appendChild(this.programDiv)
@@ -284,8 +359,113 @@ export class AssemblerEditor {
         }))
 
         this._dragSrcEl = this.editor.root.getElementById("instructionList") as HTMLLIElement
+    }
 
-        this.addLine()
+    public showMessage(msg: Modifier) {
+        this.editor._messageBar?.showMessage(msg, 2000)
+        // console.log(String(msg))
+    }
+
+    public get undoRedoProgramState(): UndoProgramState {
+        return {
+            canUndoProgram: this.canUndoProgram(),
+            canRedoProgram: this.canRedoProgram(),
+        }
+    }
+
+    public canUndoProgram() {
+        return this._undoProgramSnapshots.length > 1
+    }
+
+    public canRedoProgram() {
+        return this._redoProgramSnapshots.length > 0
+    }
+
+    private doTakeProgramSnapshot() {
+        this._undoProgramSnapshots.push(this._program)
+        while (this._undoProgramSnapshots.length > MAX_UNDO_PROGRAM_SNAPSHOTS) {
+            this._undoProgramSnapshots.shift()
+        }
+        if (this._redoProgramSnapshots.length > 0) {
+            this._redoProgramSnapshots = []
+        }
+        //console.log(this._undoProgramSnapshots)
+    }
+
+    public undoProgram() {
+        if (!this.canUndoProgram()) {
+            console.log("Nothing to undo")
+            return
+        }
+        const stateNow = this._undoProgramSnapshots.pop()!
+        const prevState = this._undoProgramSnapshots[this._undoProgramSnapshots.length - 1]
+        this._redoProgramSnapshots.push(stateNow)
+        this._program = prevState
+        this.reDrawProgram()
+    }
+
+    public redoProgram() {
+        if (!this.canRedoProgram()) {
+            console.log("Nothing to redo")
+            return
+        }
+        const snapshot = this._redoProgramSnapshots.pop()
+        if (snapshot !== undefined) {
+            this._undoProgramSnapshots.push(snapshot)
+            this._program = snapshot
+            this.reDrawProgram()
+        }
+    }
+
+    public loadProgram(content: string | Record<string, unknown>) {
+        let parsed: Record<string, unknown>
+        if (!isString(content)) {
+            parsed = content
+        } else {
+            try {
+                parsed = JSONParseObject(content)
+            } catch (err) {
+                console.error(err)
+                return "can't load this JSON - error “" + err + `”, length = ${content.length}, JSON:\n` + content
+            }
+        }
+        return parsed
+    }
+
+    public tryLoadProgramFrom(file: File) {
+        if (file.type === "text/plain") {
+            const reader = new FileReader()
+            reader.onload = () => {
+                const content = reader.result?.toString()
+                console.log(content)
+                if (content !== undefined) {
+                    const programCode = this.loadProgram(content) as Record<string, Instruction>
+                    let program : Instruction[] = []
+                    for (let lineNumber in programCode) {
+                        program.push(programCode[lineNumber])
+                   }
+                    this._program = program
+                    this.doTakeProgramSnapshot()
+                    this.reDrawProgram()
+                }
+            }
+            reader.readAsText(file, "utf-8")
+        } else {
+            this.showMessage(S.Messages.UnsupportedFileType.expand({ type: file.type }))
+        }
+    }
+
+    public saveProgramToFile() {
+        this.generateBrutSourceCode()
+        const programStr = JSON.stringify(this._program)
+        const blob = new Blob([programStr], { type: 'text/plain' })
+        const filename = "programFrom_" + this.controlDivRAMROMSelect.value + "_.txt"
+        saveAs(blob, filename)
+    }
+
+    private hideAssemblerEditor() {
+        option(disabled).applyTo(this.programOl)
+        option(style("position: relative; top: 60px; width: 20px; left:0; padding: 3px 5px; display: block; align-items: stretch;")).applyTo(this.programDiv)
     }
 
     private getRAMROMList() {
@@ -388,7 +568,7 @@ export class AssemblerEditor {
         }
 
         this._program = Array.from(program)
-
+        this.doTakeProgramSnapshot()
         this.reDrawProgram()
     }
 
@@ -480,7 +660,10 @@ export class AssemblerEditor {
             this.generateBrutSourceCode()
             this.computeLinesOperand()
             this.generateBrutSourceCode()
+
+            this.doTakeProgramSnapshot()
         }
+
     }
 
     private makeLine(): HTMLLIElement {
@@ -669,6 +852,8 @@ export class AssemblerEditor {
             this.generateBrutSourceCode()
             this.computeLinesOperand()
             this.generateBrutSourceCode()
+
+            this.doTakeProgramSnapshot()
         }
 
         if (newInstruction.opCode != this._program[lineNumber].opCode) {
@@ -709,6 +894,8 @@ export class AssemblerEditor {
             this.generateBrutSourceCode()
             this.computeLinesOperand()
             this.generateBrutSourceCode()
+
+            this.doTakeProgramSnapshot()
         }
 
         if (newInstruction.operand != this._program[lineNumber].operand) {
@@ -725,7 +912,10 @@ export class AssemblerEditor {
             this.generateBrutSourceCode()
             this.computeLinesOperand()
             this.generateBrutSourceCode()
+
+            this.doTakeProgramSnapshot()
         }
+
     }
 
     private updateLine(line: HTMLLIElement) {
@@ -780,6 +970,8 @@ export class AssemblerEditor {
         this.generateBrutSourceCode()
         this.computeLinesOperand()
         this.generateBrutSourceCode()
+
+        this.doTakeProgramSnapshot()
     }
 
     private getLineNumber(line: HTMLLIElement) {
@@ -890,6 +1082,7 @@ export class AssemblerEditor {
         this.computeLinesOperand()
         this.generateBrutSourceCode()
 
+        this.doTakeProgramSnapshot()
         return false
     }
 
@@ -898,7 +1091,7 @@ export class AssemblerEditor {
         if (this.programOl.querySelectorAll(".line") != null) {
             const program = this.programOl.querySelectorAll(".line")
 
-            for(let _i = 0; _i < program.length; _i++) {
+            for (let _i = 0; _i < program.length; _i++) {
                 const line = program[_i] as HTMLLIElement
 
                 const _label = line.querySelector(".label") as HTMLInputElement
@@ -909,10 +1102,10 @@ export class AssemblerEditor {
                 const CPUOpCode = CPUOpCodes[_opcode.options.selectedIndex]
 
                 const instruction: Instruction = {
-                    label : _label.value,
-                    opCode : _opcode.options.selectedIndex,
-                    operand : goToUpOpCode.includes(CPUOpCode)? (this._assemblerOperandLength ** 2 - 1) - _operand.options.selectedIndex : noOperandOpCode.includes(CPUOpCode)? 0 :_operand.options.selectedIndex,
-                    comment : _comment.value
+                    label: _label.value,
+                    opCode: _opcode.options.selectedIndex,
+                    operand: goToUpOpCode.includes(CPUOpCode) ? (this._assemblerOperandLength ** 2 - 1) - _operand.options.selectedIndex : noOperandOpCode.includes(CPUOpCode) ? 0 : _operand.options.selectedIndex,
+                    comment: _comment.value
                 }
 
                 this._program.push(instruction)
@@ -950,7 +1143,6 @@ export class AssemblerEditor {
 
         let operandSelectedValue = this._program[lineNumber].operand
         const operandSelect = line.getElementsByClassName("operand")[0] as HTMLSelectElement
-
 
         applyModifierTo(operandSelect, style("visibility: visible"))
         if (goToOpCode.includes(CPUOpCode)) {
@@ -1027,7 +1219,6 @@ export class AssemblerEditor {
             const disabledOptions = operandSelect.querySelectorAll('[disabled = "true"]').length
             if (16 - hiddenOptions - disabledOptions == 0 || operandSelect.selectedIndex == 0) {
                 applyModifierTo(operandSelect, style("background-color : #f7d5d5"))
-                console.log("*")
             } else {
                 applyModifierTo(operandSelect,style("background-color : #ffffff"))
             }
