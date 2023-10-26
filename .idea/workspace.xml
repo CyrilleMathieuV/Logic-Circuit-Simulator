@@ -9,16 +9,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU (TODO : finish AssemblerEditor (undo/redo, save file, highlight states, debug, display/hide, switch addressing mode (HARD)) + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU (TODO : {finish AssemblerEditor (undo/redo (DONE), save/restore program(DONE), highlight states, debug, display/hide (DONE), switch addressing mode (HARD)} + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/css/LogicEditor.css" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/css/LogicEditor.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/html/LogicEditorTemplate.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/AssemblerEditor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/LogicEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/LogicEditor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/htmlgen.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/htmlgen.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -243,7 +239,7 @@
       <workItem from="1698050980680" duration="800000" />
       <workItem from="1698078245257" duration="24384000" />
       <workItem from="1698213620541" duration="27722000" />
-      <workItem from="1698292604794" duration="30727000" />
+      <workItem from="1698292604794" duration="40862000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -370,14 +366,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00143" summary="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
-      <option name="closed" value="true" />
-      <created>1697296861537</created>
-      <option name="number" value="00143" />
-      <option name="presentableId" value="LOCAL-00143" />
-      <option name="project" value="LOCAL" />
-      <updated>1697296861537</updated>
     </task>
     <task id="LOCAL-00144" summary="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
       <option name="closed" value="true" />
@@ -619,7 +607,15 @@
       <option name="project" value="LOCAL" />
       <updated>1698273612627</updated>
     </task>
-    <option name="localTasksCounter" value="174" />
+    <task id="LOCAL-00174" summary="CMN adds Stack to CPU (TODO : {finish AssemblerEditor (undo/redo (DONE), save/restore program(DONE), highlight states, debug, display/hide (DONE), switch addressing mode (HARD)} + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
+      <option name="closed" value="true" />
+      <created>1698345470757</created>
+      <option name="number" value="00174" />
+      <option name="presentableId" value="LOCAL-00174" />
+      <option name="project" value="LOCAL" />
+      <updated>1698345470758</updated>
+    </task>
+    <option name="localTasksCounter" value="175" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -694,17 +690,7 @@
     <MESSAGE value="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
     <MESSAGE value="CMN adds Stack to CPU (TODO : finish AssemblerEditor (undo/redo, highlight states, debug) + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
     <MESSAGE value="CMN adds Stack to CPU (TODO : finish AssemblerEditor (undo/redo, save file, highlight states, debug, display/hide, switch addressing mode (HARD)) + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
-    <option name="LAST_COMMIT_MESSAGE" value="CMN adds Stack to CPU (TODO : finish AssemblerEditor (undo/redo, save file, highlight states, debug, display/hide, switch addressing mode (HARD)) + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="javascript">
-          <url>file://$PROJECT_DIR$/simulator/src/TopBar.ts</url>
-          <line>123</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
+    <MESSAGE value="CMN adds Stack to CPU (TODO : {finish AssemblerEditor (undo/redo (DONE), save/restore program(DONE), highlight states, debug, display/hide (DONE), switch addressing mode (HARD)} + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
+    <option name="LAST_COMMIT_MESSAGE" value="CMN adds Stack to CPU (TODO : {finish AssemblerEditor (undo/redo (DONE), save/restore program(DONE), highlight states, debug, display/hide (DONE), switch addressing mode (HARD)} + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]" />
   </component>
 </project>

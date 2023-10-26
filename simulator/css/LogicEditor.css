@@ -30,7 +30,7 @@ logic-editor:not(:defined) {
   padding-left: 2px;
   padding-right: 2px;
   border-right-style: dotted;
-  border-color: gray;
+  border-color: grey;
 }
 
 .nav-item {
@@ -134,7 +134,7 @@ logic-editor:not(:defined) {
   font-weight: normal;
   font-size: 90%;
   text-align: center;
-  border: 1px solid gray;
+  border: 1px solid grey;
   margin: 5px 0;
 }
 
@@ -596,6 +596,10 @@ svg text {
 .program {
   overflow-y: visible;
   overflow-x: hidden;
+}
+
+ol li::marker{
+  color:#000000;
 }
 
 .line  {

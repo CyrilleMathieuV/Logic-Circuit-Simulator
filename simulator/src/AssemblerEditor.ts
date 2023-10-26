@@ -39,6 +39,7 @@ import pngMeta from "png-metadata-writer";
 import {S} from "./strings";
 import {MessageBar} from "./MessageBar";
 import {migrateData} from "./DataMigration";
+import {UndoState} from "./UndoManager";
 
 // sources
 // https://web.dev/drag-and-drop/
@@ -134,6 +135,8 @@ export class AssemblerEditor {
 
     private _counterCheck = 0
 
+    private _directAddressingMode : boolean
+
     public constructor(editor: LogicEditor) {
         this.editor = editor
         /*
@@ -180,6 +183,8 @@ export class AssemblerEditor {
 
         this._ROMRAMsList = []
         this._CPUsList = []
+
+        this._directAddressingMode = false
 
         this._opcodes = CPUOpCodes
         this._program = []
@@ -249,10 +254,10 @@ export class AssemblerEditor {
         this.addressModeButton = button(
             i(cls("svgicon"),
                 raw(inlineIconSvgFor("signpost"))),
-            style("height:25px; width:25px; padding:0; align-items: center;")
+            style("height:25px; width:25px; padding:0; align-items: center; background-color: white")
         ).render()
         this.addressModeButton.addEventListener('click', this.editor.wrapHandler((handler) => {
-            // TO DO
+            this.toggleAddressingMode()
         }))
 
         this.openFromFileButton = button(
@@ -306,7 +311,7 @@ export class AssemblerEditor {
                 applyModifierTo(el as Element, style("height:25px; width:25px; padding:0; align-items: center;"))
             }
             applyModifierTo(this.controlDivRAMROMSelect, style("height:20px; width:50px; padding:0; align-items: center;"))
-            applyModifierTo(this.controlDivCPUSelect, style("height:20px; width:50px; padding:0; align-items: center;"))
+            //applyModifierTo(this.controlDivCPUSelect, style("height:20px; width:50px; padding:0; align-items: center;"))
             applyModifierTo(this.hideButton, style("height:25px; width:25px; padding:0; align-items: center;"))
             applyModifierTo(this.showButton, style("display:none"))
         }))
@@ -319,7 +324,7 @@ export class AssemblerEditor {
             this.controlDivRAMROMSelect,
             this.downloadFromMemRAMROMSelectedButton,
             this.uploadToMemRAMROMSelectedButton,
-            this.controlDivCPUSelect,
+            //this.controlDivCPUSelect,
             this.addressModeButton,
             this.openFromFileButton,
             this.downloadToFileButton,
@@ -359,12 +364,35 @@ export class AssemblerEditor {
         }))
 
         this._dragSrcEl = this.editor.root.getElementById("instructionList") as HTMLLIElement
+
+        this._program.push({
+            label : "",
+            opCode: 0,
+            operand: 0,
+            comment: ""
+        })
+
+        this.reDrawProgram()
+    }
+
+    public toggleAddressingMode() {
+        this._directAddressingMode = !this._directAddressingMode
+        if (this._directAddressingMode) {
+            applyModifierTo(this.addressModeButton, style("height:25px; width:25px; padding:0; align-items: center; background-color: red"))
+        } else {
+            applyModifierTo(this.addressModeButton, style("height:25px; width:25px; padding:0; align-items: center; background-color: white"))
+        }
     }
 
     public showMessage(msg: Modifier) {
         this.editor._messageBar?.showMessage(msg, 2000)
         // console.log(String(msg))
     }
+
+    // remember last sent state to avoid fake events
+    private _lastSentProgramState: UndoProgramState | undefined
+    // public callback function
+    public onProgramStateChanged: (stateProgram: UndoProgramState) => unknown = __ => null
 
     public get undoRedoProgramState(): UndoProgramState {
         return {
@@ -390,6 +418,7 @@ export class AssemblerEditor {
             this._redoProgramSnapshots = []
         }
         //console.log(this._undoProgramSnapshots)
+        this.fireUndoProgramStateChangedIfNeeded()
     }
 
     public undoProgram() {
@@ -402,6 +431,7 @@ export class AssemblerEditor {
         this._redoProgramSnapshots.push(stateNow)
         this._program = prevState
         this.reDrawProgram()
+        this.fireUndoProgramStateChangedIfNeeded()
     }
 
     public redoProgram() {
@@ -414,6 +444,15 @@ export class AssemblerEditor {
             this._undoProgramSnapshots.push(snapshot)
             this._program = snapshot
             this.reDrawProgram()
+        }
+        this.fireUndoProgramStateChangedIfNeeded()
+    }
+
+    private fireUndoProgramStateChangedIfNeeded() {
+        const newProgramState = this.undoRedoProgramState
+        if (this._lastSentProgramState === undefined || !areProgramStatesEqual(this._lastSentProgramState, newProgramState)) {
+            this.onProgramStateChanged(newProgramState)
+            this._lastSentProgramState = newProgramState
         }
     }
 
@@ -549,20 +588,28 @@ export class AssemblerEditor {
             const CPUOpCode = CPUOpCodes[instruction.opCode]
 
             if ((goToOpCode.includes(CPUOpCode))) {
-                if(goToUpOpCode.includes(CPUOpCode)) {
-                    let labelLineNumber = _i - instruction.operand
-                    if (labelLineNumber < 1) {
-                        labelLineNumber += program.length
+                if (this._directAddressingMode) {
+                    if (_i < 16) {
+                        let labelLineNumber = _i
+                        lineLabel = "line " + labelLineNumber.toString()
+                        program[labelLineNumber].label = lineLabel
                     }
-                    lineLabel = "line " + labelLineNumber.toString()
-                    program[labelLineNumber].label = lineLabel
                 } else {
-                    let labelLineNumber = _i + instruction.operand
-                    if (labelLineNumber > program.length) {
-                        labelLineNumber += -program.length
+                    if(goToUpOpCode.includes(CPUOpCode)) {
+                        let labelLineNumber = _i - instruction.operand
+                        if (labelLineNumber < 1) {
+                            labelLineNumber += program.length
+                        }
+                        lineLabel = "line " + labelLineNumber.toString()
+                        program[labelLineNumber].label = lineLabel
+                    } else {
+                        let labelLineNumber = _i + instruction.operand
+                        if (labelLineNumber > program.length) {
+                            labelLineNumber += -program.length
+                        }
+                        lineLabel = "line " + labelLineNumber.toString()
+                        program[labelLineNumber].label = lineLabel
                     }
-                    lineLabel = "line " + labelLineNumber.toString()
-                    program[labelLineNumber].label = lineLabel
                 }
             }
         }
@@ -904,7 +951,9 @@ export class AssemblerEditor {
             const lineCPUOpCode = CPUOpCodes[this._program[lineNumber].opCode]
 
             if (goToUpOpCode.includes(lineCPUOpCode)) {
-                newOperandSelectIndex = (this._assemblerOperandLength ** 2 - 1) - newOperandSelectIndex
+                if (!this._directAddressingMode) {
+                    newOperandSelectIndex = (this._assemblerOperandLength ** 2 - 1) - newOperandSelectIndex
+                }
             }
 
             applyModifierTo(newOperandSelect, selectedIndex(newOperandSelectIndex.toString()))
@@ -941,15 +990,23 @@ export class AssemblerEditor {
 
         let goToLabel = ""
         if (goToOpCode.includes(CPUOpCode)) {
-            if (goToUpOpCode.includes(CPUOpCode)) {
-                goToLabel = this._program[lineNumber - operandSelectedValue].label
+            if (this._directAddressingMode) {
+                goToLabel = this._program[operandSelectedValue].label
             } else {
-                goToLabel = this._program[lineNumber + operandSelectedValue].label
+                if (goToUpOpCode.includes(CPUOpCode)) {
+                    goToLabel = this._program[lineNumber - operandSelectedValue].label
+                } else {
+                    goToLabel = this._program[lineNumber + operandSelectedValue].label
+                }
             }
         }
 
         if (goToUpOpCode.includes(CPUOpCode)) {
-            operandSelectedValue = (this._assemblerOperandLength ** 2 - 1) - operandSelectedValue
+            if (this._directAddressingMode) {
+                operandSelectedValue = operandSelectedValue
+            } else {
+                operandSelectedValue = (this._assemblerOperandLength ** 2 - 1) - operandSelectedValue
+            }
         }
 
         const operandSelect = line.getElementsByClassName("operand")[0] as HTMLSelectElement
@@ -1101,11 +1158,15 @@ export class AssemblerEditor {
 
                 const CPUOpCode = CPUOpCodes[_opcode.options.selectedIndex]
 
-                const instruction: Instruction = {
+                let instruction: Instruction = {
                     label: _label.value,
                     opCode: _opcode.options.selectedIndex,
                     operand: goToUpOpCode.includes(CPUOpCode) ? (this._assemblerOperandLength ** 2 - 1) - _operand.options.selectedIndex : noOperandOpCode.includes(CPUOpCode) ? 0 : _operand.options.selectedIndex,
                     comment: _comment.value
+                }
+
+                if (this._directAddressingMode) {
+                    instruction.operand = goToUpOpCode.includes(CPUOpCode) ? _operand.options.selectedIndex : noOperandOpCode.includes(CPUOpCode) ? 0 : _operand.options.selectedIndex
                 }
 
                 this._program.push(instruction)
@@ -1145,86 +1206,135 @@ export class AssemblerEditor {
         const operandSelect = line.getElementsByClassName("operand")[0] as HTMLSelectElement
 
         applyModifierTo(operandSelect, style("visibility: visible"))
-        if (goToOpCode.includes(CPUOpCode)) {
-            let selectedGoToLabel = ""
-            if (operandSelect.selectedOptions.length == 1) {
-                selectedGoToLabel = operandSelect.selectedOptions[0].value
+
+        if (this._directAddressingMode) {
+            if (goToOpCode.includes(CPUOpCode)) {
+                let selectedGoToLabel = ""
+                if (operandSelect.selectedOptions.length == 1) {
+                    selectedGoToLabel = operandSelect.selectedOptions[0].value
+                }
+                this.removeAllChildren(operandSelect)
+                const higherAccessibleAddress = (this._program.length < 16) ? this._program.length : 16
+                for (let _i = 0; _i < higherAccessibleAddress; _i++) {
+                    if ((lineNumber >=0 && lineNumber < higherAccessibleAddress) || (lineNumber > 15)) {
+                        if (this._program[_i].label == "") {
+                            const operandvalue = "label " + (_i).toString()
+                            option(
+                                cls("operandvalue"),
+                                operandvalue,
+                                value(operandvalue),
+                                disabled
+                            ).applyTo(operandSelect)
+                        } else {
+                            const accessibleLabelValue = this._program[_i].label
+                            option(
+                                cls("operandvalue"),
+                                accessibleLabelValue,
+                                value(accessibleLabelValue),
+                                (accessibleLabelValue == selectedGoToLabel) ? selected("") : "",
+                            ).applyTo(operandSelect)
+                        }
+                    } else {
+                        option(
+                            cls("operandvalue"),
+                            hidden
+                        ).applyTo(operandSelect)
+                    }
+                }
+                const hiddenOptions = operandSelect.querySelectorAll('[hidden = "hidden"]').length
+                const disabledOptions = operandSelect.querySelectorAll('[disabled = "true"]').length
+                if (16 - hiddenOptions - disabledOptions == 0 || operandSelect.selectedIndex == 0) {
+                    applyModifierTo(operandSelect, style("background-color : #f7d5d5"))
+                } else {
+                    applyModifierTo(operandSelect,style("background-color : #ffffff"))
+                }
+            } else {
+                if (noOperandOpCode.includes(CPUOpCode)) {
+                    applyModifierTo(operandSelect, style("visibility: hidden"))
+                }
             }
-            this.removeAllChildren(operandSelect)
-            if (goToUpOpCode.includes(CPUOpCode)) {
-                if (selectedGoToLabel == "") {
-                    for (let _i = this._assemblerOperandLength ** 2 - 1; _i > -1; _i--) {
-                        if (lineNumber - _i >= 0) {
-                            if (this._program[lineNumber - _i].label != "") {
-                                selectedGoToLabel = this._program[lineNumber - _i].label
+        } else {
+            if (goToOpCode.includes(CPUOpCode)) {
+                let selectedGoToLabel = ""
+                if (operandSelect.selectedOptions.length == 1) {
+                    selectedGoToLabel = operandSelect.selectedOptions[0].value
+                }
+                this.removeAllChildren(operandSelect)
+                if (goToUpOpCode.includes(CPUOpCode)) {
+                    if (selectedGoToLabel == "") {
+                        for (let _i = this._assemblerOperandLength ** 2 - 1; _i > -1; _i--) {
+                            if (lineNumber - _i >= 0) {
+                                if (this._program[lineNumber - _i].label != "") {
+                                    selectedGoToLabel = this._program[lineNumber - _i].label
+                                }
                             }
                         }
                     }
-                }
-                for (let _i = this._assemblerOperandLength ** 2 - 1; _i > -1; _i--) {
-                    if (lineNumber - _i >= 0) {
-                        if (this._program[lineNumber - _i].label == "") {
-                            const operandvalue = "label " + (lineNumber - _i).toString()
-                            option(
-                                cls("operandvalue"),
-                                operandvalue,
-                                value(operandvalue),
-                                disabled
-                            ).applyTo(operandSelect)
+                    for (let _i = this._assemblerOperandLength ** 2 - 1; _i > -1; _i--) {
+                        if (lineNumber - _i >= 0) {
+                            if (this._program[lineNumber - _i].label == "") {
+                                const operandvalue = "label " + (lineNumber - _i).toString()
+                                option(
+                                    cls("operandvalue"),
+                                    operandvalue,
+                                    value(operandvalue),
+                                    disabled
+                                ).applyTo(operandSelect)
+                            } else {
+                                const accessibleLabelValue = this._program[lineNumber - _i].label
+                                option(
+                                    cls("operandvalue"),
+                                    accessibleLabelValue,
+                                    value(accessibleLabelValue),
+                                    (accessibleLabelValue == selectedGoToLabel) ? selected("") : "",
+                                ).applyTo(operandSelect)
+                            }
                         } else {
-                            const accessibleLabelValue = this._program[lineNumber - _i].label
                             option(
                                 cls("operandvalue"),
-                                accessibleLabelValue,
-                                value(accessibleLabelValue),
-                                (accessibleLabelValue == selectedGoToLabel) ? selected("") : "",
+                                hidden
                             ).applyTo(operandSelect)
                         }
-                    } else {
-                        option(
-                            cls("operandvalue"),
-                            hidden
-                        ).applyTo(operandSelect)
                     }
-                }
-            } else {
-                for (let _i = 0; _i < this._assemblerOperandLength ** 2; _i++) {
-                    if (lineNumber + _i < this._program.length) {
-                        if (this._program[lineNumber + _i].label == "") {
-                            const operandvalue = "label " + (lineNumber + _i).toString()
-                            option(
-                                cls("operandvalue"),
-                                operandvalue,
-                                value(operandvalue),
-                                disabled
-                            ).applyTo(operandSelect)
+                } else {
+                    for (let _i = 0; _i < this._assemblerOperandLength ** 2; _i++) {
+                        if (lineNumber + _i < this._program.length) {
+                            if (this._program[lineNumber + _i].label == "") {
+                                const operandvalue = "label " + (lineNumber + _i).toString()
+                                option(
+                                    cls("operandvalue"),
+                                    operandvalue,
+                                    value(operandvalue),
+                                    disabled
+                                ).applyTo(operandSelect)
+                            } else {
+                                const accessibleLabelValue = this._program[lineNumber + _i].label
+                                option(
+                                    cls("operandvalue"),
+                                    accessibleLabelValue,
+                                    value(accessibleLabelValue),
+                                    (accessibleLabelValue == selectedGoToLabel) ? selected("") : "",
+                                ).applyTo(operandSelect)
+                            }
                         } else {
-                            const accessibleLabelValue = this._program[lineNumber + _i].label
                             option(
                                 cls("operandvalue"),
-                                accessibleLabelValue,
-                                value(accessibleLabelValue),
-                                (accessibleLabelValue == selectedGoToLabel) ? selected("") : "",
+                                hidden
                             ).applyTo(operandSelect)
                         }
-                    } else {
-                        option(
-                            cls("operandvalue"),
-                            hidden
-                        ).applyTo(operandSelect)
                     }
                 }
-            }
-            const hiddenOptions = operandSelect.querySelectorAll('[hidden = "hidden"]').length
-            const disabledOptions = operandSelect.querySelectorAll('[disabled = "true"]').length
-            if (16 - hiddenOptions - disabledOptions == 0 || operandSelect.selectedIndex == 0) {
-                applyModifierTo(operandSelect, style("background-color : #f7d5d5"))
+                const hiddenOptions = operandSelect.querySelectorAll('[hidden = "hidden"]').length
+                const disabledOptions = operandSelect.querySelectorAll('[disabled = "true"]').length
+                if (16 - hiddenOptions - disabledOptions == 0 || operandSelect.selectedIndex == 0) {
+                    applyModifierTo(operandSelect, style("background-color : #f7d5d5"))
+                } else {
+                    applyModifierTo(operandSelect,style("background-color : #ffffff"))
+                }
             } else {
-                applyModifierTo(operandSelect,style("background-color : #ffffff"))
-            }
-        } else {
-            if (noOperandOpCode.includes(CPUOpCode)) {
-                applyModifierTo(operandSelect, style("visibility: hidden"))
+                if (noOperandOpCode.includes(CPUOpCode)) {
+                    applyModifierTo(operandSelect, style("visibility: hidden"))
+                }
             }
         }
     }
@@ -1311,4 +1421,9 @@ export class AssemblerEditorEventManager {
             return this._currentMouseDownData
         }
      */
+}
+
+function areProgramStatesEqual(s1: UndoProgramState, s2: UndoProgramState): boolean {
+    return s1.canUndoProgram === s2.canUndoProgram
+        && s1.canRedoProgram === s2.canRedoProgram
 }
