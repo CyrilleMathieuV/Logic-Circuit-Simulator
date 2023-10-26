@@ -41,7 +41,7 @@ import { Modifier, a, attr, attrBuilder, cls, div, emptyMod, href, input, label,
 import { inlineIconSvgFor, isIconName, makeIcon } from "./images"
 import { DefaultLang, S, getLang, isLang, setLang } from "./strings"
 import { InBrowser, KeysOfByType, RichStringEnum, UIDisplay, copyToClipboard, formatString, getURLParameter, isArray, isEmbeddedInIframe, isFalsyString, isString, isTruthyString, onVisible, pasteFromClipboard, setDisplay, setVisible, showModal, toggleVisible } from "./utils"
-import {AssemblerEditor, AssemblerEditorEventManager} from "./AssemblerEditor"
+import { AssemblerEditor, AssemblerEditorEventManager } from "./AssemblerEditor"
 
 
 enum Mode {

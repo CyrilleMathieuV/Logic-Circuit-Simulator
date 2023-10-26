@@ -60,6 +60,7 @@ import {UndoState} from "./UndoManager";
 // https://css-tricks.com/snippets/css/complete-guide-grid/#aa-grid-properties
 // https://www.freecodecamp.org/news/insert-into-javascript-array-at-specific-index/
 // https://unicorntears.dev/posts/queryselectorall-vs-getelementsbyclassname/#:~:text=querySelectorAll()%20retrieves%20a%20list,live%20HTML%20collection%20of%20elements.
+// https://mehranjnf.medium.com/mastering-events-in-node-js-and-typescript-839e51d47985
 
 type HtmlSection = {
     control: HTMLDivElement
@@ -502,11 +503,6 @@ export class AssemblerEditor {
         saveAs(blob, filename)
     }
 
-    private hideAssemblerEditor() {
-        option(disabled).applyTo(this.programOl)
-        option(style("position: relative; top: 60px; width: 20px; left:0; padding: 3px 5px; display: block; align-items: stretch;")).applyTo(this.programDiv)
-    }
-
     private getRAMROMList() {
         let numberOfAdequateRAMROM = 0
         if (this.controlDivRAMROMSelect != null) {
@@ -672,6 +668,16 @@ export class AssemblerEditor {
             cells.push(wordRepr)
         }
         return cells
+    }
+
+    public highlightLine(SelectedRAMROMRef: string) {
+        if (this._ROMRAMsList != undefined) {
+            const selectedRAMROM = this._ROMRAMsList.find((comp) => comp.ref == SelectedRAMROMRef) as RAM
+                if (selectedRAMROM != undefined) {
+                    let RAMROM = selectedRAMROM as RAM
+                    console.log(RAMROM.value)
+                }
+        }
     }
 
     private addLine(line?: HTMLLIElement, aboveCurrentLinecode?: boolean) {
