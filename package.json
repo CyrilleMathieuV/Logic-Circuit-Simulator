@@ -12,7 +12,8 @@
     "json5": "^2.2.3",
     "lz-string": "^1.4.4",
     "png-metadata-writer": "^1.0.1",
-    "qrcode": "^1.5.0"
+    "qrcode": "^1.5.0",
+    "sub-events": "^1.9.0"
   },
   "devDependencies": {
     "@types/bezier-js": "^4.1.0",

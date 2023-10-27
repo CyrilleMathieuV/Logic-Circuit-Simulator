@@ -2,7 +2,7 @@ import { LogicEditor, MouseAction } from "./LogicEditor"
 import {binaryStringRepr, isString, JSONParseObject, RepeatFunction, TimeoutHandle, Unknown} from "./utils"
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
 import { EditorSelection, UIEventManager } from "./UIEventManager"
-import { CPU, CPUBase, CPUOpCode, CPUOpCodes} from "./components/CPU"
+import {CPU, CPUBase, CPUOpCode, CPUOpCodes, CPUStageColorKey, CPUStages} from "./components/CPU"
 import { IconName, inlineIconSvgFor } from "./images"
 import {
     p,
@@ -29,17 +29,28 @@ import {
     selectedIndex,
     Modifier,
 } from "./htmlgen"
-import { ROM } from "./components/ROM"
+import { ROM, ROMRAMBase } from "./components/ROM"
 import { RAM } from "./components/RAM"
 import { Component } from "./components/Component"
-import { COLOR_BACKGROUND_INVALID, COLOR_MOUSE_OVER_DANGER } from "./drawutils"
-import {Library, Serialization, stringifySmart} from "./Serialization";
-import {saveAs} from "file-saver";
-import pngMeta from "png-metadata-writer";
-import {S} from "./strings";
-import {MessageBar} from "./MessageBar";
-import {migrateData} from "./DataMigration";
-import {UndoState} from "./UndoManager";
+import { COLOR_BACKGROUND_INVALID, COLOR_MOUSE_OVER_DANGER, COLOR_BACKGROUND,
+    COLOR_COMPONENT_BORDER,
+    COLOR_COMPONENT_INNER_LABELS,
+    COLOR_CPUSTAGE_BACKGROUND,
+    COLOR_CPUSTAGE_TEXT,
+    displayValuesFromArray,
+    drawLabel,
+    drawWireLineToComponent,
+    formatWithRadix,
+    GRID_STEP,
+    COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED, colorForBoolean, strokeSingleLine } from "./drawutils"
+import {Library, Serialization, stringifySmart} from "./Serialization"
+import {saveAs} from "file-saver"
+import pngMeta from "png-metadata-writer"
+import {S} from "./strings"
+import {MessageBar} from "./MessageBar"
+import {migrateData} from "./DataMigration"
+import {UndoState} from "./UndoManager"
+import {SubEvent} from 'sub-events'
 
 // sources
 // https://web.dev/drag-and-drop/
@@ -60,7 +71,7 @@ import {UndoState} from "./UndoManager";
 // https://css-tricks.com/snippets/css/complete-guide-grid/#aa-grid-properties
 // https://www.freecodecamp.org/news/insert-into-javascript-array-at-specific-index/
 // https://unicorntears.dev/posts/queryselectorall-vs-getelementsbyclassname/#:~:text=querySelectorAll()%20retrieves%20a%20list,live%20HTML%20collection%20of%20elements.
-// https://mehranjnf.medium.com/mastering-events-in-node-js-and-typescript-839e51d47985
+// https://stackoverflow.com/questions/51681107/create-custom-event-within-class-in-typescript
 
 type HtmlSection = {
     control: HTMLDivElement
@@ -131,8 +142,11 @@ export class AssemblerEditor {
     private _undoProgramSnapshots : Instruction[][]
     private _redoProgramSnapshots : Instruction[][]
 
-    private _ROMRAMsList: Component[]
-    private _CPUsList: Component[]
+    private _allROMRAMsAsComponentsList: Component[]
+    private _adequateROMRAMsList: ROMRAMBase<any>[]
+
+    private _allCPUsAsComponentsList: Component[]
+    private _CPUsList: CPU[]
 
     private _counterCheck = 0
 
@@ -182,7 +196,10 @@ export class AssemblerEditor {
             this.getCPUList()
         }))
 
-        this._ROMRAMsList = []
+        this._allROMRAMsAsComponentsList = []
+        this._adequateROMRAMsList = []
+
+        this._allCPUsAsComponentsList = []
         this._CPUsList = []
 
         this._directAddressingMode = false
@@ -325,7 +342,7 @@ export class AssemblerEditor {
             this.controlDivRAMROMSelect,
             this.downloadFromMemRAMROMSelectedButton,
             this.uploadToMemRAMROMSelectedButton,
-            //this.controlDivCPUSelect,
+            this.controlDivCPUSelect,
             this.addressModeButton,
             this.openFromFileButton,
             this.downloadToFileButton,
@@ -383,11 +400,6 @@ export class AssemblerEditor {
         } else {
             applyModifierTo(this.addressModeButton, style("height:25px; width:25px; padding:0; align-items: center; background-color: white"))
         }
-    }
-
-    public showMessage(msg: Modifier) {
-        this.editor._messageBar?.showMessage(msg, 2000)
-        // console.log(String(msg))
     }
 
     // remember last sent state to avoid fake events
@@ -457,6 +469,11 @@ export class AssemblerEditor {
         }
     }
 
+    public showMessage(msg: Modifier) {
+        this.editor._messageBar?.showMessage(msg, 2000)
+        // console.log(String(msg))
+    }
+
     public loadProgram(content: string | Record<string, unknown>) {
         let parsed: Record<string, unknown>
         if (!isString(content)) {
@@ -505,18 +522,40 @@ export class AssemblerEditor {
 
     private getRAMROMList() {
         let numberOfAdequateRAMROM = 0
+        let currentSelectedRAMROM = this.controlDivRAMROMSelect.selectedIndex
+        let currentSelectedRAMROMref = this.controlDivRAMROMSelect.value
+        //console.log("selected" + currentSelectedRAMROM + "*" + currentSelectedRAMROMref)
         if (this.controlDivRAMROMSelect != null) {
             this.removeAllChildren(this.controlDivRAMROMSelect)
-            this._ROMRAMsList = []
+            this._allROMRAMsAsComponentsList = []
+            this._adequateROMRAMsList = []
         }
-        this._ROMRAMsList = [...this.editor.components.all()].filter((comp) => comp instanceof RAM || comp instanceof ROM)
-        if (this._ROMRAMsList.length > 0) {
-            for (let romram of this._ROMRAMsList) {
+        this._allROMRAMsAsComponentsList = [...this.editor.components.all()].filter((comp) => comp instanceof RAM || comp instanceof ROM)
+        if (this._allROMRAMsAsComponentsList.length > 0) {
+            for (let romram of this._allROMRAMsAsComponentsList) {
                 if (romram.ref != undefined) {
                     //We only want 8 data bits memories…
                     if (romram.value.mem[0].length == this._assemblerWordLength) {
                         //…and max 2 ** numWords
                         if (romram.value.mem.length <= 2 ** this._assemblerNumMaxAddressBits) {
+                            /*
+                            romramCast.onROMRAMChangedEventDispatcher(event => {
+                                console.log("Tikki the cat did just meow!");
+                            });
+                            const romramCast = romram as ROMRAMBase<any>
+                            this._adequateROMRAMsList.push(romramCast)
+                            this._adequateROMRAMsList[this._adequateROMRAMsList.length - 1].romramChangedEvent.subscribe(message => {
+                                // message is strongly-typed here;
+                                console.log(message)
+                                if (romram.ref == currentSelectedRAMROMref) {
+                                    const currentROMRAMline = parseInt(message)
+                                    const currentProgramLength = this.programOl.childNodes.length
+                                    if (currentROMRAMline < currentProgramLength) {
+                                        applyModifierTo(this.programOl.childNodes[currentROMRAMline] as HTMLLIElement, style("background-color: blue"))
+                                    }
+                                }
+                            })
+                            */
                             option(romram.ref, value(romram.ref)).applyTo(this.controlDivRAMROMSelect)
                             numberOfAdequateRAMROM += 1
                         }
@@ -525,6 +564,11 @@ export class AssemblerEditor {
             }
             if (numberOfAdequateRAMROM == 0) {
                 option("none", value("none"), disabled).applyTo(this.controlDivRAMROMSelect)
+            } else {
+                this.controlDivRAMROMSelect.selectedIndex = currentSelectedRAMROM
+                if (this.controlDivRAMROMSelect.value != currentSelectedRAMROMref){
+                    this.controlDivRAMROMSelect.selectedIndex = -1
+                }
             }
         } else {
             option("none", value("none"), disabled).applyTo(this.controlDivRAMROMSelect)
@@ -533,15 +577,45 @@ export class AssemblerEditor {
 
     private getCPUList() {
         let numberOfCPU = 0
+        let currentSelectedCPU = this.controlDivCPUSelect.selectedIndex
+        let currentSelectedCPUref = this.controlDivCPUSelect.value
+        //console.log("selected" + currentSelectedCPU + "*" + currentSelectedCPUref)
         if (this.controlDivCPUSelect != null) {
             this.removeAllChildren(this.controlDivCPUSelect)
+            this._allCPUsAsComponentsList = []
             this._CPUsList = []
         }
-        this._CPUsList = [...this.editor.components.all()].filter((comp) => comp instanceof CPU)
-        console.log(this._CPUsList)
-        if (this._CPUsList.length > 0) {
-            for (let cpu of this._CPUsList) {
+        this._allCPUsAsComponentsList = [] = [...this.editor.components.all()].filter((comp) => comp instanceof CPU)
+        console.log(this._allCPUsAsComponentsList)
+        if (this._allCPUsAsComponentsList.length > 0) {
+            for (let cpu of this._allCPUsAsComponentsList) {
                 if (cpu.ref != undefined) {
+                    const CPUcast = cpu as CPU
+                    this._CPUsList.push(CPUcast)
+                    this._CPUsList[this._CPUsList.length - 1].CPUevent.subscribe(message => {
+                        // message is strongly-typed here;
+                        if (cpu.ref == currentSelectedCPUref) {
+                            const CPUstageFETCHline = parseInt(message.split("+")[0].split(":")[0])
+                            const CPUstageFETCHcolor = message.split("+")[0].split(":")[1]
+                            const CPUstageDECODEline = parseInt(message.split("+")[1].split(":")[0])
+                            const CPUstageDECODEcolor = message.split("+")[1].split(":")[1]
+                            const CPUstageEXECUTEline = parseInt(message.split("+")[2].split(":")[0])
+                            const CPUstageEXECUTEcolor = message.split("+")[2].split(":")[1]
+                            const program = this.programOl.getElementsByClassName("line")
+                            for(let _i = 0; _i < program.length; _i++) {
+                                const line = program[_i] as HTMLLIElement
+                                if (_i == CPUstageFETCHline) {
+                                    applyModifierTo(line, style("background-color: " + `${CPUstageFETCHcolor}`))
+                                } else if (_i == CPUstageDECODEline) {
+                                    applyModifierTo(line, style("background-color: " + `${CPUstageDECODEcolor}`))
+                                    } else if (_i == CPUstageEXECUTEline) {
+                                    applyModifierTo(line, style("background-color: " + `${CPUstageEXECUTEcolor}`))
+                                } else {
+                                    applyModifierTo(line, style("background-color: rgb(221, 221, 221)"))
+                                }
+                            }
+                        }
+                    })
                     option(cpu.ref, value(cpu.ref)).applyTo(this.controlDivCPUSelect)
                     numberOfCPU += 1
                 }
@@ -549,13 +623,18 @@ export class AssemblerEditor {
         }
         if (numberOfCPU == 0) {
             option("none", value("none"), disabled).applyTo(this.controlDivCPUSelect)
+        } else {
+            this.controlDivCPUSelect.selectedIndex = currentSelectedCPU
+            if (this.controlDivCPUSelect.value != currentSelectedCPUref){
+                this.controlDivCPUSelect.selectedIndex = -1
+            }
         }
     }
 
     private downloadFromMemRAMROM(SelectedRAMROMRef: string) {
         let programMem: string[] = []
-        if (this._ROMRAMsList != undefined) {
-            const selectedRAMROM = this._ROMRAMsList.find((comp) => comp.ref == SelectedRAMROMRef)
+        if (this._allROMRAMsAsComponentsList != undefined) {
+            const selectedRAMROM = this._allROMRAMsAsComponentsList.find((comp) => comp.ref == SelectedRAMROMRef)
             if (selectedRAMROM != undefined) {
                 let RAMROM = selectedRAMROM as ROM
                 programMem = this.contentRepr(selectedRAMROM.value.mem)
@@ -629,8 +708,8 @@ export class AssemblerEditor {
 
     private uploadToMemRAMROM(SelectedRAMROMRef: string) {
         if (this._program != undefined) {
-            if (this._ROMRAMsList != undefined) {
-                const selectedRAMROM = this._ROMRAMsList.find((comp) => comp.ref == SelectedRAMROMRef) as RAM
+            if (this._allROMRAMsAsComponentsList != undefined) {
+                const selectedRAMROM = this._allROMRAMsAsComponentsList.find((comp) => comp.ref == SelectedRAMROMRef) as RAM
                 let memSize = 0
                 if (selectedRAMROM != null) {
                     const mem = this.contentRepr(selectedRAMROM.value.mem)
@@ -671,8 +750,8 @@ export class AssemblerEditor {
     }
 
     public highlightLine(SelectedRAMROMRef: string) {
-        if (this._ROMRAMsList != undefined) {
-            const selectedRAMROM = this._ROMRAMsList.find((comp) => comp.ref == SelectedRAMROMRef) as RAM
+        if (this._allROMRAMsAsComponentsList != undefined) {
+            const selectedRAMROM = this._allROMRAMsAsComponentsList.find((comp) => comp.ref == SelectedRAMROMRef) as RAM
                 if (selectedRAMROM != undefined) {
                     let RAMROM = selectedRAMROM as RAM
                     console.log(RAMROM.value)

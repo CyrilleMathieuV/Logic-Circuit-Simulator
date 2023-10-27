@@ -1,4 +1,5 @@
 import * as t from "io-ts"
+import { SubEvent } from 'sub-events'
 import {
     COLOR_BACKGROUND,
     COLOR_COMPONENT_BORDER,
@@ -66,6 +67,10 @@ export const CPUOpCodes = [
     "OR_", "AND", "NOT", "XOR",
     //1100 1101   1110   1111
 ] as const
+
+const goToDownOpCode = ["JMD", "BRZ", "BRC", "JSR"] as string[]
+const goToUpOpCode = ["JMU"] as string[]
+let goToOpCode = goToDownOpCode.concat(goToUpOpCode)
 
 export type CPUOpCode = typeof CPUOpCodes[number]
 
@@ -295,6 +300,7 @@ export abstract class CPUBase<
     protected _addProgramRAM: boolean
 
     public _opCodeOperandsInStages : any
+    public _adressesInStages : any
 
     protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef, params: CPUBaseParams, saved?: TRepr) {
         super(parent, SubclassDef.with(params as any) as any /* TODO */, saved)
@@ -306,7 +312,8 @@ export abstract class CPUBase<
 
         this.numStackBits = params.numStackBits
 
-        this._opCodeOperandsInStages = { FETCH : "", DECODE : "", EXECUTE : ""}
+        this._opCodeOperandsInStages = { FETCH : "", DECODE : "", EXECUTE : "" }
+        this._adressesInStages = { FETCH : -1, DECODE : -1, EXECUTE : -1 }
 
         this._showStage = saved?.showStage ?? CPUDef.aults.showStage
 
@@ -600,6 +607,12 @@ export type CPURepr = Repr<typeof CPUDef>
 export type CPUParams = ResolvedParams<typeof CPUDef>
 
 export class CPU extends CPUBase<CPURepr> {
+    public readonly CPUevent: SubEvent<string> = new SubEvent();
+
+    public CPUeventDispatcher(message: string) {
+        this.CPUevent.emit(`${message}`);
+    }
+
     public readonly numInstructionBits: number
     private _directAddressingMode = CPUDef.aults.directAddressingMode
     private _pipeline: LogicValue
@@ -638,8 +651,6 @@ export class CPU extends CPUBase<CPURepr> {
     private _jump : LogicValue = true
     private _backwardJump : LogicValue = Unknown
     private _operandsValue : LogicValue[] = ArrayFillWith(false, this.numDataBits)
-
-    public _currentAddressEvent : CustomEvent
 
     public constructor(parent: DrawableParent, params: CPUParams, saved?: CPURepr) {
         super(parent, CPUDef, params, saved)
@@ -725,10 +736,6 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._lastClock = Unknown
 
-        this._currentAddressEvent = new CustomEvent("instrAddr", {
-            bubbles: true,
-            detail: { text: () => this.outputs.Isaadr },
-        });
     }
 
     public toJSON() {
@@ -883,27 +890,68 @@ export class CPU extends CPUBase<CPURepr> {
                 DECODE: "",
                 EXECUTE: ""
             }
+            this._adressesInStages = {
+                FETCH: -1,
+                DECODE: -1,
+                EXECUTE: -1
+            }
         }
 
-        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync)) {
+        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync) || clrSignal) {
             console.log(cycle, "-", stage, " * ", this.getOperandsNumberWithRadix(isa_FETCH, 2))
-            console.log("before ",this._opCodeOperandsInStages)
+
+            let messageForAssemblerEditor = ""
+
+            let currentIsaAddress = displayValuesFromArray(this._virtualProgramCounterRegister.outputsQ, false)[1]
+            if (currentIsaAddress == Unknown) {
+                currentIsaAddress = -1
+            }
+            currentIsaAddress = clrSignal? -1 : currentIsaAddress
+
+            console.log("before ",this._adressesInStages)
             //this._mustGetFetchInstructionAgain = true
             if (this._pipeline) {
+
+
                 this._opCodeOperandsInStages["EXECUTE"] = this._opCodeOperandsInStages["DECODE"]
                 this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["FETCH"]
                 this._opCodeOperandsInStages["FETCH"] = isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2)
+
+                const isa_EXECUTE_opCodeName = this._opCodeOperandsInStages["EXECUTE"].split("+")[0]
+                if (goToOpCode.includes(isa_EXECUTE_opCodeName)) {
+                    console.log("daut", parseInt(this._opCodeOperandsInStages["EXECUTE"].split("+")[1].split("b")[1],2))
+                    const isa_EXECUTE_operands = parseInt(this._opCodeOperandsInStages["EXECUTE"].split("+")[1].split("b")[1], 2) + 1
+                    currentIsaAddress = isa_EXECUTE_operands
+                }
+
+                this._adressesInStages["EXECUTE"] = this._adressesInStages["DECODE"]
+                this._adressesInStages["DECODE"] = this._adressesInStages["FETCH"]
+                this._adressesInStages["FETCH"] = currentIsaAddress + 1
             } else {
                 for (let eachStage of CPUStages) {
                     if (eachStage == stage) {
                         console.log(stage)
                         this._opCodeOperandsInStages[eachStage] = isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2)
+
+                        this._adressesInStages[eachStage] = currentIsaAddress
                     } else {
                         this._opCodeOperandsInStages[eachStage] = ""
+
+                        this._adressesInStages[eachStage] = -1
                     }
                 }
             }
             console.log("after", this._opCodeOperandsInStages)
+
+            for (let eachStage of CPUStages) {
+                const stageColor = CPUStageColorKey.color(eachStage)
+                const stageColorBackground = COLOR_CPUSTAGE_BACKGROUND[stageColor]
+                messageForAssemblerEditor += this._adressesInStages[eachStage].toString() + ":" + stageColorBackground + "+"
+            }
+
+            console.log("message ", messageForAssemblerEditor)
+
+            this.CPUeventDispatcher(messageForAssemblerEditor)
         }
 
         // We must get it again, but why ?
