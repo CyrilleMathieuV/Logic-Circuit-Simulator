@@ -68,7 +68,9 @@ export const CPUOpCodes = [
     //1100 1101   1110   1111
 ] as const
 
-const goToDownOpCode = ["JMD", "BRZ", "BRC", "JSR"] as string[]
+const unconditionalGoToDownOpCode = ["JMD", "JSR"] as string[]
+const conditionalGoToDownOpCode = ["BRZ", "BRC"] as string[]
+let goToDownOpCode = unconditionalGoToDownOpCode.concat(conditionalGoToDownOpCode)
 const goToUpOpCode = ["JMU"] as string[]
 let goToOpCode = goToDownOpCode.concat(goToUpOpCode)
 
@@ -898,10 +900,6 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         if (CPU.isClockTrigger(this._trigger, prevClock, clockSync) || clrSignal) {
-            console.log(cycle, "-", stage, " * ", this.getOperandsNumberWithRadix(isa_FETCH, 2))
-
-            let messageForAssemblerEditor = ""
-
             let currentIsaAddress = displayValuesFromArray(this._virtualProgramCounterRegister.outputsQ, false)[1]
             if (currentIsaAddress == Unknown) {
                 currentIsaAddress = -1
@@ -909,25 +907,7 @@ export class CPU extends CPUBase<CPURepr> {
             currentIsaAddress = clrSignal? -1 : currentIsaAddress
 
             console.log("before ",this._adressesInStages)
-            //this._mustGetFetchInstructionAgain = true
-            if (this._pipeline) {
-
-
-                this._opCodeOperandsInStages["EXECUTE"] = this._opCodeOperandsInStages["DECODE"]
-                this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["FETCH"]
-                this._opCodeOperandsInStages["FETCH"] = isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2)
-
-                const isa_EXECUTE_opCodeName = this._opCodeOperandsInStages["EXECUTE"].split("+")[0]
-                if (goToOpCode.includes(isa_EXECUTE_opCodeName)) {
-                    console.log("daut", parseInt(this._opCodeOperandsInStages["EXECUTE"].split("+")[1].split("b")[1],2))
-                    const isa_EXECUTE_operands = parseInt(this._opCodeOperandsInStages["EXECUTE"].split("+")[1].split("b")[1], 2) + 1
-                    currentIsaAddress = isa_EXECUTE_operands
-                }
-
-                this._adressesInStages["EXECUTE"] = this._adressesInStages["DECODE"]
-                this._adressesInStages["DECODE"] = this._adressesInStages["FETCH"]
-                this._adressesInStages["FETCH"] = currentIsaAddress + 1
-            } else {
+            if (!this._pipeline) {
                 for (let eachStage of CPUStages) {
                     if (eachStage == stage) {
                         console.log(stage)
@@ -943,13 +923,13 @@ export class CPU extends CPUBase<CPURepr> {
             }
             console.log("after", this._opCodeOperandsInStages)
 
+            let messageForAssemblerEditor = ""
+
             for (let eachStage of CPUStages) {
                 const stageColor = CPUStageColorKey.color(eachStage)
                 const stageColorBackground = COLOR_CPUSTAGE_BACKGROUND[stageColor]
                 messageForAssemblerEditor += this._adressesInStages[eachStage].toString() + ":" + stageColorBackground + "+"
             }
-
-            console.log("message ", messageForAssemblerEditor)
 
             this.CPUeventDispatcher(messageForAssemblerEditor)
         }
@@ -1179,6 +1159,37 @@ export class CPU extends CPUBase<CPURepr> {
             this._virtualStackPointerOUflowFlipflopD.inputClock = clockSyncExecute
             this._virtualStackPointerOUflowFlipflopD.recalcVirtualValue()
         }
+
+        if (CPU.isClockTrigger(this._trigger, prevClock, clockSync) || clrSignal) {
+            let currentIsaAddress = displayValuesFromArray(this._virtualProgramCounterRegister.outputsQ, false)[1]
+            if (currentIsaAddress == Unknown) {
+                currentIsaAddress = -1
+            }
+            currentIsaAddress = clrSignal? -1 : currentIsaAddress
+
+            console.log("before ",this._adressesInStages)
+            if (this._pipeline) {
+                this._opCodeOperandsInStages["EXECUTE"] = this._opCodeOperandsInStages["DECODE"]
+                this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["FETCH"]
+                this._opCodeOperandsInStages["FETCH"] = isa_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isa_FETCH_operands, 2)
+
+                this._adressesInStages["EXECUTE"] = this._adressesInStages["DECODE"]
+                this._adressesInStages["DECODE"] = this._adressesInStages["FETCH"]
+                this._adressesInStages["FETCH"] = currentIsaAddress
+            }
+            console.log("after", this._opCodeOperandsInStages)
+
+            let messageForAssemblerEditor = ""
+
+            for (let eachStage of CPUStages) {
+                const stageColor = CPUStageColorKey.color(eachStage)
+                const stageColorBackground = COLOR_CPUSTAGE_BACKGROUND[stageColor]
+                messageForAssemblerEditor += this._adressesInStages[eachStage].toString() + ":" + stageColorBackground + "+"
+            }
+
+            this.CPUeventDispatcher(messageForAssemblerEditor)
+        }
+
 
         const false_ = false as LogicValue
 
