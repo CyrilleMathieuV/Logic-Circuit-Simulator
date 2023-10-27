@@ -71,6 +71,8 @@ import {SubEvent} from 'sub-events'
 // https://css-tricks.com/snippets/css/complete-guide-grid/#aa-grid-properties
 // https://www.freecodecamp.org/news/insert-into-javascript-array-at-specific-index/
 // https://unicorntears.dev/posts/queryselectorall-vs-getelementsbyclassname/#:~:text=querySelectorAll()%20retrieves%20a%20list,live%20HTML%20collection%20of%20elements.
+
+// This cat helps me a lot ;-)
 // https://stackoverflow.com/questions/51681107/create-custom-event-within-class-in-typescript
 
 type HtmlSection = {
