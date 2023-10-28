@@ -67,7 +67,7 @@ import Comparator from '../img/Comparator.svg'; // @ts-ignore
 import ControlledInverter from '../img/ControlledInverter.svg'; // @ts-ignore
 import Counter from '../img/Counter.svg'; // @ts-ignore
 import CPU from '../img/CPU.svg'; // @ts-ignore
-import CPU_v6 from '../img/CPU_v6.svg'; // @ts-ignore
+//import CPU_v6 from '../img/CPU_v6.svg'; // @ts-ignore
 import Decoder from '../img/Decoder.svg'; // @ts-ignore
 import Decoder16Seg from '../img/Decoder16Seg.svg'; // @ts-ignore
 import Decoder7Seg from '../img/Decoder7Seg.svg'; // @ts-ignore
@@ -198,7 +198,7 @@ const images = {
     Comparator,
     Counter,
     CPU,
-    CPU_v6,
+    //CPU_v6,
     Decoder,
     Decoder7Seg,
     Decoder16Seg,

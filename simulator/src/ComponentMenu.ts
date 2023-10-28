@@ -10,7 +10,7 @@ import { ParamDef, ParametrizedComponentDef, ParamsFromDefs } from "./components
 import { ControlledInverterDef } from "./components/ControlledInverter"
 import { CounterDef } from "./components/Counter"
 import { CPUDef } from "./components/CPU"
-import { CPUDef_v6 } from "./components/CPU_v6"
+//import { CPUDef_v6 } from "./components/CPU_v6"
 import { CustomComponentDef, CustomComponentImageHeight, CustomComponentImageWidth } from "./components/CustomComponent"
 import { DecoderDef } from "./components/Decoder"
 import { Decoder16SegDef } from "./components/Decoder16Seg"
@@ -163,7 +163,7 @@ const componentsMenu: Array<Section> = [{
         AdderArrayDef.button({ bits: 4 }, "AdderArray"),
         ALUDef.button({ bits: 4, ext: false }, "ALU"),
         CPUDef.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, stackBits: 2, addressInstructionBits : 8 }, "CPU"),
-        CPUDef_v6.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, addressInstructionBits : 8 }, "CPU_v6"),
+        //CPUDef_v6.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, addressInstructionBits : 8 }, "CPU_v6"),
 
         MuxDef.button({ from: 4, to: 2 }, "Mux"),
         DemuxDef.button({ from: 2, to: 4 }, "Demux"),
