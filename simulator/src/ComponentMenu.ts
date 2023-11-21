@@ -9,8 +9,6 @@ import { ComparatorDef } from "./components/Comparator"
 import { ParamDef, ParametrizedComponentDef, ParamsFromDefs } from "./components/Component"
 import { ControlledInverterDef } from "./components/ControlledInverter"
 import { CounterDef } from "./components/Counter"
-import { CPUDef } from "./components/CPU"
-//import { CPUDef_v6 } from "./components/CPU_v6"
 import { CustomComponentDef, CustomComponentImageHeight, CustomComponentImageWidth } from "./components/CustomComponent"
 import { DecoderDef } from "./components/Decoder"
 import { Decoder16SegDef } from "./components/Decoder16Seg"
@@ -29,7 +27,6 @@ import { Gate1Def, GateNDef } from "./components/Gate"
 import { GateArrayDef } from "./components/GateArray"
 import { HalfAdderDef } from "./components/HalfAdder"
 import { InputDef } from "./components/Input"
-//import { KeypadDef } from "./components/Keypad"
 import { LabelDef } from "./components/Label"
 import { LatchSRDef } from "./components/LatchSR"
 import { MuxDef } from "./components/Mux"
@@ -103,8 +100,6 @@ const componentsMenu: Array<Section> = [{
         DisplayAsciiDef.button("DisplayAscii", { compat: "out.ascii", visible: withButton }),
 
         RandomDef.button({ bits: 1 }, "Random", { compat: "random", visible: withButton }),
-        //KeypadDef.button({ bits: 8 }, "Keypad", { compat: "out.byte-display", visible: ifShowOnly }),
-
         ShiftDisplayDef.button("ShiftDisplay", { compat: "out.shift-buffer", visible: withButton }),
     ],
 }, {
@@ -162,8 +157,6 @@ const componentsMenu: Array<Section> = [{
 
         AdderArrayDef.button({ bits: 4 }, "AdderArray"),
         ALUDef.button({ bits: 4, ext: false }, "ALU"),
-        CPUDef.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, stackBits: 2, addressInstructionBits : 8 }, "CPU"),
-        //CPUDef_v6.button({ dataBits: 4, addressDataBits : 4, instructionBits : 8, addressInstructionBits : 8 }, "CPU_v6"),
 
         MuxDef.button({ from: 4, to: 2 }, "Mux"),
         DemuxDef.button({ from: 2, to: 4 }, "Demux"),
@@ -221,7 +214,7 @@ export class ComponentMenu {
             }
         }
 
-        if (showOnlyBuf !== undefined && showOnlyBuf.length > 0) {
+        if (showOnlyBuf !== undefined && showOnlyBuf.filter(s => !s.endsWith("*")).length > 0) {
             console.log(`ERROR Supposed to show unknown elems: ${showOnlyBuf.join("; ")}`)
         }
     }
@@ -416,17 +409,32 @@ function makeButton(typeStr: string, normallyHidden: boolean, componentIds: stri
 function shouldShow(componentIds: string[], showOnly: string[]) {
     let visible = false
     for (const componentId of componentIds) {
-        if (showOnly.includes(componentId)) {
-            visible = true
-            const ind = showOnly.indexOf(componentId)
-            showOnly.splice(ind, 1)
-            break
+        for (const showOnlySpec of showOnly) {
+            const [isMatch, isWildcard] = matchesSpec(showOnlySpec, componentId)
+            if (isMatch) {
+                visible = true
+                if (!isWildcard) {
+                    const ind = showOnly.indexOf(componentId)
+                    showOnly.splice(ind, 1)
+                }
+                break
+            }
         }
     }
 
     // console.log(`buttonId '${buttonId}' is visible: ${visible}`)
 
     return visible
+
+    function matchesSpec(showOnlySpec: string, componentId: string) {
+        if (showOnlySpec === componentId) {
+            return [true, false]
+        }
+        if (showOnlySpec.endsWith("*") && componentId.startsWith(showOnlySpec.slice(0, -1))) {
+            return [true, true]
+        }
+        return [false, false]
+    }
 }
 
 
