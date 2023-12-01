@@ -84,6 +84,9 @@ export type ColorComponentsRGBA = [number, number, number, number]
 export type ColorString = string
 
 export const COLOR_TRANSPARENT: ColorString = "rgba(0,0,0,0)"
+export const USER_COLORS = {
+    COLOR_BACKGROUND: undefined as ColorString | undefined,
+}
 export let COLOR_BACKGROUND: ColorString
 export let COLOR_OFF_BACKGROUND: ColorString
 export let COLOR_BACKGROUND_UNUSED_REGION: ColorString
@@ -121,8 +124,8 @@ export let PATTERN_STRIPED_GRAY: CanvasPattern
 let _currentModeIsDark = false
 doSetColors(_currentModeIsDark)
 
-export function setDarkMode(darkMode: boolean) {
-    if (darkMode !== _currentModeIsDark) {
+export function setDarkMode(darkMode: boolean, force: boolean) {
+    if (force || darkMode !== _currentModeIsDark) {
         doSetColors(darkMode)
         for (const editor of LogicEditor.allConnectedEditors) {
             editor.wrapHandler(() => {
@@ -179,7 +182,7 @@ function doSetColors(darkMode: boolean) {
 
     } else {
         // Dark Theme
-        COLOR_BACKGROUND = ColorString(30)
+        COLOR_BACKGROUND = USER_COLORS.COLOR_BACKGROUND ?? ColorString(30)
         COLOR_OFF_BACKGROUND = ColorString(60)
         COLOR_BACKGROUND_INVALID = ColorString([0xA8, 0x14, 0x14])
         COLOR_BACKGROUND_UNUSED_REGION = ColorString(55)

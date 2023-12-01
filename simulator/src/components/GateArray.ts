@@ -250,7 +250,7 @@ export class GateArray extends ParametrizedComponentBase<GateArrayRepr> {
                 typeItems.push(MenuData.sep())
             } else {
                 const icon = this._type === subtype ? "check" : "none"
-                typeItems.push(MenuData.item(icon, subtype, () => {
+                typeItems.push(MenuData.item(icon, subtype.toUpperCase(), () => {
                     this.doSetType(subtype)
                 }))
             }

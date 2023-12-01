@@ -35,7 +35,7 @@ import { CustomComponent } from "./components/CustomComponent"
 import { Drawable, DrawableParent, DrawableWithPosition, EditTools, GraphicsRendering, Orientation } from "./components/Drawable"
 import { Rectangle, RectangleDef } from "./components/Rectangle"
 import { Wire, WireManager, WireStyle, WireStyles } from "./components/Wire"
-import { COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, clampZoom, isDarkMode, parseColorToRGBA, setDarkMode, strokeSingleLine } from "./drawutils"
+import { COLOR_BACKGROUND, COLOR_BACKGROUND_UNUSED_REGION, COLOR_BORDER, COLOR_COMPONENT_BORDER, COLOR_GRID_LINES, COLOR_GRID_LINES_GUIDES, GRID_STEP, USER_COLORS, clampZoom, isDarkMode, parseColorToRGBA, setDarkMode, strokeSingleLine } from "./drawutils"
 import { gallery } from './gallery'
 import { Modifier, a, attr, attrBuilder, cls, div, emptyMod, href, input, label, option, select, span, style, target, title, type } from "./htmlgen"
 import { inlineIconSvgFor, isIconName, makeIcon } from "./images"
@@ -507,9 +507,9 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
             // singletons manage their dark mode according to system settings
             const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)")
             darkModeQuery.onchange = () => {
-                setDarkMode(darkModeQuery.matches)
+                setDarkMode(darkModeQuery.matches, false)
             }
-            setDarkMode(darkModeQuery.matches)
+            setDarkMode(darkModeQuery.matches, true)
 
             // reexport some libs
             window.JSON5 = JSON5
@@ -644,6 +644,10 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
         const groupButton = this.html.leftToolbar.querySelector("button.sim-component-button[data-type=rect]")
         if (groupButton === null) {
             console.log("ERROR: Could not find group button")
+            if (this._options.showOnly === undefined) {
+                // else, it was probably hidden on purpose
+                console.log("ERROR: Could not find group button")
+            }
         } else {
             groupButton.addEventListener("mousedown", this.wrapHandler(e => {
                 const selectedComps = this.eventMgr.currentSelection?.previouslySelectedElements || new Set()
@@ -933,7 +937,7 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
 
         document.body.addEventListener("themechanged", (e) => {
             const isDark = Boolean((e as any).detail?.is_dark_theme)
-            setDarkMode(isDark)
+            setDarkMode(isDark, false)
         })
 
         LogicEditor._globalListenersInstalled = true
@@ -1513,11 +1517,11 @@ export class LogicEditor extends HTMLElement implements DrawableParent {
             const g = LogicEditor.getGraphics(tmpCanvas)
             const wasDark = isDarkMode()
             if (wasDark) {
-                setDarkMode(false)
+                setDarkMode(false, false)
             }
             this.doDrawWithContext(g, width, height, transform, transform, true, true)
             if (wasDark) {
-                setDarkMode(true)
+                setDarkMode(true, false)
             }
             tmpCanvas.toBlob(resolve, 'image/png')
             tmpCanvas.remove()
@@ -1974,7 +1978,7 @@ export class LogicStatic {
                 console.log(`Will use new background color '${rgbaString}'`)
             }
         }
-        setDarkMode(Boolean(mode))
+        setDarkMode(Boolean(mode), true)
     }
 
 }
