@@ -180,12 +180,16 @@ export class Clock extends InputBase<ClockRepr> {
             [16000, "16 s (0.0625 Hz)"],
         ]
 
+        let matchesSomePreset = false
         const makeItemSetPeriod = (data: [number, string]) => {
             const [period, desc] = data
             const isCurrent = this._period === period
             const icon = isCurrent ? "check" : "none"
             return MenuData.item(icon, desc, () => this.doSetPeriod(period))
         }
+
+        const presetPeriodItems = periodPresets.map(makeItemSetPeriod)
+        const customPeriodItem = MenuData.item(matchesSomePreset ? "none" : "check", s.CustomPeriod + (matchesSomePreset ? "…" : " (" + this._period + " ms, " + Math.round(1000000 / this._period) / 1000 + " Hz)…"), () => this.runSetPeriodDialog())
 
         const replaceWithInputItem =
             MenuData.item("replace", s.ReplaceWithInput, () => {
@@ -195,10 +199,26 @@ export class Clock extends InputBase<ClockRepr> {
         return [
             ...super.makeComponentSpecificContextMenuItems(),
             ["mid", MenuData.sep()],
-            ["mid", MenuData.submenu("timer", s.Period, periodPresets.map(makeItemSetPeriod))],
+            ["mid", MenuData.submenu("timer", s.Period, [...presetPeriodItems, MenuData.sep(), customPeriodItem])],
             ["mid", MenuData.sep()],
             ["mid", replaceWithInputItem],
         ]
+    }
+    private runSetPeriodDialog() {
+        const s = S.Components.Clock.contextMenu
+        const newPeriodStr = window.prompt(s.SetPeriodMillis, String(this._period))
+        if (newPeriodStr === null || newPeriodStr.length === 0) {
+            return
+        }
+
+        const newPeriod = parseInt(newPeriodStr)
+        if (isNaN(newPeriod) || newPeriod < 1) {
+            window.alert(s.InvalidPeriod)
+            this.runSetPeriodDialog()
+            return
+        }
+
+        this.doSetPeriod(newPeriod)
     }
 
 }

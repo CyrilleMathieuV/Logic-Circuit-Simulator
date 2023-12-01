@@ -158,8 +158,9 @@ const componentsMenu: Array<Section> = [{
         AdderArrayDef.button({ bits: 4 }, "AdderArray"),
         ALUDef.button({ bits: 4, ext: false }, "ALU"),
 
-        MuxDef.button({ from: 4, to: 2 }, "Mux"),
-        DemuxDef.button({ from: 2, to: 4 }, "Demux"),
+        MuxDef.button({ from: 4, to: 2, bottom: false }, "Mux"),
+        MuxDef.button({ from: 8, to: 4, bottom: false }, "Mux", { visible: ifShowOnly }),
+        DemuxDef.button({ from: 2, to: 4, bottom: false }, "Demux"),
 
         LatchSRDef.button("LatchSR"),
         FlipflopJKDef.button("FlipflopJK", { compat: "flipflop-jk", visible: withButton }),

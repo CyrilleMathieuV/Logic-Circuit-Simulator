@@ -3,7 +3,7 @@ import { COLOR_BACKGROUND, displayValuesFromArray, drawWireLineToComponent, stro
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import {ArrayFillWith, LogicValue, Unknown, isUnknown, typeOrUndefined, RichStringEnum} from "../utils"
-import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param } from "./Component"
+import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param, paramBool } from "./Component"
 import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 import { WireStyles } from "./Wire"
 
@@ -18,12 +18,13 @@ export type MuxTypes<TALUType extends string> = RichStringEnum<TALUType, MuxType
 
 export const MuxDef =
     defineParametrizedComponent("mux", true, true, {
-        variantName: ({ from, to }) => `mux-${from}to${to}`,
+        variantName: ({ from, to, bottom }) => `mux-${from}to${to}${bottom ? "b" : ""}`,
         idPrefix: "mux",
         button: { imgWidth: 50 },
         repr: {
             from: typeOrUndefined(t.number),
             to: typeOrUndefined(t.number),
+            bottom: typeOrUndefined(t.boolean),
             showWiring: typeOrUndefined(t.boolean),
         },
         valueDefaults: {
@@ -32,13 +33,14 @@ export const MuxDef =
         params: {
             to: param(2, [1, 2, 4, 8, 16]),
             from: param(4),
+            bottom: paramBool(),
         },
-        validateParams: ({ from, to }) => {
+        validateParams: ({ from, to, bottom }) => {
             // reference is 'to'; 'from' is clamped to be between 2*to and 16*to
             const numFrom = Math.min(16 * to, Math.max(2 * to, from))
             const numGroups = Math.ceil(numFrom / to)
             const numSel = Math.ceil(Math.log2(numGroups))
-            return { numFrom, numTo: to, numGroups, numSel }
+            return { numFrom, numTo: to, numGroups, numSel, controlPinsAtBottom: bottom }
         },
         size: ({ numFrom, numTo, numGroups, numSel }) => {
             const gridWidth = 2 * numSel
@@ -48,18 +50,20 @@ export const MuxDef =
             const gridHeight = 1 + spacing * numLeftSlots
             return { gridWidth, gridHeight }
         },
-        makeNodes: ({ numTo, numGroups, numSel }) => {
+        makeNodes: ({ numTo, numGroups, numSel, controlPinsAtBottom }) => {
             const outX = 1 + numSel
             const inX = -outX
 
             const groupOfInputs = groupVerticalMulti("w", inX, 0, numGroups, numTo)
             const firstInputY = groupOfInputs[0][0][1]
-            const selY = firstInputY - 2
+            const lastGroup = groupOfInputs[groupOfInputs.length - 1]
+            const lastInputY = lastGroup[lastGroup.length - 1][1]
+            const selY = controlPinsAtBottom ? lastInputY + 2 : firstInputY - 2
 
             return {
                 ins: {
                     I: groupOfInputs,
-                    S: groupHorizontal("n", 0, selY, numSel),
+                    S: groupHorizontal(controlPinsAtBottom ? "s" : "n", 0, selY, numSel),
                 },
                 outs: {
                     Z: groupVertical("e", outX, 0, numTo),
@@ -79,6 +83,8 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
     public readonly numTo: number
     public readonly numGroups: number
     public readonly numSel: number
+    public readonly controlPinsAtBottom: boolean
+
     private _showWiring: boolean
 
     public constructor(parent: DrawableParent, params: MuxParams, saved?: MuxRepr) {
@@ -88,6 +94,7 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
         this.numTo = params.numTo
         this.numGroups = params.numGroups
         this.numSel = params.numSel
+        this.controlPinsAtBottom = params.controlPinsAtBottom
 
         this._showWiring = saved?.showWiring ?? MuxDef.aults.showWiring
     }
@@ -97,6 +104,7 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
             ...super.toJSONBase(),
             from: this.numFrom,
             to: this.numTo,
+            bottom: this.controlPinsAtBottom === MuxDef.aults.bottom ? undefined : this.controlPinsAtBottom,
             showWiring: (this._showWiring !== MuxDef.aults.showWiring) ? this._showWiring : undefined,
         }
     }
@@ -209,6 +217,7 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
             this.makeChangeParamsContextMenuItem("outputs", s.ParamNumTo, this.numTo, "to"),
             this.makeChangeParamsContextMenuItem("inputs", s.ParamNumFrom, this.numFrom, "from", [2, 4, 8, 16].map(x => x * this.numTo)),
             ["mid", MenuData.sep()],
+            this.makeChangeBooleanParamsContextMenuItem(s.ParamControlAtBottom, this.controlPinsAtBottom, "bottom"),
             ["mid", toggleShowWiringItem],
             ...this.makeForceOutputsContextMenuItem(true),
         ]

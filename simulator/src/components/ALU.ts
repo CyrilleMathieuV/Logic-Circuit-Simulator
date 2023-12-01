@@ -10,7 +10,7 @@ import { Gate1Types, Gate2toNType, Gate2toNTypes } from "./GateTypes"
 
 export const ALUDef =
     defineParametrizedComponent("alu", true, true, {
-        variantName: ({ bits }) => `alu-${bits}`,
+        variantName: ({ bits, ext }) => `alu-${bits}${ext ? "e" : ""}`,
         idPrefix: "alu",
         button: { imgWidth: 50 },
         repr: {

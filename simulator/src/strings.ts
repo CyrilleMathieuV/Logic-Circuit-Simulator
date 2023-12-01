@@ -451,7 +451,9 @@ const Strings_fr = {
                 phase: tuple("Déphasage: ", " ms"),
             },
             contextMenu: {
-                Period: "Période",
+                Period: "Période",CustomPeriod: "Autre",
+                SetPeriodMillis: "Entrez la période de l’horloge en millisecondes:",
+                InvalidPeriod: "La période doit être un nombre entier positif.",
                 ReplaceWithInput: "Remplacer par entrée",
             },
             timeline: {
@@ -663,6 +665,7 @@ const Strings_fr = {
 
                 ParamNumFrom: tuple("Nombre d’entrées", template("${val} entrée$s{val}")),
                 ParamNumTo: tuple("Nombre de sorties", template("${val} sortie$s{val}")),
+                ParamControlAtBottom: "Bits de contrôle en bas",
             },
         },
         Output: {
@@ -1293,6 +1296,9 @@ const Strings_en: Strings = {
             },
             contextMenu: {
                 Period: "Period",
+                CustomPeriod: "Other",
+                SetPeriodMillis: "Enter the period in milliseconds:",
+                InvalidPeriod: "The period must be a positive number.",
                 ReplaceWithInput: "Replace with Input",
             },
             timeline: {
@@ -1503,6 +1509,7 @@ const Strings_en: Strings = {
 
                 ParamNumFrom: tuple("Number of Inputs", template("${val} Input$s{val}")),
                 ParamNumTo: tuple("Number of Outputs", template("${val} Output$s{val}")),
+                ParamControlAtBottom: "Control Bits at Bottom",
             },
         },
         Output: {

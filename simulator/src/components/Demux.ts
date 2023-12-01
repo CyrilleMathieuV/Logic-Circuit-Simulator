@@ -3,28 +3,21 @@ import { COLOR_BACKGROUND, displayValuesFromArray, drawWireLineToComponent, stro
 import { div, mods, tooltipContent } from "../htmlgen"
 import { IconName } from "../images"
 import { S } from "../strings"
-import {ArrayFillWith, HighImpedance, LogicValue, Unknown, isUnknown, typeOrUndefined, RichStringEnum} from "../utils"
-import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param } from "./Component"
+import { ArrayFillWith, HighImpedance, LogicValue, Unknown, isUnknown, typeOrUndefined } from "../utils"
+import { ParametrizedComponentBase, Repr, ResolvedParams, defineParametrizedComponent, groupHorizontal, groupVertical, groupVerticalMulti, param, paramBool } from "./Component"
 import { DrawContext, DrawableParent, GraphicsRendering, MenuData, MenuItems } from "./Drawable"
 import { WireStyles } from "./Wire"
 
-export type DemuxTypeProps = {
-    includeInContextMenu: boolean
-    includeInPoseAs: boolean
-    fullShortDesc: () => [string, string | undefined, string]
-    out: (ins: LogicValue[]) => LogicValue
-}
-
-export type DemuxTypes<TALUType extends string> = RichStringEnum<TALUType, DemuxTypeProps>
 
 export const DemuxDef =
     defineParametrizedComponent("demux", true, true, {
-        variantName: ({ from, to }) => `demux-${from}to${to}`,
+        variantName: ({ from, to, bottom }) => `demux-${from}to${to}${bottom ? "b" : ""}`,
         idPrefix: "demux",
         button: { imgWidth: 50 },
         repr: {
             from: typeOrUndefined(t.number),
             to: typeOrUndefined(t.number),
+            bottom: typeOrUndefined(t.boolean),
             showWiring: typeOrUndefined(t.boolean),
             disconnectedAsHighZ: typeOrUndefined(t.boolean),
         },
@@ -35,13 +28,14 @@ export const DemuxDef =
         params: {
             from: param(2, [1, 2, 4, 8, 16]),
             to: param(4),
+            bottom: paramBool(),
         },
-        validateParams: ({ from, to }) => {
+        validateParams: ({ from, to, bottom }) => {
             // reference is 'from'; 'to' is clamped to be between 2*from and 16*from
             const numTo = Math.min(16 * from, Math.max(2 * from, to))
             const numGroups = Math.ceil(numTo / from)
             const numSel = Math.ceil(Math.log2(numGroups))
-            return { numFrom: from, numTo, numGroups, numSel }
+            return { numFrom: from, numTo, numGroups, numSel, controlPinsAtBottom: bottom }
         },
         size: ({ numFrom, numTo, numGroups, numSel }) => {
             const gridWidth = 2 * numSel
@@ -51,18 +45,20 @@ export const DemuxDef =
             const gridHeight = spacing * numLeftSlots
             return { gridWidth, gridHeight }
         },
-        makeNodes: ({ numFrom, numGroups, numSel }) => {
+        makeNodes: ({ numFrom, numGroups, numSel, controlPinsAtBottom }) => {
             const outX = 1 + numSel
             const inX = -outX
 
             const groupOfOutputs = groupVerticalMulti("e", outX, 0, numGroups, numFrom)
             const firstInputY = groupOfOutputs[0][0][1]
-            const selY = firstInputY - 2
+            const lastGroup = groupOfOutputs[groupOfOutputs.length - 1]
+            const lastInputY = lastGroup[lastGroup.length - 1][1]
+            const selY = controlPinsAtBottom ? lastInputY + 2 : firstInputY - 2
 
             return {
                 ins: {
                     In: groupVertical("w", inX, 0, numFrom),
-                    S: groupHorizontal("n", 0, selY, numSel),
+                    S: groupHorizontal(controlPinsAtBottom ? "s" : "n", 0, selY, numSel),
                 },
                 outs: {
                     Z: groupOfOutputs,
@@ -82,6 +78,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
     public readonly numSel: number
     public readonly numGroups: number
     public readonly numTo: number
+    public readonly controlPinsAtBottom: boolean
     private _showWiring: boolean
     private _disconnectedAsHighZ: boolean
 
@@ -92,6 +89,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
         this.numTo = params.numTo
         this.numGroups = params.numGroups
         this.numSel = params.numSel
+        this.controlPinsAtBottom = params.controlPinsAtBottom
 
         this._showWiring = saved?.showWiring ?? DemuxDef.aults.showWiring
         this._disconnectedAsHighZ = saved?.disconnectedAsHighZ ?? DemuxDef.aults.disconnectedAsHighZ
@@ -102,6 +100,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
             ...super.toJSONBase(),
             from: this.numFrom,
             to: this.numTo,
+            bottom: this.controlPinsAtBottom === DemuxDef.aults.bottom ? undefined : this.controlPinsAtBottom,
             showWiring: (this._showWiring !== DemuxDef.aults.showWiring) ? this._showWiring : undefined,
             disconnectedAsHighZ: (this._disconnectedAsHighZ !== DemuxDef.aults.disconnectedAsHighZ) ? this._disconnectedAsHighZ : undefined,
         }
@@ -242,6 +241,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
             this.makeChangeParamsContextMenuItem("inputs", s.ParamNumFrom, this.numFrom, "from"),
             this.makeChangeParamsContextMenuItem("outputs", s.ParamNumTo, this.numTo, "to", [2, 4, 8, 16].map(x => x * this.numFrom)),
             ["mid", MenuData.sep()],
+            this.makeChangeBooleanParamsContextMenuItem(s.ParamControlAtBottom, this.controlPinsAtBottom, "bottom"),
             ["mid", toggleShowWiringItem],
             ["mid", toggleUseHighZItem],
             ...this.makeForceOutputsContextMenuItem(true),
