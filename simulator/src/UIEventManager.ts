@@ -680,7 +680,7 @@ export class UIEventManager {
 
             compButton.addEventListener("mousedown", editor.wrapHandler((e) => {
                 // console.log("button mousedown %o %o", editor.offsetXY(e), e)
-                if (e.ctrlKey || e.button === 2) {
+                if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
                     // will be handled by context menu
                     return
                 }
@@ -860,7 +860,6 @@ class EditHandlers extends ToolHandlers {
             editor.editTools.redrawMgr.addReason("selection rect changed", null)
         }
     }
-
     public override mouseDraggedOnBackground(e: MouseEvent | TouchEvent) {
         const editor = this.editor
         const allowSelection = editor.mode >= Mode.CONNECT

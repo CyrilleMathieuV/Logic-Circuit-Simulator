@@ -844,8 +844,9 @@ export class WireManager {
             const x1 = nodeFrom.posX
             const y1 = nodeFrom.posY
             const editor = this.parent.editor
-            const x2 = editor.mouseX
-            const y2 = editor.mouseY
+            const zoomFactor = editor.options.zoom / 100
+            const x2 = editor.mouseX / zoomFactor
+            const y2 = editor.mouseY / zoomFactor
             g.beginPath()
             g.moveTo(x1, y1)
             if (this.parent.editor.options.wireStyle === WireStyles.straight) {
