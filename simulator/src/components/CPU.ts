@@ -204,9 +204,9 @@ export const CPUBaseDef =
                     Dadr: groupHorizontal("n", midX, -inputY, numAddressDataBits),
                     Dout: groupVertical("e", inputX, -midY, numDataBits),
                     RAMweSync: [inputX, -1, "e", "RAM WE sync"],
-                    RAMwe: [inputX, 1, "e", "RAM WE"],
+                    Sync: [inputX, 1, "e", "Sync"],
                     ResetSync: [inputX, 3, "e", "Reset sync"],
-                    Sync: [inputX, 5, "e", "Sync"],
+                    RAMwe: [inputX, 5, "e", "RAM WE"],
                     Z: [inputX, 7, "e", "Z (Zero)"],
                     //V: [inputX, 11, "e", "V (oVerflow)"],
                     Cout: [inputX, 9, "e", `Cout`],
@@ -224,9 +224,9 @@ export const CPUBaseDef =
                 dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                 dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                 ramwesync: false_,
-                ramwe: false_,
-                resetsync: false_,
                 sync: false_,
+                resetsync: false_,
+                ramwe: false_,
                 z: false_,
                 //v: false_,
                 cout: false_,
@@ -243,9 +243,9 @@ export const CPUBaseDef =
                     dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                     dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                     ramwesync: false_,
-                    ramwe: false_,
-                    resetsync: false_,
                     sync: false_,
+                    resetsync: false_,
+                    ramwe: false_,
                     z: false_,
                     //v: false_,
                     cout: false_,
@@ -343,9 +343,9 @@ export abstract class CPUBase<
             dadr: ArrayFillWith<LogicValue>(false_, this.numDataBits),
             dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
             ramwesync: false_,
-            ramwe: false_,
-            resetsync: false_,
             sync: false_,
+            resetsync: false_,
+            ramwe: false_,
             z: false_,
             //v: false_,
             cout: false_,
@@ -363,9 +363,9 @@ export abstract class CPUBase<
             dadr: ArrayFillWith<LogicValue>(val, this.numDataBits),
             dout: ArrayFillWith<LogicValue>(val, this.numDataBits),
             ramwesync: val,
-            ramwe: val,
-            resetsync: val,
             sync: val,
+            resetsync: val,
+            ramwe: val,
             z: val,
             //v: val,
             cout: val,
@@ -1201,9 +1201,9 @@ export class CPU extends CPUBase<CPURepr> {
                 dadr: ArrayFillWith<LogicValue>(false_, this.numDataBits),
                 dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
                 ramwesync: false_,
-                ramwe: false_,
-                resetsync: false_,
                 sync: false_,
+                resetsync: false_,
+                ramwe: false_,
                 z: false_,
                 //v: false_,
                 cout: false_,
@@ -1217,9 +1217,9 @@ export class CPU extends CPUBase<CPURepr> {
                 dadr: operandValue,
                 dout: this._virtualAccumulatorRegister.outputsQ,
                 ramwesync: ramWESyncValue,
-                ramwe: ramwevalue,
-                resetsync: clrSignal,
                 sync: clockSync,
+                resetsync: clrSignal,
+                ramwe: ramwevalue,
                 z: this._virtualFlagsRegister.outputsQ[0],
                 //v: false_,
                 cout: this._virtualFlagsRegister.outputsQ[1],
@@ -1237,9 +1237,9 @@ export class CPU extends CPUBase<CPURepr> {
         this.outputValues(this.outputs.Dadr , newValue.dadr, true)
         this.outputValues(this.outputs.Dout , newValue.dout)
         this.outputs.RAMweSync.value = newValue.ramwesync
-        this.outputs.RAMwe.value = newValue.ramwe
-        this.outputs.ResetSync.value = newValue.resetsync
         this.outputs.Sync.value = newValue.sync
+        this.outputs.ResetSync.value = newValue.resetsync
+        this.outputs.RAMwe.value = newValue.ramwe
         this.outputs.Z.value = newValue.z
         //this.outputs.Z.value = allZeros(newValue.dout)
         //this.outputs.V.value = newValue.v
@@ -1311,9 +1311,9 @@ export class CPU extends CPUBase<CPURepr> {
         for (const output of this.outputs.Dadr) {
             drawWireLineToComponent(g, output, output.posXInParentTransform, top)
         }
-        drawWireLineToComponent(g, this.outputs.ResetSync, right, this.outputs.ResetSync.posYInParentTransform)
-        drawWireLineToComponent(g, this.outputs.Sync, right, this.outputs.Sync.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.RAMweSync, right, this.outputs.RAMweSync.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.Sync, right, this.outputs.Sync.posYInParentTransform)
+        drawWireLineToComponent(g, this.outputs.ResetSync, right, this.outputs.ResetSync.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.RAMwe, right, this.outputs.RAMwe.posYInParentTransform)
         drawWireLineToComponent(g, this.outputs.Z, right, this.outputs.Z.posYInParentTransform)
         //drawWireLineToComponent(g, this.outputs.V, right, this.outputs.V.posYInParentTransform)
@@ -1369,9 +1369,9 @@ export class CPU extends CPUBase<CPURepr> {
             // right outputs
             drawLabel(ctx, this.orient, "Dout", "e", right, this.outputs.Dout)
             drawLabel(ctx, this.orient, "RAM Sync", "e", right, this.outputs.RAMweSync, undefined, true)
+            drawLabel(ctx, this.orient, "Sync", "e", right, this.outputs.Sync, undefined, true)
             drawLabel(ctx, this.orient, "Reset Sync", "e", right, this.outputs.ResetSync, undefined, true)
             drawLabel(ctx, this.orient, "RAM WE", "e", right, this.outputs.RAMwe, undefined, true)
-            drawLabel(ctx, this.orient, "Sync", "e", right, this.outputs.Sync, undefined, true)
             drawLabel(ctx, this.orient, "Z", "e", right, this.outputs.Z, undefined, true)
             //drawLabel(ctx, this.orient, "V", "e", right, this.outputs.V, undefined, true)
             drawLabel(ctx, this.orient, "Cout", "e", right, this.outputs.Cout, undefined, true)
