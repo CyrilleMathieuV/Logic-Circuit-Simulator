@@ -15,14 +15,14 @@
 * High-Z bus logic
 * Add tootips to components, e.g., describe what happens on the next state transition, etc.
 * Save/restore using browser's storage
-   * standalone
-      * no long term storage
-      * sessionstorage pour recharger la page et restaurer le contenu
-      * localstorage pour reproposer le contenu si rechargé plus tard, 1 seule entrée
-      * avec un bouton
-   * embedded
-      * with manually-defined id
-      * only with sessionstorage
+    * standalone
+        * no long term storage
+        * sessionstorage pour recharger la page et restaurer le contenu
+        * localstorage pour reproposer le contenu si rechargé plus tard, 1 seule entrée
+        * avec un bouton
+    * embedded
+        * with manually-defined id
+        * only with sessionstorage
 
 
 ## Low priority
