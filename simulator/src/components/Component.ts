@@ -467,11 +467,11 @@ export abstract class ComponentBase<
                     nodes[fieldName] = makeNode(undefined, fieldName, desc)
                 } else {
                     // group
-                    const makeNodesForGroup = (groupDesc: NodeGroupDesc<TDesc>) => {
-                        const group = new NodeGroup<TNode>(this, fieldName)
-                        nodeGroups.set(fieldName, group)
+                    const makeNodesForGroup = (groupDesc: NodeGroupDesc<TDesc>, groupName: string, namePrefix: string) => {
+                        const group = new NodeGroup<TNode>(this, groupName)
+                        nodeGroups.set(groupName, group)
                         for (let i = 0; i < groupDesc.length; i++) {
-                            group.addNode(makeNode(group, `${fieldName}${i}`, groupDesc[i]))
+                            group.addNode(makeNode(group, namePrefix + i, groupDesc[i]))
                         }
                         return group.nodes
                     }
@@ -479,11 +479,11 @@ export abstract class ComponentBase<
                     if (isNodeDesc(desc[0])) {
                         // normal group
                         const groupDesc = desc as NodeGroupDesc<TDesc>
-                        nodes[fieldName] = makeNodesForGroup(groupDesc)
+                        nodes[fieldName] = makeNodesForGroup(groupDesc, fieldName, fieldName)
                     } else {
                         // nested group
                         const groupMultiDesc = desc as NodeGroupMultiDesc<TDesc>
-                        nodes[fieldName] = groupMultiDesc.map(makeNodesForGroup)
+                        nodes[fieldName] = groupMultiDesc.map((groupDesc, i) => makeNodesForGroup(groupDesc, `${fieldName}${i}`, `${fieldName}${i}.`))
                     }
                 }
             }
@@ -936,11 +936,11 @@ export abstract class ComponentBase<
         const saveWires = <TNode extends NodeBase<any>, TWires>(nodes: readonly TNode[], getWires: (node: TNode) => null | TWires): Map<string, TWires> => {
             const savedWires: Map<string, TWires> = new Map()
             for (const node of nodes) {
-                const group = node.group
                 const wires = getWires(node)
                 if (wires === null) {
                     continue
                 }
+                const group = node.group
                 const keyName = group === undefined ? node.shortName : `${group.name}[${group.nodes.indexOf(node)}]`
                 savedWires.set(keyName, wires)
             }
