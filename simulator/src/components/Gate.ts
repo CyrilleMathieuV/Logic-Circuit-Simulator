@@ -424,10 +424,15 @@ export abstract class GateBase<
     }
 
     protected override makeComponentSpecificContextMenuItems(): MenuItems {
-        const items: MenuItems = [
-            ["start", this.makeReplaceByMenuItem()],
-        ]
-        if (this.parent.mode >= Mode.FULL) {
+        const items: MenuItems = []
+        const adminMode = this.parent.mode >= Mode.FULL
+
+        if (!this._showAsUnknown || adminMode) {
+            items.push(
+                ["start", this.makeReplaceByMenuItem()]
+            )
+        }
+        if (adminMode) {
             items.push(
                 ["mid", this.makePoseAsMenuItem()],
                 ...this.makeForceOutputsContextMenuItem()
