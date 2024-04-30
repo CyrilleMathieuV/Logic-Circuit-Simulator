@@ -1,5 +1,5 @@
 import * as t from "io-ts"
-import { COLOR_BACKGROUND_INVALID, COLOR_COMPONENT_BORDER, colorForBoolean, drawValueText } from "../drawutils"
+import { COLOR_BACKGROUND_INVALID, COLOR_COMPONENT_BORDER, colorForLogicValue, drawValueText } from "../drawutils"
 import { S } from "../strings"
 import { EdgeTrigger, LogicValue, LogicValueRepr, Unknown, toLogicValue, toLogicValueRepr, typeOrUndefined } from "../utils"
 import { ComponentBase, InstantiatedComponentDef, NodesIn, NodesOut, Repr, defineAbstractComponent } from "./Component"
@@ -99,7 +99,7 @@ export abstract class FlipflopOrLatch<TRepr extends FlipflopOrLatchRepr> extends
     }
 
     public static drawStoredValue(g: GraphicsRendering, value: LogicValue, x: number, y: number, cellHeight: number, swapHeightWidth: boolean) {
-        g.fillStyle = colorForBoolean(value)
+        g.fillStyle = colorForLogicValue(value)
         FlipflopOrLatch.drawStoredValueFrame(g, x, y, 20, cellHeight, swapHeightWidth)
         drawValueText(g, value, x, y, { small: cellHeight < 18 })
     }

@@ -107,10 +107,13 @@ export let COLOR_MOUSE_OVER_DANGER: ColorString
 export let COLOR_NODE_MOUSE_OVER: ColorString
 export let COLORCOMPS_FULL: ColorComponentsRGB
 export let COLOR_FULL: ColorString
+export let COLOR_FULL_ALT: ColorString
 export let COLOR_DARK_RED: ColorString
 export let COLORCOMPS_EMPTY: ColorComponentsRGB
 export let COLOR_EMPTY: ColorString
+export let COLOR_EMPTY_ALT: ColorString
 export let COLOR_UNKNOWN: ColorString
+export let COLOR_UNKNOWN_ALT: ColorString
 export let COLOR_HIGH_IMPEDANCE: ColorString
 export let COLOR_GATE_NAMES: ColorString
 export let COLOR_LED_ON: { [C in LedColor]: ColorString }
@@ -254,6 +257,9 @@ function doSetColors(darkMode: boolean) {
     setColorMouseOverIsDanger(false)
     COLOR_FULL = ColorString(COLORCOMPS_FULL)
     COLOR_EMPTY = ColorString(COLORCOMPS_EMPTY)
+    COLOR_FULL_ALT = ligherColor(COLOR_FULL, 40)
+    COLOR_EMPTY_ALT = ligherColor(COLOR_EMPTY, 80)
+    COLOR_UNKNOWN_ALT = ligherColor(COLOR_UNKNOWN, 50)
     _currentModeIsDark = darkMode
 }
 
@@ -303,7 +309,7 @@ export function ColorString(input: ColorGreyLevel | ColorComponentsRGB | ColorCo
     return `rgb(${input},${input},${input})`
 }
 
-export function colorComps(c: ColorString) {
+export function colorCompsRGB(c: ColorString): ColorComponentsRGB {
     const PREFIX = "rgb("
     if (c.startsWith(PREFIX)) {
         c = c.substring(PREFIX.length)
@@ -312,11 +318,21 @@ export function colorComps(c: ColorString) {
     if (c.endsWith(SUFFIX)) {
         c = c.substring(0, c.length - SUFFIX.length)
     }
-    return c.split(',').map(compStr => parseInt(compStr))
+    const comps = c.split(',').map(compStr => parseInt(compStr))
+    return FixedArrayAssert(comps, 3)
 }
 
-export function colorForBoolean(value: LogicValue): ColorString {
+export function ligherColor(col: string, offset: number): string {
+    const components = colorCompsRGB(col)
+    const newComponents = FixedArrayAssert(components.map(c => Math.min(255, c + offset)), 3)
+    return ColorString(newComponents)
+}
+
+export function colorForLogicValue(value: LogicValue): ColorString {
     return isUnknown(value) ? COLOR_UNKNOWN : isHighImpedance(value) ? COLOR_HIGH_IMPEDANCE : value ? COLOR_FULL : COLOR_EMPTY
+}
+export function colorsForLogicValue(value: LogicValue): [ColorString, ColorString] {
+    return isUnknown(value) ? [COLOR_UNKNOWN, COLOR_UNKNOWN_ALT] : isHighImpedance(value) ? [COLOR_HIGH_IMPEDANCE, COLOR_HIGH_IMPEDANCE /* not alt because High-Z is not animated*/] : value ? [COLOR_FULL, COLOR_FULL_ALT] : [COLOR_EMPTY, COLOR_EMPTY_ALT]
 }
 
 export function colorForFraction(fraction: number): ColorString {
@@ -427,7 +443,7 @@ export function drawWireLineToComponent(g: GraphicsRendering, node: Node, x1: nu
     const neutral = node.parent.editor.options.hideWireColors
     const x0 = node.posXInParentTransform
     const y0 = node.posYInParentTransform
-    drawStraightWireLine(g, x0, y0, x1, y1, node.value, node.color, neutral)
+    drawStraightWireLine(g, x0, y0, x1, y1, node.value, node.color, neutral, 0)
     if (withTriangle) {
         g.strokeStyle = COLOR_COMPONENT_BORDER
         g.fillStyle = COLOR_COMPONENT_BORDER
@@ -475,14 +491,20 @@ export function drawWireLineToComponent(g: GraphicsRendering, node: Node, x1: nu
     }
 }
 
-export function drawStraightWireLine(g: GraphicsRendering, x0: number, y0: number, x1: number, y1: number, value: LogicValue, color: WireColor, neutral: boolean) {
+export function drawStraightWireLine(g: GraphicsRendering, x0: number, y0: number, x1: number, y1: number, value: LogicValue, color: WireColor, neutral: boolean, timeFraction: number | undefined) {
     g.beginPath()
     g.moveTo(x0, y0)
     g.lineTo(x1, y1)
-    strokeAsWireLine(g, value, color, false, neutral)
+    strokeAsWireLine(g, value, color, false, neutral, timeFraction)
 }
 
-export function strokeAsWireLine(g: GraphicsRendering, value: LogicValue, color: WireColor, isMouseOver: boolean, neutral: boolean, path?: Path2D) {
+export function strokeAsWireLine(g: GraphicsRendering, value: LogicValue, color: WireColor, isMouseOver: boolean, neutral: boolean, timeFraction: number | undefined, path?: Path2D) {
+
+    function doStroke() {
+        if (path) { g.stroke(path) }
+        else { g.stroke() }
+    }
+
     const oldLineCap = g.lineCap
     g.lineCap = "butt"
 
@@ -494,13 +516,34 @@ export function strokeAsWireLine(g: GraphicsRendering, value: LogicValue, color:
         g.lineWidth = mainStrokeWidth
         g.strokeStyle = COLOR_WIRE[color]
     }
-    if (path) { g.stroke(path) }
-    else { g.stroke() }
 
-    g.strokeStyle = neutral ? COLOR_UNKNOWN : colorForBoolean(value)
+    doStroke()
     g.lineWidth = mainStrokeWidth - 2
-    if (path) { g.stroke(path) }
-    else { g.stroke() }
+
+    const [baseColor, altColor] = neutral ? [COLOR_UNKNOWN, COLOR_UNKNOWN_ALT] : colorsForLogicValue(value)
+    g.strokeStyle = baseColor
+
+    if (timeFraction === undefined) {
+        // no animation
+        doStroke()
+
+    } else {
+        // TODO: this currently breaks the animation showing the newly propagating value,
+        // since this works along paths by changing the line dash, which we overwrite here.
+        const dashSize = 20
+        g.setLineDash([dashSize, dashSize])
+        const baseOffset = -timeFraction * dashSize * 2
+        g.lineDashOffset = baseOffset
+        doStroke()
+
+        const altOffset = baseOffset + dashSize
+        g.strokeStyle = altColor
+        g.lineDashOffset = altOffset
+        doStroke()
+
+        g.setLineDash([])
+        g.lineDashOffset = 0
+    }
 
     g.lineCap = oldLineCap
 }
@@ -527,7 +570,7 @@ export function drawWaypoint(g: GraphicsRendering, ctx: DrawContext, x: number, 
 
     g.strokeStyle = circleColor
     g.lineWidth = thickness
-    g.fillStyle = style === NodeStyle.IN_DISCONNECTED ? COLOR_BACKGROUND : (neutral ? COLOR_UNKNOWN : colorForBoolean(value))
+    g.fillStyle = style === NodeStyle.IN_DISCONNECTED ? COLOR_BACKGROUND : (neutral ? COLOR_UNKNOWN : colorForLogicValue(value))
 
     g.beginPath()
     circle(g, x, y, WAYPOINT_DIAMETER)

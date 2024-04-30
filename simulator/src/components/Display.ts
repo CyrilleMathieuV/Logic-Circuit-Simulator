@@ -1,5 +1,5 @@
 import * as t from "io-ts"
-import { COLOR_UNKNOWN, ColorString, colorComps, colorForFraction, displayValuesFromArray, formatWithRadix, useCompact } from "../drawutils"
+import { COLOR_UNKNOWN, ColorString, colorCompsRGB, colorForFraction, displayValuesFromArray, formatWithRadix, useCompact } from "../drawutils"
 import { b, div, emptyMod, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import { InteractionResult, Mode, Unknown, isUnknown, typeOrUndefined } from "../utils"
@@ -116,7 +116,7 @@ export class Display extends ParametrizedComponentBase<DisplayRepr> {
             componentName: [this._name, true, value],
             drawLabels: (ctx, { width, height }) => {
                 const isVertical = Orientation.isVertical(this.orient)
-                const backColorComps = colorComps(background)
+                const backColorComps = colorCompsRGB(background)
                 const textColor = ColorString(backColorComps[0] + backColorComps[1] + backColorComps[2] > 3 * 127 ? 0 : 0xFF)
                 g.fillStyle = textColor
 

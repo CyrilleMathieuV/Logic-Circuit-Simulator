@@ -2,7 +2,7 @@ import { Bezier, Offset } from "bezier-js"
 import * as t from "io-ts"
 import { DrawParams } from "../LogicEditor"
 import { Timestamp } from "../Timeline"
-import { COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE, GRID_STEP, NodeStyle, WAYPOINT_DIAMETER, WIRE_WIDTH, colorForBoolean, dist, drawStraightWireLine, drawWaypoint, isOverWaypoint, strokeAsWireLine } from "../drawutils"
+import { COLOR_MOUSE_OVER, COLOR_UNKNOWN, COLOR_WIRE, GRID_STEP, NodeStyle, WAYPOINT_DIAMETER, WIRE_WIDTH, colorForLogicValue, dist, drawStraightWireLine, drawWaypoint, isOverWaypoint, strokeAsWireLine } from "../drawutils"
 import { span, style, title } from "../htmlgen"
 import { S } from "../strings"
 import { InteractionResult, LogicValue, Mode, isArray, toLogicValueRepr, typeOrUndefined } from "../utils"
@@ -419,6 +419,7 @@ export class Wire extends Drawable {
         const path = g.createPath(svgPathDesc)
 
         const drawParams = ctx.drawParams
+        // highlight if needed
         if (drawParams.highlightColor !== undefined && (drawParams.highlightedItems?.wires.includes(this) ?? false)) {
             g.lineWidth = 15
             g.shadowColor = drawParams.highlightColor
@@ -435,7 +436,7 @@ export class Wire extends Drawable {
             const frac = Math.min(1.0, (drawTime - timeSet) / propagationDelay)
             const lengthToDraw = totalLength * frac
             g.setLineDash([lengthToDraw, totalLength])
-            strokeAsWireLine(g, value, this._startNode.color, ctx.isMouseOver, neutral, path)
+            strokeAsWireLine(g, value, this._startNode.color, ctx.isMouseOver, neutral, drawParams.drawTimeAnimationFraction, path)
         }
         g.setLineDash(old)
 
@@ -736,7 +737,7 @@ export class Ribbon extends Drawable {
         g.lineWidth = WIRE_WIDTH
         let dist = -((numWires - 1) / 2) * (WIRE_WIDTH + WIRE_MARGIN_INNER)
         for (const value of values) {
-            g.strokeStyle = neutral ? COLOR_UNKNOWN : colorForBoolean(value)
+            g.strokeStyle = neutral ? COLOR_UNKNOWN : colorForLogicValue(value)
             const b1 = b.offset(dist)
             drawBeziers(b1)
             dist += WIRE_WIDTH + WIRE_MARGIN_INNER
@@ -778,7 +779,7 @@ export class Ribbon extends Drawable {
             }
         })()
 
-        drawStraightWireLine(g, startX, startY, endX, endY, "Z", "black", true)
+        drawStraightWireLine(g, startX, startY, endX, endY, "Z", "black", true, ctx.drawParams.drawTimeAnimationFraction)
         return [mid, orient]
     }
 
@@ -833,10 +834,10 @@ export class WireManager {
                 waypoint.draw(g, drawParams)
             }
         }
-        this.drawWireBeingAdded(g)
+        this.drawWireBeingAdded(g, drawParams)
     }
 
-    private drawWireBeingAdded(g: GraphicsRendering) {
+    private drawWireBeingAdded(g: GraphicsRendering, drawParams: DrawParams) {
         // TODO use some PartialWire class to draw this and allow adding waypoints
         // while dragging, e.g. with the A or Space key
         const nodeFrom = this._wireBeingAddedFrom
@@ -864,7 +865,7 @@ export class WireManager {
                 const [a2x, a2y] = bezierAnchorForWire(outgoingOrient, x2, y2, bezierAnchorPointDistX, bezierAnchorPointDistY)
                 g.bezierCurveTo(a1x, a1y, a2x, a2y, x2, y2)
             }
-            strokeAsWireLine(g, nodeFrom.value, nodeFrom.color, false, false)
+            strokeAsWireLine(g, nodeFrom.value, nodeFrom.color, false, false, drawParams.drawTimeAnimationFraction)
         }
     }
 

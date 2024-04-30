@@ -12,7 +12,9 @@
 
 ## Medium priority
 
+* Name field for non-input components, https://github.com/jppellet/Logic-Circuit-Simulator/issues/15
 * High-Z bus logic
+* Allow to swap RAM width/height (for Christophe Declercq)
 * Add tootips to components, e.g., describe what happens on the next state transition, etc.
 * Save/restore using browser's storage
     * standalone

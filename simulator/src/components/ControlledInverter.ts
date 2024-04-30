@@ -1,5 +1,5 @@
 import * as t from "io-ts"
-import { COLOR_COMPONENT_BORDER, COLOR_UNKNOWN, circle, colorForBoolean } from "../drawutils"
+import { COLOR_COMPONENT_BORDER, COLOR_UNKNOWN, circle, colorForLogicValue } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import { ArrayFillWith, LogicValue, Unknown, isHighImpedance, isUnknown, typeOrUndefined } from "../utils"
@@ -93,7 +93,7 @@ export class ControlledInverter extends ParametrizedComponentBase<ControlledInve
                 const invert = this.inputs.S.value
 
                 g.lineWidth = 2
-                g.strokeStyle = colorForBoolean(invert)
+                g.strokeStyle = colorForLogicValue(invert)
                 g.beginPath()
                 g.moveTo(this.posX, top)
                 g.lineTo(this.posX, this.posY - 4)

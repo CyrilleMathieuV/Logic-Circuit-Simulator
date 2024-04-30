@@ -169,6 +169,7 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
                 const selectedInputs = this.inputs.I[sel]
                 const anchorDiffX = (right - left) / 3
                 const wireStyleStraight = this.parent.editor.options.wireStyle === WireStyles.straight
+                const timeFraction = ctx.drawParams.drawTimeAnimationFraction
 
                 for (let i = 0; i < selectedInputs.length; i++) {
                     this.parent.editor.options.wireStyle
@@ -188,7 +189,7 @@ export class Mux extends ParametrizedComponentBase<MuxRepr> {
                             right - 1, toY,
                         )
                     }
-                    strokeAsWireLine(g, selectedInputs[i].value, toNode.color, false, neutral)
+                    strokeAsWireLine(g, selectedInputs[i].value, toNode.color, false, neutral, timeFraction)
                 }
             }
         }

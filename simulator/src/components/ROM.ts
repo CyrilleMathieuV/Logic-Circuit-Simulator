@@ -1,6 +1,6 @@
 import { saveAs } from 'file-saver'
 import * as t from "io-ts"
-import { COLOR_COMPONENT_BORDER, COLOR_EMPTY, colorForBoolean, displayValuesFromArray, formatWithRadix, strokeSingleLine } from "../drawutils"
+import { COLOR_COMPONENT_BORDER, COLOR_EMPTY, colorForLogicValue, displayValuesFromArray, formatWithRadix, strokeSingleLine } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import { ArrayFillWith, InteractionResult, LogicValue, Unknown, allBooleans, binaryStringRepr, hexStringRepr, isAllZeros, isArray, isUnknown, typeOrUndefined, wordFromBinaryOrHexRepr } from "../utils"
@@ -347,7 +347,7 @@ function drawMemoryCells(g: GraphicsRendering, mem: LogicValue[][], numDataBits:
         for (let j = 0; j < numDataBits; j++) {
             const v = mem[i][numDataBits - j - 1]
             if (v !== false) {
-                g.fillStyle = colorForBoolean(v)
+                g.fillStyle = colorForLogicValue(v)
                 g.fillRect(contentLeft + j * cellWidth, contentTop + i * cellHeight, cellWidth, cellHeight)
             }
         }

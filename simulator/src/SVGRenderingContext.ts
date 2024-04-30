@@ -44,6 +44,7 @@ export class SVGRenderingContext {
     public textAlign: string = "start"
     public textBaseline: string = "alphabetic"
     public lineDash: string | null = null
+    public lineDashOffset: number = 0
     // extra
     public fontUnderline: string = ""
     public fontHref: string | undefined

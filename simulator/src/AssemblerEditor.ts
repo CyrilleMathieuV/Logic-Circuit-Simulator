@@ -42,7 +42,7 @@ import { COLOR_BACKGROUND_INVALID, COLOR_MOUSE_OVER_DANGER, COLOR_BACKGROUND,
     drawWireLineToComponent,
     formatWithRadix,
     GRID_STEP,
-    COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED, colorForBoolean, strokeSingleLine } from "./drawutils"
+    COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED, colorForLogicValue, strokeSingleLine } from "./drawutils"
 import {Library, Serialization, stringifySmart} from "./Serialization"
 import {saveAs} from "file-saver"
 import pngMeta from "png-metadata-writer"
@@ -248,7 +248,7 @@ export class AssemblerEditor {
         this.downloadFromMemRAMROMSelectedButton = button(
             i(cls("svgicon"),
                 raw(inlineIconSvgFor("inputcircle"))),
-            style("height:25px; width:25px; padding:0; align-items: center;")
+            style("height:25px; width:25px; padding:0; align-items: center; rotate: 180deg")
         ).render()
         this.downloadFromMemRAMROMSelectedButton.addEventListener('click', this.editor.wrapHandler((handler) => {
             this.downloadFromMemRAMROM(this.controlDivRAMROMSelect.value)
@@ -256,7 +256,7 @@ export class AssemblerEditor {
         this.uploadToMemRAMROMSelectedButton = button(
             i(cls("svgicon"),
                 raw(inlineIconSvgFor("outputcircle"))),
-            style("height:25px; width:25px; padding:0; align-items: center;")
+            style("height:25px; width:25px; padding:0; align-items: center; rotate: 180deg")
         ).render()
         this.uploadToMemRAMROMSelectedButton.addEventListener('click', this.editor.wrapHandler((handler) => {
             this.uploadToMemRAMROM(this.controlDivRAMROMSelect.value)

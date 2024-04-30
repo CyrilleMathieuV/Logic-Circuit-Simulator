@@ -1,5 +1,5 @@
 import * as t from "io-ts"
-import { COLOR_COMPONENT_BORDER, colorForBoolean } from "../drawutils"
+import { COLOR_COMPONENT_BORDER, colorForLogicValue } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import { ArrayFillWith, HighImpedance, LogicValue, Unknown, isHighImpedance, isUnknown, typeOrUndefined } from "../utils"
@@ -88,7 +88,7 @@ export class TristateBufferArray extends ParametrizedComponentBase<TristateBuffe
                 const enable = this.inputs.E.value
 
                 g.lineWidth = 2
-                g.strokeStyle = colorForBoolean(enable)
+                g.strokeStyle = colorForLogicValue(enable)
                 g.beginPath()
                 g.moveTo(this.posX, top)
                 g.lineTo(this.posX, this.posY - 4)

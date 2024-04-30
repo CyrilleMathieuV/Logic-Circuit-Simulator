@@ -183,6 +183,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
                 const selectedOutputs = this.outputs.Z[sel]
                 const anchorDiffX = (right - left) / 3
                 const wireStyleStraight = this.parent.editor.options.wireStyle === WireStyles.straight
+                const timeFraction = ctx.drawParams.drawTimeAnimationFraction
 
                 for (let i = 0; i < this.inputs.In.length; i++) {
                     g.beginPath()
@@ -201,7 +202,7 @@ export class Demux extends ParametrizedComponentBase<DemuxRepr> {
                             right - 1, toY,
                         )
                     }
-                    strokeAsWireLine(g, this.inputs.In[i].value, fromNode.color, false, neutral)
+                    strokeAsWireLine(g, this.inputs.In[i].value, fromNode.color, false, neutral, timeFraction)
                 }
             }
         }

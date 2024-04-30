@@ -1,5 +1,5 @@
 import * as t from "io-ts"
-import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, GRID_STEP, INPUT_OUTPUT_DIAMETER, circle, colorForBoolean, dist, drawComponentName, drawValueText, drawValueTextCentered, drawWireLineToComponent, isTrivialNodeName, triangle, useCompact } from "../drawutils"
+import { COLOR_BACKGROUND, COLOR_COMPONENT_BORDER, GRID_STEP, INPUT_OUTPUT_DIAMETER, circle, colorForLogicValue, dist, drawComponentName, drawValueText, drawValueTextCentered, drawWireLineToComponent, isTrivialNodeName, triangle, useCompact } from "../drawutils"
 import { mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
 import { ArrayFillWith, LogicValue, Mode, Unknown, toLogicValueRepr, typeOrUndefined } from "../utils"
@@ -109,7 +109,7 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
         g.stroke()
 
         const valueToShow = this.parent.editor.options.hideOutputColors ? Unknown : input.value
-        g.fillStyle = colorForBoolean(valueToShow)
+        g.fillStyle = colorForLogicValue(valueToShow)
         g.lineWidth = 4
         g.beginPath()
         circle(g, this.posX, this.posY, INPUT_OUTPUT_DIAMETER)
@@ -147,7 +147,7 @@ export class Output extends ParametrizedComponentBase<OutputRepr> {
         const cellHeight = useCompact(this.numBits) ? GRID_STEP : 2 * GRID_STEP
         for (let i = 0; i < this.numBits; i++) {
             const y = top + i * cellHeight
-            g.fillStyle = colorForBoolean(displayValues[i])
+            g.fillStyle = colorForLogicValue(displayValues[i])
             g.beginPath()
             g.rect(left, y, width, cellHeight)
             g.fill()

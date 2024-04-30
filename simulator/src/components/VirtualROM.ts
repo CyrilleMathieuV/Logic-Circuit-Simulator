@@ -2,7 +2,7 @@ import { ArrayFillWith, InteractionResult, LogicValue, Unknown, allBooleans, bin
 import {
     COLOR_COMPONENT_BORDER,
     COLOR_EMPTY,
-    colorForBoolean,
+    colorForLogicValue,
     displayValuesFromArray,
     strokeSingleLine,
 } from "../drawutils"

@@ -11,7 +11,7 @@ import {
     drawWireLineToComponent,
     formatWithRadix,
     GRID_STEP,
-    COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED, colorForBoolean, strokeSingleLine,
+    COLOR_EMPTY, COLOR_LABEL_OFF, COLOR_DARK_RED, colorForLogicValue, strokeSingleLine,
 } from "../drawutils"
 import { div, mods, tooltipContent } from "../htmlgen"
 import { S } from "../strings"
@@ -1498,7 +1498,7 @@ export class CPU extends CPUBase<CPURepr> {
                     for (let j = 0; j < numDataBits; j++) {
                         const v = this._virtualStack.value.mem[i][numDataBits - j - 1]
                         if (v !== false) {
-                            g.fillStyle = colorForBoolean(v)
+                            g.fillStyle = colorForLogicValue(v)
                             g.fillRect(contentLeft + j * cellWidth, contentTop + i * cellHeight, cellWidth, cellHeight)
                         }
                     }
