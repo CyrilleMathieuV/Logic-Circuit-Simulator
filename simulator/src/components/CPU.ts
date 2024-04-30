@@ -190,7 +190,8 @@ export const CPUBaseDef =
 
             return {
                 ins: {
-                    Pipeline: [-15, inputY, "s", "Pipeline"],
+                    // DISABLED
+                    // Pipeline: [-15, inputY, "s", "Pipeline"],
                     RunStop: [-13, inputY, "s", "Run/Stop", { prefersSpike: true }],
                     Reset: [-11, inputY, "s", "Reset CPU", { prefersSpike: true }],
                     ManStep: [-9, inputY, "s","Man STEP", { prefersSpike: true }],
@@ -984,8 +985,9 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._virtualAccumulatorRegister.inputsD = _inputsAccumulatorData
 
+        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_ALUoutputs.s)
         this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
-        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_inputsAccumulatorData)
+        // this._virtualFlagsRegister.inputsD[0] = this.allZeros(_inputsAccumulatorData)
 
         const c = this._virtualFlagsRegister.outputsQ[1]
         const z = this._virtualFlagsRegister.outputsQ[0]
@@ -1075,7 +1077,8 @@ export class CPU extends CPUBase<CPURepr> {
         this._virtualResetStateFlipflopD.inputClock = clockSync
         this._virtualResetStateFlipflopD.recalcVirtualValue()
 
-        this._virtualPipelineStateFlipflopD.inputD = this.inputs.Pipeline.value
+        //this._virtualPipelineStateFlipflopD.inputD = this.inputs.Pipeline.value
+        this._virtualPipelineStateFlipflopD.inputD = false
         this._virtualPipelineStateFlipflopD.inputClock = clockSync && this._virtualResetStateFlipflopD.outputQ
         this._virtualPipelineStateFlipflopD.recalcVirtualValue()
 
@@ -1293,7 +1296,8 @@ export class CPU extends CPUBase<CPURepr> {
         for (const input of this.inputs.Din) {
             drawWireLineToComponent(g, input, input.posXInParentTransform, bottom)
         }
-        drawWireLineToComponent(g, this.inputs.Pipeline, this.inputs.Pipeline.posXInParentTransform, bottom)
+        // DISABLED
+        // drawWireLineToComponent(g, this.inputs.Pipeline, this.inputs.Pipeline.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.RunStop, this.inputs.RunStop.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.Reset, this.inputs.Reset.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.ManStep, this.inputs.ManStep.posXInParentTransform, bottom)
@@ -1351,7 +1355,8 @@ export class CPU extends CPUBase<CPURepr> {
 
             // bottom inputs
             drawLabel(ctx, this.orient, "Din", "s", this.inputs.Din, bottom)
-            drawLabel(ctx, this.orient, "Pipeline", "s", this.inputs.Pipeline, bottom, undefined, true)
+            // DISABLED
+            // drawLabel(ctx, this.orient, "Pipeline", "s", this.inputs.Pipeline, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom, undefined, true)

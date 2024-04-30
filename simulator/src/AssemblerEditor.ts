@@ -1,8 +1,8 @@
 import { LogicEditor, MouseAction } from "./LogicEditor"
-import {binaryStringRepr, isString, JSONParseObject, RepeatFunction, TimeoutHandle, Unknown} from "./utils"
+import { binaryStringRepr, isString, JSONParseObject, RepeatFunction, TimeoutHandle, Unknown} from "./utils"
 import { Instance as PopperInstance } from "@popperjs/core/lib/types"
 import { EditorSelection, UIEventManager } from "./UIEventManager"
-import {CPU, CPUBase, CPUOpCode, CPUOpCodes, CPUStageColorKey, CPUStages} from "./components/CPU"
+import { CPU, CPUBase, CPUOpCode, CPUOpCodes, CPUStageColorKey, CPUStages} from "./components/CPU"
 import { IconName, inlineIconSvgFor } from "./images"
 import {
     p,
