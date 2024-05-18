@@ -1,18 +1,18 @@
 import * as t from "io-ts"
-import { VirtualComponentList, DrawZIndex } from "../VirtualComponentList"
+import { InternalComponentList, DrawZIndex } from "../InternalComponentList"
 import { DrawParams, LogicEditor } from "../LogicEditor"
-import { type VirtualNodeManager } from "../VirtualNodeManager"
-import { VirtualRecalcManager } from "../VirtualRecalcManager"
+import { type InternalNodeManager } from "../InternalNodeManager"
+import { InternalRecalcManager } from "../InternalRecalcManager"
 import { S } from "../strings"
 import { Expand, FixedArray, InteractionResult, Mode, RichStringEnum, typeOrUndefined } from "../utils"
-import { VirtualComponentBase } from "./VirtualComponent"
-import { VirtualWireManager } from "./VirtualWire";
+import { InternalComponentBase } from "./InternalComponent"
+import { InternalWireManager } from "./InternalWire";
 import { RedrawManager } from "../RedrawRecalcManager";
 import { MoveManager } from "../MoveManager";
 import { UndoManager } from "../UndoManager";
 import {Orientation} from "./Drawable";
 
-export interface VirtualCalculableParent {
+export interface InternalCalculableParent {
 
     isMainEditor(): this is LogicEditor
     readonly editor: LogicEditor
@@ -20,20 +20,20 @@ export interface VirtualCalculableParent {
     readonly mode: Mode
 
     // implemented as one per (editor + instantiated custom component)
-    readonly virtualComponents: VirtualComponentList
-    readonly virtualNodeMgr: VirtualNodeManager
-    readonly virtualWireMgr: VirtualWireManager
-    readonly recalcMgr: VirtualRecalcManager
+    readonly internalComponents: InternalComponentList
+    readonly internalNodeMgr: InternalNodeManager
+    readonly internalWireMgr: InternalWireManager
+    readonly recalcMgr: InternalRecalcManager
 }
 
 // for compact JSON repr, pos is an array
 
-export abstract class VirtualCalculable {
+export abstract class InternalCalculable {
 
-    public readonly parent: VirtualCalculableParent
+    public readonly parent: InternalCalculableParent
     private _ref: string | undefined = undefined
 
-    protected constructor(parent: VirtualCalculableParent, saved?: PositionSupportRepr) {
+    protected constructor(parent: InternalCalculableParent, saved?: PositionSupportRepr) {
         this.parent = parent
         this.setNeedsRedraw("newly created")
     }
@@ -79,7 +79,7 @@ export abstract class VirtualCalculable {
                 break
             }
 
-            if (!(this instanceof VirtualComponentBase)) {
+            if (!(this instanceof InternalComponentBase)) {
                 // ids are unregulated
                 this.doSetValidatedId(newId.length === 0 ? undefined : newId)
 
@@ -89,7 +89,7 @@ export abstract class VirtualCalculable {
                     window.alert(s.IdentifierCannotBeEmpty)
                     continue
                 }
-                const componentList = this.parent.virtualComponents
+                const componentList = this.parent.internalComponents
                 const otherComp = componentList.get(newId)
                 if (otherComp === undefined) {
                     // OK button pressed
@@ -107,9 +107,9 @@ export abstract class VirtualCalculable {
     }
 }
 
-export abstract class VirtualCalculableSaved extends  VirtualCalculable{
+export abstract class InternalCalculableSaved extends  InternalCalculable{
 
-    protected constructor(parent: VirtualCalculableParent, saved?: PositionSupportRepr) {
+    protected constructor(parent: InternalCalculableParent, saved?: PositionSupportRepr) {
         super(parent)
 
         // using null and not undefined to prevent subclasses from

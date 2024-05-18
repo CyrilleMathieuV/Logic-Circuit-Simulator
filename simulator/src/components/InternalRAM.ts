@@ -1,10 +1,10 @@
 import { ArrayFillWith, EdgeTrigger, LogicValue, Unknown, isUnknown, typeOrUndefined } from "../utils"
 import { Flipflop, makeTriggerItems } from "./FlipflopOrLatch"
-import { VirtualROMRAMBase, VirtualROMRAMBaseValue } from "./VirtualROM"
-import { VirtualSyncComponent } from "./VirtualFlipflopOrLatch";
+import { InternalROMRAMBase, InternalROMRAMBaseValue } from "./IntenalROM"
+import { InternalSyncComponent } from "./InternalFlipflopOrLatch";
 
 
-export class VirtualRAM extends VirtualROMRAMBase {
+export class InternalRAM extends InternalROMRAMBase {
     public inputClock: LogicValue
 
     public inputWE: LogicValue
@@ -13,7 +13,7 @@ export class VirtualRAM extends VirtualROMRAMBase {
 
     public inputsD: LogicValue[]
 
-    public value: VirtualROMRAMBaseValue;
+    public value: InternalROMRAMBaseValue;
 
     private _trigger: EdgeTrigger
     protected _lastClock: LogicValue = Unknown
@@ -31,7 +31,7 @@ export class VirtualRAM extends VirtualROMRAMBase {
 
         this._trigger = EdgeTrigger.falling
 
-        this.value = VirtualRAM.defaultVirtualValue(this.numWords, this.numDataBits)
+        this.value = InternalRAM.defaultInternalValue(this.numWords, this.numDataBits)
     }
 
     public get trigger() {
@@ -42,13 +42,13 @@ export class VirtualRAM extends VirtualROMRAMBase {
         this._trigger = trigger
     }
 
-    public recalcVirtualValue(): VirtualROMRAMBaseValue {
+    public recalcInternalValue(): InternalROMRAMBaseValue {
         const clear = this.inputClr
         const numWords = this.numWords
         if (clear === true) {
             // clear is true, preset is false, set output to 0
             //console.log("RAM RST !!!")
-            return VirtualRAM.virtualValueFilledWith(false, numWords, this.numDataBits)
+            return InternalRAM.internalValueFilledWith(false, numWords, this.numDataBits)
         }
 
         // first, determine output
@@ -70,7 +70,7 @@ export class VirtualRAM extends VirtualROMRAMBase {
         // we write
         if (isUnknown(addr)) {
             //console.log("! RAM ADR ???")
-            return VirtualRAM.virtualValueFilledWith(Unknown, numWords, this.numDataBits)
+            return InternalRAM.internalValueFilledWith(Unknown, numWords, this.numDataBits)
         }
 
         // build new state

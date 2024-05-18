@@ -1,27 +1,27 @@
-import { VirtualComponent } from "./components/VirtualComponent"
+import { InternalComponent } from "./components/InternalComponent"
 
-export class VirtualRecalcManager {
+export class InternalRecalcManager {
 
-    private _propagateQueueVirtual: Array<VirtualComponent> = []
-    private _recalcQueueVirtual: Array<[VirtualComponent, boolean]> = []
+    private _propagateQueueInternal: Array<InternalComponent> = []
+    private _recalcQueueInternal: Array<[InternalComponent, boolean]> = []
     public debug = false
 
-    public enqueueForPropagate(virtcomp: VirtualComponent) {
-        this._propagateQueueVirtual.push(virtcomp)
+    public enqueueForPropagate(virtcomp: InternalComponent) {
+        this._propagateQueueInternal.push(virtcomp)
         this.log("Enqueued for propagate: " + virtcomp)
     }
 
-    public enqueueForRecalc(virtcomp: VirtualComponent, forcePropagate: boolean) {
-        this._recalcQueueVirtual.push([virtcomp, forcePropagate])
+    public enqueueForRecalc(virtcomp: InternalComponent, forcePropagate: boolean) {
+        this._recalcQueueInternal.push([virtcomp, forcePropagate])
         this.log("Enqueued for recalc: " + virtcomp)
     }
 
-    public queueVirtualIsEmpty(): boolean {
-        return this._propagateQueueVirtual.length === 0 && this._recalcQueueVirtual.length === 0
+    public queueInternalIsEmpty(): boolean {
+        return this._propagateQueueInternal.length === 0 && this._recalcQueueInternal.length === 0
     }
 
     public recalcAndPropagateIfNeeded(): boolean {
-        if (this.queueVirtualIsEmpty()) {
+        if (this.queueInternalIsEmpty()) {
             return false
         }
         this.recalcAndPropagate()
@@ -43,15 +43,15 @@ export class VirtualRecalcManager {
             round++
             if (round >= roundLimit) {
                 console.warn(`ERROR: Circular dependency; suspending updates after ${roundLimit} recalc/propagate rounds`)
-                this._propagateQueueVirtual = []
-                this._recalcQueueVirtual = []
+                this._propagateQueueInternal = []
+                this._recalcQueueInternal = []
                 break
             }
 
-            this.log(`Recalc/propagate round ${round}: ${this._propagateQueueVirtual.length} propagate, ${this._recalcQueueVirtual.length} recalc.`)
+            this.log(`Recalc/propagate round ${round}: ${this._propagateQueueInternal.length} propagate, ${this._recalcQueueInternal.length} recalc.`)
 
-            const propagateQueue = this._propagateQueueVirtual
-            this._propagateQueueVirtual = []
+            const propagateQueue = this._propagateQueueInternal
+            this._propagateQueueInternal = []
             this.log(`  PROPAG (${propagateQueue.length}) – ` + propagateQueue.map((c) => c.toString()).join("; "))
             for (const virtcomp of propagateQueue) {
                 try {
@@ -61,8 +61,8 @@ export class VirtualRecalcManager {
                 }
             }
 
-            const recalcQueue = this._recalcQueueVirtual
-            this._recalcQueueVirtual = []
+            const recalcQueue = this._recalcQueueInternal
+            this._recalcQueueInternal = []
             this.log(`  RECALC (${recalcQueue.length}) – ` + recalcQueue.map((c) => c.toString()).join("; "))
             for (const [virtcomp, forcePropagate] of recalcQueue) {
                 try {
@@ -72,7 +72,7 @@ export class VirtualRecalcManager {
                 }
             }
 
-        } while (!this.queueVirtualIsEmpty())
+        } while (!this.queueInternalIsEmpty())
 
         this.log(`Recalc/propagate done in ${round} rounds.`)
     }

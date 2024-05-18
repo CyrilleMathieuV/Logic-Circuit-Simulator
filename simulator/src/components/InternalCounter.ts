@@ -10,11 +10,11 @@ import {
     typeOrUndefined,
     deepEquals,
 } from "../utils"
-import {VirtualFlipflop} from "./VirtualFlipflopOrLatch";
+import {InternalFlipflop} from "./InternalFlipflopOrLatch";
 import {Counter} from "./Counter";
-import {VirtualRegisterBaseValue} from "./VirtualRegister";
+import {InternalRegisterBaseValue} from "./InternalRegister";
 
-export class VirtualCounter {
+export class InternalCounter {
     public outputsQ: LogicValue[]
     public outputV: LogicValue
 
@@ -50,11 +50,11 @@ export class VirtualCounter {
 
  */
 /*
-    public static emptyVirtualValue(numBits: number) {
+    public static emptyInternalValue(numBits: number) {
         return [ArrayFillWith(false, numBits), false] as const
     }
     */
-    public doRecalcVirtualValue(): [LogicValue[], LogicValue] {
+    public doRecalcInternalValue(): [LogicValue[], LogicValue] {
         const clear = this.inputClr
         if (clear === true) {
             return [ArrayFillWith(false, this.numBits), false]
@@ -64,7 +64,7 @@ export class VirtualCounter {
         const clock = this._lastClock = this.inputClock
         const activeOverflowValue = this.trigger === EdgeTrigger.rising ? true : false
 
-        if (this.isVirtualClockTrigger(prevClock, clock)) {
+        if (this.isInternalClockTrigger(prevClock, clock)) {
             const [__, value] = displayValuesFromArray(this.value[0], false)
             if (isUnknown(value)) {
                 return [ArrayFillWith(Unknown, this.numBits), Unknown]
@@ -81,26 +81,26 @@ export class VirtualCounter {
         }
     }
 
-    protected propagateVirtualValue(newValue: readonly [LogicValue[], LogicValue]) {
+    protected propagateInternalValue(newValue: readonly [LogicValue[], LogicValue]) {
         const [counter, overflow] = newValue
         this.outputsQ = counter
         this.outputV = overflow
     }
 
-    public doSetVirtualValue(newValue: [LogicValue[], LogicValue], forcePropagate = false) {
+    public doSetInternalValue(newValue: [LogicValue[], LogicValue], forcePropagate = false) {
         const oldValue = this.value
         if (forcePropagate || !deepEquals(newValue, oldValue)) {
             this.value = newValue
             //this.setNeedsPropagate()
-            this.propagateVirtualValue(newValue)
+            this.propagateInternalValue(newValue)
         }
     }
 
-    public recalcVirtualValue() {
-        this.doSetVirtualValue(this.doRecalcVirtualValue(), false)
+    public recalcInternalValue() {
+        this.doSetInternalValue(this.doRecalcInternalValue(), false)
     }
 
-    public isVirtualClockTrigger(prevClock: LogicValue, clock: LogicValue): boolean {
+    public isInternalClockTrigger(prevClock: LogicValue, clock: LogicValue): boolean {
         return (this.trigger === EdgeTrigger.rising && prevClock === false && clock === true)
             || (this.trigger === EdgeTrigger.falling && prevClock === true && clock === false)
     }

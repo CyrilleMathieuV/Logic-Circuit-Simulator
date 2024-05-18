@@ -8,9 +8,9 @@ import {
     typeOrUndefined,
     Unknown,
 } from "../utils"
-import {VirtualFlipflop} from "./VirtualFlipflopOrLatch";
+import {InternalFlipflop} from "./InternalFlipflopOrLatch";
 
-export class VirtualFlipflopD extends VirtualFlipflop {
+export class InternalFlipflopD extends InternalFlipflop {
 
     public constructor(trigger: EdgeTrigger) {
         super(trigger)

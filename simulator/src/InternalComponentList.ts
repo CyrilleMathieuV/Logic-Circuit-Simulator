@@ -1,4 +1,4 @@
-import { VirtualComponent } from "./components/VirtualComponent"
+import { InternalComponent } from "./components/InternalComponent"
 import { CustomComponent } from "./components/CustomComponent"
 import { ArrayFillUsing, isString } from "./utils"
 
@@ -10,10 +10,10 @@ export const DrawZIndex = {
 
 export type DrawZIndex = typeof DrawZIndex[keyof typeof DrawZIndex]
 
-export class VirtualComponentList {
+export class InternalComponentList {
 
-    private _componentsByZIndex = ArrayFillUsing(() => [] as VirtualComponent[], 3)
-    private _componentsById = new Map<string, VirtualComponent>()
+    private _componentsByZIndex = ArrayFillUsing(() => [] as InternalComponent[], 3)
+    private _componentsById = new Map<string, InternalComponent>()
 
     public *all() {
         for (const compList of this._componentsByZIndex) {
@@ -38,7 +38,7 @@ export class VirtualComponentList {
         }
     }
 
-    public add(comp: VirtualComponent) {
+    public add(comp: InternalComponent) {
         const z = comp.drawZIndex
         this._componentsByZIndex[z].push(comp)
 
@@ -73,7 +73,7 @@ export class VirtualComponentList {
         }
     }
 */
-    public changeIdOf(comp: VirtualComponent, newId: string) {
+    public changeIdOf(comp: InternalComponent, newId: string) {
         // We must make sure that this new id is not already used before calling
         const oldId = comp.ref
         if (oldId !== undefined) {
@@ -89,7 +89,7 @@ export class VirtualComponentList {
         this._componentsById.set(newId, comp)
     }
 
-    public swapIdsOf(comp1: VirtualComponent, comp2: VirtualComponent) {
+    public swapIdsOf(comp1: InternalComponent, comp2: InternalComponent) {
         const id1 = comp1.ref
         const id2 = comp2.ref
         if (id1 === undefined || id2 === undefined) {
@@ -101,11 +101,11 @@ export class VirtualComponentList {
         this._componentsById.set(id2, comp1)
     }
 
-    public get(id: string): VirtualComponent | undefined {
+    public get(id: string): InternalComponent | undefined {
         return this._componentsById.get(id)
     }
 
-    private generateIdFor(comp: VirtualComponent): string {
+    private generateIdFor(comp: InternalComponent): string {
         const prefixFromDef = comp.def.idPrefix
         const prefix = isString(prefixFromDef) ? prefixFromDef : prefixFromDef(comp)
         let i = 0
@@ -116,12 +116,12 @@ export class VirtualComponentList {
         return id
     }
 
-    public tryDelete(comp: VirtualComponent): boolean {
+    public tryDelete(comp: InternalComponent): boolean {
         return this.tryDeleteWhere(c => c === comp, true) > 0
     }
 
-    public tryDeleteWhere(cond: (e: VirtualComponent) => boolean, onlyOne: boolean): number {
-        const deletedComps: VirtualComponent[] = []
+    public tryDeleteWhere(cond: (e: InternalComponent) => boolean, onlyOne: boolean): number {
+        const deletedComps: InternalComponent[] = []
 
         outer:
             for (const compList of this._componentsByZIndex) {

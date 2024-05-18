@@ -1,11 +1,11 @@
 import { HighImpedance, InteractionResult, isUnknown, LogicValue, Mode, RepeatFunction, toLogicValue, Unknown } from "../utils"
-import { VirtualComponent, InputVirtualNodeRepr, VirtualNodeGroup, OutputVirtualNodeRepr } from "./VirtualComponent"
-import { VirtualWire } from "./VirtualWire"
-import { VirtualCalculable } from "./VirtualCalculable";
+import { InternalComponent, InputInternalNodeRepr, InternalNodeGroup, OutputInternalNodeRepr } from "./InternalComponent"
+import { InternalWire } from "./InternalWire"
+import { InternalCalculable } from "./InternalCalculable";
 
-export type VirtualNode = VirtualNodeIn | VirtualNodeOut
+export type InternalNode = InternalNodeIn | InternalNodeOut
 
-export abstract class VirtualNodeBase<N extends VirtualNode> extends VirtualCalculable{
+export abstract class InternalNodeBase<N extends InternalNode> extends InternalCalculable{
 
     public readonly id: number
     private _isAlive = true
@@ -14,9 +14,9 @@ export abstract class VirtualNodeBase<N extends VirtualNode> extends VirtualCalc
     protected _forceValue: LogicValue | undefined
 
     public constructor(
-        public readonly component: VirtualComponent,
-        nodeSpec: InputVirtualNodeRepr | OutputVirtualNodeRepr,
-        public readonly group: VirtualNodeGroup<N> | undefined,
+        public readonly component: InternalComponent,
+        nodeSpec: InputInternalNodeRepr | OutputInternalNodeRepr,
+        public readonly group: InternalNodeGroup<N> | undefined,
         public readonly shortName: string,
         public readonly fullName: string,
     ) {
@@ -30,18 +30,18 @@ export abstract class VirtualNodeBase<N extends VirtualNode> extends VirtualCalc
             this._initialValue = initialValue
             this._value = initialValue
         }
-        this.parent.virtualNodeMgr.addVirtualNode(this.asVirtualNode)
+        this.parent.internalNodeMgr.addInternalNode(this.asInternalNode)
     }
 
-    private get asVirtualNode(): VirtualNode {
-        return this as unknown as VirtualNode
+    private get asInternalNode(): InternalNode {
+        return this as unknown as InternalNode
     }
 
-    public isVirtualOutput(): this is VirtualNodeOut {
-        return VirtualNode.isOutput(this.asVirtualNode)
+    public isInternalOutput(): this is InternalNodeOut {
+        return InternalNode.isOutput(this.asInternalNode)
     }
     
-    public get isVirtualAlive() {
+    public get isInternalAlive() {
         return this._isAlive
     }
 
@@ -79,31 +79,31 @@ export abstract class VirtualNodeBase<N extends VirtualNode> extends VirtualCalc
     public abstract get isDisconnected(): boolean
 }
 
-export class VirtualNodeIn extends VirtualNodeBase<VirtualNodeIn> {
+export class InternalNodeIn extends InternalNodeBase<InternalNodeIn> {
 
     public readonly _tag = "_vnodein"
 
-    private _incomingVirtualWire: VirtualWire | null = null
+    private _incomingInternalWire: InternalWire | null = null
 
-    public get incomingVirtualWire() {
-        return this._incomingVirtualWire
+    public get incomingInternalWire() {
+        return this._incomingInternalWire
     }
 
-    public set incomingVirtualWire(wire: VirtualWire | null) {
-        this._incomingVirtualWire = wire
+    public set incomingInternalWire(wire: InternalWire | null) {
+        this._incomingInternalWire = wire
         if (wire === null) {
             this.value = false
         } else {
-            this.value = wire.startVirtualNode.value
+            this.value = wire.startInternalNode.value
         }
     }
 
     public get acceptsMoreConnections() {
-        return this._incomingVirtualWire === null
+        return this._incomingInternalWire === null
     }
 
     public get isDisconnected() {
-        return this._incomingVirtualWire === null
+        return this._incomingInternalWire === null
     }
 
     public get forceValue() {
@@ -120,33 +120,33 @@ export class VirtualNodeIn extends VirtualNodeBase<VirtualNodeIn> {
 
 }
 
-export class VirtualNodeOut extends VirtualNodeBase<VirtualNodeOut> {
+export class InternalNodeOut extends InternalNodeBase<InternalNodeOut> {
 
     public readonly _tag = "_vnodeout"
 
-    private readonly _outgoingVirtualWires: VirtualWire[] = []
+    private readonly _outgoingInternalWires: InternalWire[] = []
 
     public get isClock() {
         return false
     }
 
-    public addOutgoingVirtualWire(wire: VirtualWire) {
+    public addOutgoingInternalWire(wire: InternalWire) {
         // don't add the same wire twice
-        const i = this._outgoingVirtualWires.indexOf(wire)
+        const i = this._outgoingInternalWires.indexOf(wire)
         if (i === -1) {
-            this._outgoingVirtualWires.push(wire)
+            this._outgoingInternalWires.push(wire)
         }
     }
 
-    public removeOutgoinVirtualWire(wire: VirtualWire) {
-        const i = this._outgoingVirtualWires.indexOf(wire)
+    public removeOutgoinInternalWire(wire: InternalWire) {
+        const i = this._outgoingInternalWires.indexOf(wire)
         if (i !== -1) {
-            this._outgoingVirtualWires.splice(i, 1)
+            this._outgoingInternalWires.splice(i, 1)
         }
     }
 
-    public get outgoingVirtualWires(): readonly VirtualWire[] {
-        return this._outgoingVirtualWires
+    public get outgoingInternalWires(): readonly InternalWire[] {
+        return this._outgoingInternalWires
     }
 
     public get acceptsMoreConnections() {
@@ -154,11 +154,11 @@ export class VirtualNodeOut extends VirtualNodeBase<VirtualNodeOut> {
     }
 
     public get isDisconnected() {
-        return this._outgoingVirtualWires.length === 0
+        return this._outgoingInternalWires.length === 0
     }
 
-    public findWireTo(node: VirtualNodeIn): VirtualWire | undefined {
-        return this._outgoingVirtualWires.find(wire => wire.endVirtualNode === node)
+    public findWireTo(node: InternalNodeIn): InternalWire | undefined {
+        return this._outgoingInternalWires.find(wire => wire.endInternalNode === node)
     }
 
     public get forceValue() {
@@ -178,14 +178,14 @@ export class VirtualNodeOut extends VirtualNodeBase<VirtualNodeOut> {
 
     protected propagateNewValue(newValue: LogicValue) {
         const now = this.parent.editor.timeline.logicalTime()
-        for (const wire of this._outgoingVirtualWires) {
+        for (const wire of this._outgoingInternalWires) {
             wire.propagateNewValue(newValue, now)
         }
     }
 }
 
-export const VirtualNode = {
-    isOutput(node: VirtualNode): node is VirtualNodeOut {
+export const InternalNode = {
+    isOutput(node: InternalNode): node is InternalNodeOut {
         return node._tag === "_vnodeout"
     }
 }

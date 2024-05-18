@@ -9,13 +9,13 @@ import {
     Unknown,
 } from "../utils"
 import { Counter } from "./Counter";
-import { VirtualFlipflop,VirtualSyncComponent } from "./VirtualFlipflopOrLatch";
+import { InternalFlipflop, InternalSyncComponent } from "./InternalFlipflopOrLatch";
 import { displayValuesFromArray } from "../drawutils";
 import { NodeIn } from "./Node";
 
-export type VirtualRegisterBaseValue = LogicValue[]
+export type InternalRegisterBaseValue = LogicValue[]
 
-export abstract class VirtualRegisterBase {
+export abstract class InternalRegisterBase {
     public readonly numBits : number
 
     public inputClock: LogicValue
@@ -48,36 +48,36 @@ export abstract class VirtualRegisterBase {
         this._lastClock = false
     }
 
-    public makeVirtualInvalidState(): LogicValue[] {
+    public makeInternalInvalidState(): LogicValue[] {
         return ArrayFillWith(false, this.numBits)
     }
 
-    public makeVirtualStateFromMainValue(val: LogicValue): LogicValue[] {
+    public makeInternalStateFromMainValue(val: LogicValue): LogicValue[] {
         return ArrayFillWith(val, this.numBits)
     }
 
-    public abstract makeVirtualStateAfterClock(): LogicValue[]
+    public abstract makeInternalStateAfterClock(): LogicValue[]
 
-    public virtualOutputs() : LogicValue[] {
+    public internalOutputs() : LogicValue[] {
         return this.outputsQ
     }
 
-    protected propagateVirtualValue(newValue: VirtualRegisterBaseValue) {
+    protected propagateInternalValue(newValue: InternalRegisterBaseValue) {
         this.outputsQ = newValue
     }
 }
 /*
-    protected getOutputVirtualValues(output: readonly LogicValue[]): LogicValue[] {
+    protected getOutputInternalValues(output: readonly LogicValue[]): LogicValue[] {
         return output.map(node => output.value)
     }
 */
-export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncComponent<VirtualRegisterBaseValue>{
+export class InternalRegister extends InternalRegisterBase implements InternalSyncComponent<InternalRegisterBaseValue>{
     public inputsD: LogicValue[]
 
     public inputInc: LogicValue
     public inputDec: LogicValue
 
-    public value: VirtualRegisterBaseValue
+    public value: InternalRegisterBaseValue
 
     private _saturating: LogicValue
 
@@ -86,7 +86,7 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
 
     public constructor(numBits: number, trigger: EdgeTrigger) {
         super(numBits, trigger)
-        this.value = super.virtualOutputs()
+        this.value = super.internalOutputs()
         this.inputInc = false
         this.inputDec = false
         this._saturating = false
@@ -97,7 +97,7 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         //this._isCounter = isCounter
     }
 
-    public getVirtualValueFromArray(values: readonly LogicValue[]): number | Unknown {
+    public getInternalValueFromArray(values: readonly LogicValue[]): number | Unknown {
         // lowest significant bit is the first bit
         let binaryStringRep = ""
         let hasUnset = false
@@ -117,7 +117,7 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         return value
     }
 
-    public makeVirtualStateAfterClock(): LogicValue[] {
+    public makeInternalStateAfterClock(): LogicValue[] {
         const inc = this.inputInc
         const dec = this.inputDec
         if (isUnknown(inc) || isUnknown(dec) || isHighImpedance(inc) || isHighImpedance(dec)) {
@@ -162,29 +162,29 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         return this.inputsD.map(LogicValue.filterHighZ)
     }
 
-    public doRecalcVirtualValue(): LogicValue[] {
+    public doRecalcInternalValue(): LogicValue[] {
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputClock
         const { isInInvalidState, newState } =
-            VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
+            InternalFlipflop.doRecalcInternalValueForInternalSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
         this._isInInvalidState = isInInvalidState
         return newState
     }
 
-    public doSetVirtualValue(newValue: VirtualRegisterBaseValue, forcePropagate = false) {
+    public doSetInternalValue(newValue: InternalRegisterBaseValue, forcePropagate = false) {
         const oldValue = this.value
         if (forcePropagate || !deepEquals(newValue, oldValue)) {
             this.value = newValue
             //this.setNeedsPropagate()
-            this.propagateVirtualValue(newValue)
+            this.propagateInternalValue(newValue)
         }
     }
 
-    public recalcVirtualValue() {
-        this.doSetVirtualValue(this.doRecalcVirtualValue(), false)
+    public recalcInternalValue() {
+        this.doSetInternalValue(this.doRecalcInternalValue(), false)
     }
 
-    public isVirtualClockTrigger(prevClock: LogicValue, clock: LogicValue): boolean {
+    public isInternalClockTrigger(prevClock: LogicValue, clock: LogicValue): boolean {
         return (this.trigger === EdgeTrigger.rising && prevClock === false && clock === true)
             || (this.trigger === EdgeTrigger.falling && prevClock === true && clock === false)
     }
@@ -204,11 +204,11 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         }
     }
 
-    protected getVirtualInputsValues(inputs: LogicValue[]): LogicValue[] {
+    protected getInternalInputsValues(inputs: LogicValue[]): LogicValue[] {
         return inputs
     }
 
-    protected setVirtualInputsValues(inputs: LogicValue[], values: LogicValue[], reverse = false) {
+    protected setInternalInputsValues(inputs: LogicValue[], values: LogicValue[], reverse = false) {
         const num = inputs.length
         if (values.length !== num) {
             throw new Error(`inputValues: expected ${num} values, got ${values.length}`)
@@ -219,12 +219,12 @@ export class VirtualRegister extends VirtualRegisterBase implements VirtualSyncC
         }
     }
 
-    public doRecalcVirtualValueIntoDoRecalcValue() {
+    public doRecalcInternalValueIntoDoRecalcValue() {
         const prevClock = this._lastClock
         const clock = this._lastClock = this.inputClock
         const { isInInvalidState, newState } =
-            VirtualFlipflop.doRecalcVirtualValueForVirtualSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
+            InternalFlipflop.doRecalcInternalValueForInternalSyncComponent(this, prevClock, clock, this.inputPre, this.inputClr)
         this._isInInvalidState = isInInvalidState
-        this.propagateVirtualValue(newState)
+        this.propagateInternalValue(newState)
     }
 }

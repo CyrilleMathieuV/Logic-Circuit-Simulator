@@ -7,19 +7,19 @@ import {
     strokeSingleLine,
 } from "../drawutils"
 import { ParametrizedComponentBase, Repr, ResolvedParams, defineAbstractParametrizedComponent, defineParametrizedComponent, groupHorizontal, groupVertical, param } from "./Component"
-import { VirtualRAM } from "./VirtualRAM"
-import { VirtualSyncComponent } from "./VirtualFlipflopOrLatch";
-import { VirtualRegisterBaseValue } from "./VirtualRegister";
+import { InternalRAM } from "./InternalRAM"
+import { InternalSyncComponent } from "./InternalFlipflopOrLatch";
+import { InternalRegisterBaseValue } from "./InternalRegister";
 import { number, string } from "fp-ts";
 import {GraphicsRendering} from "./Drawable";
 
 
-export type VirtualROMRAMBaseValue = {
+export type InternalROMRAMBaseValue = {
     mem: LogicValue[][]
     out: LogicValue[]
 }
 
-export abstract class VirtualROMRAMBase {
+export abstract class InternalROMRAMBase {
     public readonly numDataBits: number
     public readonly numAddressBits: number
     public readonly numWords: number
@@ -38,11 +38,11 @@ export abstract class VirtualROMRAMBase {
         this.outputsQ = ArrayFillWith(false, this.numDataBits)
     }
 
-    public static defaultVirtualValue(numWords: number, numDataBits: number){
-        return VirtualROMRAMBase.virtualValueFilledWith(false, numWords, numDataBits)
+    public static defaultInternalValue(numWords: number, numDataBits: number){
+        return InternalROMRAMBase.internalValueFilledWith(false, numWords, numDataBits)
     }
 
-    public static virtualValueFilledWith(v: LogicValue, numWords: number, numDataBits: number): VirtualROMRAMBaseValue {
+    public static internalValueFilledWith(v: LogicValue, numWords: number, numDataBits: number): InternalROMRAMBaseValue {
         const mem: LogicValue[][] = new Array(numWords)
         for (let i = 0; i < numWords; i++) {
             mem[i] = ArrayFillWith(v, numDataBits)
@@ -51,7 +51,7 @@ export abstract class VirtualROMRAMBase {
         return { mem, out }
     }
 
-    public static virtualContentsFromString(stringRep: string | string[], numDataBits: number, numWords: number) {
+    public static internalContentsFromString(stringRep: string | string[], numDataBits: number, numWords: number) {
         const splitContent = isArray(stringRep) ? stringRep : stringRep.split(/\s+/)
         const mem: LogicValue[][] = new Array(numWords)
         for (let i = 0; i < numWords; i++) {
@@ -69,26 +69,26 @@ export abstract class VirtualROMRAMBase {
         return addr
     }
 
-    public virtualOutputs() : LogicValue[] {
+    public internalOutputs() : LogicValue[] {
         return this.outputsQ
     }
 
-    protected propagateVirtualValue(newValue: VirtualROMRAMBaseValue) {
+    protected propagateInternalValue(newValue: InternalROMRAMBaseValue) {
         this.outputsQ = newValue.out
     }
 }
 
 
 
-export class VirtualROM extends VirtualROMRAMBase {
-    public value: VirtualROMRAMBaseValue;
+export class IntenalROM extends InternalROMRAMBase {
+    public value: InternalROMRAMBaseValue;
 
     public constructor(numDataBits: number, numAddressBits: number) {
         super(numDataBits, numAddressBits)
-        this.value = VirtualROM.defaultVirtualValue(this.numWords, this.numDataBits)
+        this.value = IntenalROM.defaultInternalValue(this.numWords, this.numDataBits)
     }
 
-    protected doRecalcVirtualValue(): VirtualROMRAMBaseValue {
+    protected doRecalcInternalValue(): InternalROMRAMBaseValue {
         const { mem } = this.value
         const addr = this.currentAddress()
         const out = isUnknown(addr) ? ArrayFillWith(Unknown, this.numDataBits) : mem[addr]

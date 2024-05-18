@@ -1,14 +1,14 @@
 import * as t from "io-ts"
 import {  displayValuesFromArray } from "../drawutils"
 import { ArrayFillWith, EdgeTrigger, LogicValue, Unknown, isUnknown, typeOrNull, typeOrUndefined } from "../utils"
-import { ParametrizedVirtualComponentBase, Repr, ResolvedParams, defineParametrizedVirtualComponent, param, group } from "./VirtualComponent"
+import { ParametrizedInternalComponentBase, Repr, ResolvedParams, defineParametrizedInternalComponent, param, group } from "./InternalComponent"
 import { Flipflop, FlipflopOrLatch, makeTriggerItems } from "./FlipflopOrLatch"
-import { VirtualCalculableParent } from "./VirtualCalculable";
+import { InternalCalculableParent } from "./InternalCalculable";
 import {groupVertical} from "./Component";
 
 
-export const VirtualCounterNewDef =
-    defineParametrizedVirtualComponent("counter", true, true, {
+export const InternalCounterNewDef =
+    defineParametrizedInternalComponent("counter", true, true, {
         variantName: ({ bits }) => `counter-${bits}`,
         idPrefix: "counter",
         repr: {
@@ -27,7 +27,7 @@ export const VirtualCounterNewDef =
         validateParams: ({ bits }) => ({
             numBits: bits,
         }),
-        makeVirtualNodes: ({ numBits }) => {
+        makeInternalNodes: ({ numBits }) => {
             return {
                 ins: {
                     Clock: ["Clk"],
@@ -42,16 +42,16 @@ export const VirtualCounterNewDef =
         },
         initialValue: (saved, { numBits }) => {
             if (saved === undefined || saved.count === undefined) {
-                return VirtualCounterNew.emptyValue(numBits)
+                return InternalCounterNew.emptyValue(numBits)
             }
-            return [VirtualCounterNew.decimalToNBits(saved.count, numBits), false] as const
+            return [InternalCounterNew.decimalToNBits(saved.count, numBits), false] as const
         },
     })
 
-export type VirtualCounterNewRepr = Repr<typeof VirtualCounterNewDef>
-export type VirtualCounterNewParams = ResolvedParams<typeof VirtualCounterNewDef>
+export type InternalCounterNewRepr = Repr<typeof InternalCounterNewDef>
+export type InternalCounterNewParams = ResolvedParams<typeof InternalCounterNewDef>
 
-export class VirtualCounterNew extends ParametrizedVirtualComponentBase<VirtualCounterNewRepr> {
+export class InternalCounterNew extends ParametrizedInternalComponentBase<InternalCounterNewRepr> {
 
     public static emptyValue(numBits: number) {
         return [ArrayFillWith<LogicValue>(false, numBits), false as LogicValue] as const
@@ -71,13 +71,13 @@ export class VirtualCounterNew extends ParametrizedVirtualComponentBase<VirtualC
     private _lastClock: LogicValue = Unknown
     private _displayRadix: number | undefined
 
-    public constructor(parent: VirtualCalculableParent, params: VirtualCounterNewParams, saved?: VirtualCounterNewRepr) {
-        super(parent, VirtualCounterNewDef.with(params), saved)
+    public constructor(parent: InternalCalculableParent, params: InternalCounterNewParams, saved?: InternalCounterNewRepr) {
+        super(parent, InternalCounterNewDef.with(params), saved)
 
         this.numBits = params.numBits
 
-        this._trigger = saved?.trigger ?? VirtualCounterNewDef.aults.trigger
-        this._displayRadix = saved?.displayRadix === undefined ? VirtualCounterNewDef.aults.displayRadix
+        this._trigger = saved?.trigger ?? InternalCounterNewDef.aults.trigger
+        this._displayRadix = saved?.displayRadix === undefined ? InternalCounterNewDef.aults.displayRadix
             : (saved.displayRadix === null ? undefined : saved.displayRadix) // convert null in the repr to undefined
     }
 
@@ -87,10 +87,10 @@ export class VirtualCounterNew extends ParametrizedVirtualComponentBase<VirtualC
         const displayRadix = this._displayRadix === undefined ? null : this._displayRadix
         return {
             ...this.toJSONBase(),
-            bits: this.numBits === VirtualCounterNewDef.aults.bits ? undefined : this.numBits,
+            bits: this.numBits === InternalCounterNewDef.aults.bits ? undefined : this.numBits,
             count: currentCount === 0 ? undefined : currentCount,
-            trigger: (this._trigger !== VirtualCounterNewDef.aults.trigger) ? this._trigger : undefined,
-            displayRadix: (displayRadix !== VirtualCounterNewDef.aults.displayRadix) ? displayRadix : undefined,
+            trigger: (this._trigger !== InternalCounterNewDef.aults.trigger) ? this._trigger : undefined,
+            displayRadix: (displayRadix !== InternalCounterNewDef.aults.displayRadix) ? displayRadix : undefined,
         }
     }
 
@@ -101,7 +101,7 @@ export class VirtualCounterNew extends ParametrizedVirtualComponentBase<VirtualC
     protected doRecalcValue(): readonly [LogicValue[], LogicValue] {
         const clear = this.inputs.Clr.value
         if (clear === true) {
-            return VirtualCounterNew.emptyValue(this.numBits)
+            return InternalCounterNew.emptyValue(this.numBits)
         }
 
         const prevClock = this._lastClock
@@ -118,7 +118,7 @@ export class VirtualCounterNew extends ParametrizedVirtualComponentBase<VirtualC
                 return [ArrayFillWith(false, this.numBits), activeOverflowValue]
             }
 
-            return [VirtualCounterNew.decimalToNBits(newValue, this.numBits), !activeOverflowValue]
+            return [InternalCounterNew.decimalToNBits(newValue, this.numBits), !activeOverflowValue]
 
         } else {
             return [this.value[0], !activeOverflowValue]
@@ -142,4 +142,4 @@ export class VirtualCounterNew extends ParametrizedVirtualComponentBase<VirtualC
     }
 
 }
-VirtualCounterNewDef.impl = VirtualCounterNew
+InternalCounterNewDef.impl = InternalCounterNew

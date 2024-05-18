@@ -50,11 +50,11 @@ import {
     FlipflopOrLatch, SyncComponent,
 } from "./FlipflopOrLatch";
 import { ALUOps, doALUOp } from "./ALU"
-import { VirtualFlipflopD } from "./VirtualFlipflopD";
-import { VirtualRegister } from "./VirtualRegister";
-import { VirtualCounter } from "./VirtualCounter";
-import { VirtualRAM } from "./VirtualRAM";
-import { VirtualComponent } from "./VirtualComponent";
+import { InternalFlipflopD } from "./InternalFlipflopD";
+import { InternalRegister } from "./InternalRegister";
+import { InternalCounter } from "./InternalCounter";
+import { InternalRAM } from "./InternalRAM";
+import { InternalComponent } from "./InternalComponent";
 import {number} from "fp-ts";
 
 export const CPUOpCodes = [
@@ -541,7 +541,7 @@ export abstract class CPUBase<
         return true
     }
 
-    private innerStateRepr<TrimEnd extends boolean>(innerComponent : VirtualComponent, trimEnd : TrimEnd): TrimEnd extends false ? string : string | undefined {
+    private innerStateRepr<TrimEnd extends boolean>(innerComponent : InternalComponent, trimEnd : TrimEnd): TrimEnd extends false ? string : string | undefined {
         const result: string[] = []
         if (trimEnd) {
             let numToSkip = 0
@@ -622,34 +622,34 @@ export class CPU extends CPUBase<CPURepr> {
 
     protected _mustGetFetchInstructionAgain : boolean
 
-    protected _virtualPipelineStateFlipflopD : VirtualFlipflopD
+    protected _internalPipelineStateFlipflopD : InternalFlipflopD
 
-    protected _virtualResetStateFlipflopD : VirtualFlipflopD
+    protected _internalResetStateFlipflopD : InternalFlipflopD
 
-    protected _virtualRunStopFlipflopD : VirtualFlipflopD
+    protected _internalRunStopFlipflopD : InternalFlipflopD
 
-    protected _virtualInstructionRegister : VirtualRegister
+    protected _internalInstructionRegister : InternalRegister
 
-    protected _virtualAccumulatorRegister : VirtualRegister
-    protected _virtualFlagsRegister: VirtualRegister
+    protected _internalAccumulatorRegister : InternalRegister
+    protected _internalFlagsRegister: InternalRegister
 
-    protected _virtualProgramCounterRegister : VirtualRegister
-    protected _virtualPreviousProgramCounterRegister : VirtualRegister
+    protected _internalProgramCounterRegister : InternalRegister
+    protected _internalPreviousProgramCounterRegister : InternalRegister
 
-    protected _virtualStackPointerRegister : VirtualRegister
-    protected _virtualStack : VirtualRAM
-    protected _virtualStackPointerPreOUflowFlipflopD : VirtualFlipflopD
-    protected _virtualStackPointerOUflowFlipflopD : VirtualFlipflopD
+    protected _internalStackPointerRegister : InternalRegister
+    protected _internalStack : InternalRAM
+    protected _internalStackPointerPreOUflowFlipflopD : InternalFlipflopD
+    protected _internalStackPointerOUflowFlipflopD : InternalFlipflopD
 
-    //protected _virtualSpecialVoidProgramCounterFlipflopD : VirtualFlipflopD
+    //protected _internalSpecialVoidProgramCounterFlipflopD : InternalFlipflopD
 
-    protected _virtualFetchFlipflopD : VirtualFlipflopD
-    protected _virtualDecodeFlipflopD : VirtualFlipflopD
-    protected _virtualExecuteFlipflopD : VirtualFlipflopD
+    protected _internalFetchFlipflopD : InternalFlipflopD
+    protected _internalDecodeFlipflopD : InternalFlipflopD
+    protected _internalExecuteFlipflopD : InternalFlipflopD
 
-    protected _virtualHaltSignalFlipflopD : VirtualFlipflopD
+    protected _internalHaltSignalFlipflopD : InternalFlipflopD
 
-    protected _virtualOperationStageCounter : VirtualCounter
+    protected _internalOperationStageCounter : InternalCounter
 
     private _jump : LogicValue = true
     private _backwardJump : LogicValue = Unknown
@@ -665,25 +665,25 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._mustGetFetchInstructionAgain = true
 
-        this._virtualResetStateFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-        this._virtualResetStateFlipflopD.inputPre = true
+        this._internalResetStateFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._internalResetStateFlipflopD.inputPre = true
 
-        this._virtualPipelineStateFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-        this._virtualPipelineStateFlipflopD.inputClr = true
+        this._internalPipelineStateFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._internalPipelineStateFlipflopD.inputClr = true
 
-        this._pipeline = this._virtualPipelineStateFlipflopD.outputQ
+        this._pipeline = this._internalPipelineStateFlipflopD.outputQ
 
-        this._virtualRunStopFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-        this._virtualRunStopFlipflopD.inputClr = true
+        this._internalRunStopFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._internalRunStopFlipflopD.inputClr = true
 
-        this._virtualHaltSignalFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-        this._virtualHaltSignalFlipflopD.inputClr = true
+        this._internalHaltSignalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._internalHaltSignalFlipflopD.inputClr = true
 
-        this._virtualInstructionRegister = new VirtualRegister(this.numInstructionBits, EdgeTrigger.falling)
+        this._internalInstructionRegister = new InternalRegister(this.numInstructionBits, EdgeTrigger.falling)
         // const isaInit = this.inputValues(this.inputs.Isa)
         // Needs to revert all inputs to be compatible with choosen ISA
         // const isaInit_FETCH = isaInit.reverse()
-        // this._virtualInstructionRegister.inputsD = isaInit_FETCH
+        // this._internalInstructionRegister.inputsD = isaInit_FETCH
 
         // const isaInit_FETCH_opCodeValue = isaInit_FETCH.slice(0, 4).reverse()
         // const isaInit_FETCH_opCodeIndex = displayValuesFromArray(isaInit_FETCH_opCodeValue, false)[1]
@@ -691,51 +691,51 @@ export class CPU extends CPUBase<CPURepr> {
 
         // const isaInit_FETCH_operands = isaInit_FETCH.slice(4, 8).reverse()
         // this._opCodeOperandsInStages = {FETCH: isaInit_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(isaInit_FETCH_operands, 2), DECODE: "", EXECUTE: ""}
-        // this._virtualInstructionRegister.inputClr = true
-        // this._virtualInstructionRegister.recalcVirtualValue()
+        // this._internalInstructionRegister.inputClr = true
+        // this._internalInstructionRegister.recalcInternalValue()
 
-        this._virtualAccumulatorRegister = new VirtualRegister(this.numDataBits, EdgeTrigger.falling)
-        this._virtualAccumulatorRegister.inputClr = true
-        // this._virtualInstructionRegister.recalcVirtualValue()
-        this._virtualFlagsRegister = new VirtualRegister(4, EdgeTrigger.falling)
-        this._virtualFlagsRegister.inputClr = true
-        // this._virtualFlagsRegister.recalcVirtualValue()
+        this._internalAccumulatorRegister = new InternalRegister(this.numDataBits, EdgeTrigger.falling)
+        this._internalAccumulatorRegister.inputClr = true
+        // this._internalInstructionRegister.recalcInternalValue()
+        this._internalFlagsRegister = new InternalRegister(4, EdgeTrigger.falling)
+        this._internalFlagsRegister.inputClr = true
+        // this._internalFlagsRegister.recalcInternalValue()
 
-        this._virtualProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
-        this. _virtualProgramCounterRegister.inputClr = true
-        // this. _virtualProgramCounterRegister.recalcVirtualValue()
-        this._virtualPreviousProgramCounterRegister = new VirtualRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
-        this. _virtualPreviousProgramCounterRegister.inputClr = true
-        // this. _virtualPreviousProgramCounterRegister.recalcVirtualValue()
+        this._internalProgramCounterRegister = new InternalRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
+        this. _internalProgramCounterRegister.inputClr = true
+        // this. _internalProgramCounterRegister.recalcInternalValue()
+        this._internalPreviousProgramCounterRegister = new InternalRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
+        this. _internalPreviousProgramCounterRegister.inputClr = true
+        // this. _internalPreviousProgramCounterRegister.recalcInternalValue()
 
-        this._virtualStackPointerRegister = new VirtualRegister(this.numStackBits, EdgeTrigger.falling)
-        this._virtualStackPointerRegister.inputPre = true
+        this._internalStackPointerRegister = new InternalRegister(this.numStackBits, EdgeTrigger.falling)
+        this._internalStackPointerRegister.inputPre = true
 
-        this._virtualStack = new VirtualRAM(this.numAddressInstructionBits, this.numStackBits)
-        this._virtualStack.inputClr =true
+        this._internalStack = new InternalRAM(this.numAddressInstructionBits, this.numStackBits)
+        this._internalStack.inputClr =true
 
-        this._virtualStackPointerPreOUflowFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-        this._virtualStackPointerPreOUflowFlipflopD.inputClr =true
+        this._internalStackPointerPreOUflowFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._internalStackPointerPreOUflowFlipflopD.inputClr =true
 
-        this._virtualStackPointerOUflowFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-        this._virtualStackPointerOUflowFlipflopD.inputClr = true
-        //this._virtualSpecialVoidProgramCounterFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+        this._internalStackPointerOUflowFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._internalStackPointerOUflowFlipflopD.inputClr = true
+        //this._internalSpecialVoidProgramCounterFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
 
-        this._virtualFetchFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-        this._virtualDecodeFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
-        this._virtualExecuteFlipflopD = new VirtualFlipflopD(EdgeTrigger.falling)
+        this._internalFetchFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._internalDecodeFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._internalExecuteFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
 
-        this._virtualFetchFlipflopD.inputPre = true
-        //this._virtualFetchFlipflopD.recalcVirtualValue()
-        this._virtualDecodeFlipflopD.inputClr = true
-        //this._virtualDecodeFlipflopD.recalcVirtualValue()
-        this._virtualExecuteFlipflopD.inputClr = true
-        //this._virtualExecuteFlipflopD.recalcVirtualValue()
+        this._internalFetchFlipflopD.inputPre = true
+        //this._internalFetchFlipflopD.recalcInternalValue()
+        this._internalDecodeFlipflopD.inputClr = true
+        //this._internalDecodeFlipflopD.recalcInternalValue()
+        this._internalExecuteFlipflopD.inputClr = true
+        //this._internalExecuteFlipflopD.recalcInternalValue()
 
-        this._virtualOperationStageCounter = new VirtualCounter(16, EdgeTrigger.falling, 10)
-        this._virtualOperationStageCounter.inputClr = true
-        // this._virtualOperationStageCounter.inputClr = true
-        // this._virtualOperationStageCounter.recalcVirtualValue()
+        this._internalOperationStageCounter = new InternalCounter(16, EdgeTrigger.falling, 10)
+        this._internalOperationStageCounter.inputClr = true
+        // this._internalOperationStageCounter.inputClr = true
+        // this._internalOperationStageCounter.recalcInternalValue()
 
         this._lastClock = Unknown
 
@@ -802,78 +802,78 @@ export class CPU extends CPUBase<CPURepr> {
         // RUN CONTROL LOGIC
         const prevClock= this._lastClock
         const clockSpeed= this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
-        const clockSync= this._lastClock = (this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅
+        const clockSync= this._lastClock = (this._internalRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._internalHaltSignalFlipflopD.outputQ̅
 
-        const runningState = this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value && this._virtualRunStopFlipflopD.outputQ̅ : this._virtualRunStopFlipflopD.outputQ
-        const haltSignal = this._virtualHaltSignalFlipflopD.outputQ || (this._virtualResetStateFlipflopD.outputQ̅  && this._virtualRunStopFlipflopD.outputQ̅ )
-        //console.log((this._virtualRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._virtualHaltSignalFlipflopD.outputQ̅)
-        //console.log(this._virtualRunStopFlipflopD.outputQ̅ )
+        const runningState = this._internalRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value && this._internalRunStopFlipflopD.outputQ̅ : this._internalRunStopFlipflopD.outputQ
+        const haltSignal = this._internalHaltSignalFlipflopD.outputQ || (this._internalResetStateFlipflopD.outputQ̅  && this._internalRunStopFlipflopD.outputQ̅ )
+        //console.log((this._internalRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._internalHaltSignalFlipflopD.outputQ̅)
+        //console.log(this._internalRunStopFlipflopD.outputQ̅ )
         /*
-        if (VirtualFlipflop.isVirtualClockTrigger(this._virtualRunStopFlipflopD.trigger, prevClock, clockSync)) {
+        if (InternalFlipflop.isInternalClockTrigger(this._internalRunStopFlipflopD.trigger, prevClock, clockSync)) {
             if (prevClock) {
                 if (!clockSync) {
                     console.log("Falling")
-                    console.log("! ", this._virtualRunStopFlipflopD.value)
+                    console.log("! ", this._internalRunStopFlipflopD.value)
                 }
             }
             if (clockSync) {
                 if (prevClock) {
                     console.log("Rising")
-                    console.log("* ", this._virtualRunStopFlipflopD.value)
+                    console.log("* ", this._internalRunStopFlipflopD.value)
                 }
             }
-            const newValue : LogicValue = LogicValue.filterHighZ(this._virtualRunStopFlipflopD.inputD)
-            this._virtualRunStopFlipflopD.propagateVirtualValue([newValue, !newValue])
+            const newValue : LogicValue = LogicValue.filterHighZ(this._internalRunStopFlipflopD.inputD)
+            this._internalRunStopFlipflopD.propagateInternalValue([newValue, !newValue])
         }
 */
 
         // CLR Button
 
-        const clrSignal= this.inputs.Reset.value && this._virtualRunStopFlipflopD.outputQ̅
+        const clrSignal= this.inputs.Reset.value && this._internalRunStopFlipflopD.outputQ̅
 
-        this._virtualResetStateFlipflopD.inputPre = clrSignal
+        this._internalResetStateFlipflopD.inputPre = clrSignal
 
-        this._virtualPipelineStateFlipflopD.inputClr = clrSignal
+        this._internalPipelineStateFlipflopD.inputClr = clrSignal
 
-        this._virtualRunStopFlipflopD.inputClr = clrSignal
+        this._internalRunStopFlipflopD.inputClr = clrSignal
 
-        this._virtualHaltSignalFlipflopD.inputClr = clrSignal
+        this._internalHaltSignalFlipflopD.inputClr = clrSignal
 
-        this._virtualFetchFlipflopD.inputPre = clrSignal
-        this._virtualDecodeFlipflopD.inputClr = clrSignal
-        this._virtualExecuteFlipflopD.inputClr = clrSignal
+        this._internalFetchFlipflopD.inputPre = clrSignal
+        this._internalDecodeFlipflopD.inputClr = clrSignal
+        this._internalExecuteFlipflopD.inputClr = clrSignal
 
-        this._virtualInstructionRegister.inputClr = clrSignal
+        this._internalInstructionRegister.inputClr = clrSignal
 
-        this._virtualAccumulatorRegister.inputClr = clrSignal
-        this._virtualFlagsRegister.inputClr = clrSignal
+        this._internalAccumulatorRegister.inputClr = clrSignal
+        this._internalFlagsRegister.inputClr = clrSignal
 
-        this._virtualProgramCounterRegister.inputClr = clrSignal
-        this._virtualPreviousProgramCounterRegister.inputClr = clrSignal
+        this._internalProgramCounterRegister.inputClr = clrSignal
+        this._internalPreviousProgramCounterRegister.inputClr = clrSignal
 
-        this._virtualStackPointerRegister.inputPre = clrSignal
-        this._virtualStack.inputClr = clrSignal
+        this._internalStackPointerRegister.inputPre = clrSignal
+        this._internalStack.inputClr = clrSignal
 
-        this._virtualStackPointerPreOUflowFlipflopD.inputClr = clrSignal
-        this._virtualStackPointerOUflowFlipflopD.inputClr = clrSignal
+        this._internalStackPointerPreOUflowFlipflopD.inputClr = clrSignal
+        this._internalStackPointerOUflowFlipflopD.inputClr = clrSignal
 
-        this._virtualOperationStageCounter.inputClr = clrSignal
+        this._internalOperationStageCounter.inputClr = clrSignal
 
-        this._pipeline = this._virtualPipelineStateFlipflopD.outputQ
+        this._pipeline = this._internalPipelineStateFlipflopD.outputQ
 
         // FETCH Stage
 
         const isa = this.inputValues(this.inputs.Isa)
 
         //const isa = this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ)
-        //console.log(this._virtualFetchFlipflopD.outputQ)
+        //console.log(this._internalFetchFlipflopD.outputQ)
         // Needs to revert all inputs to be compatible with choosen ISA
         const isa_FETCH = isa.reverse()
         //console.log(this.getOperandsNumberWithRadix(isa_FETCH, 2))
         // naive approach !
-        // this._virtualInstructionRegister.inputsD = isa_FETCH
-        VirtualRegister.setInputValues(this._virtualInstructionRegister.inputsD, isa_FETCH)
-        // console.log("*",this._virtualInstructionRegister.inputsD)
+        // this._internalInstructionRegister.inputsD = isa_FETCH
+        InternalRegister.setInputValues(this._internalInstructionRegister.inputsD, isa_FETCH)
+        // console.log("*",this._internalInstructionRegister.inputsD)
 
         // const isa_FETCH_opCodeValue = isa_FETCH.slice(0, 4).reverse()
         const isa_FETCH_opCodeValue = isa_FETCH.slice(0, 4)
@@ -901,7 +901,7 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         if (CPU.isClockTrigger(this._trigger, prevClock, clockSync) || clrSignal) {
-            let currentIsaAddress = displayValuesFromArray(this._virtualProgramCounterRegister.outputsQ, false)[1]
+            let currentIsaAddress = displayValuesFromArray(this._internalProgramCounterRegister.outputsQ, false)[1]
             if (currentIsaAddress == Unknown) {
                 currentIsaAddress = -1
             }
@@ -944,11 +944,11 @@ export class CPU extends CPUBase<CPURepr> {
         // DECCODE Stage
         // ISA_v8
 
-        const opCodeValue = this._virtualInstructionRegister.outputsQ.slice(0, 4).reverse()
+        const opCodeValue = this._internalInstructionRegister.outputsQ.slice(0, 4).reverse()
         const opCodeIndex = displayValuesFromArray(opCodeValue, false)[1]
         const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
 
-        const operandValue = this._virtualInstructionRegister.outputsQ.slice(4, 8).reverse()
+        const operandValue = this._internalInstructionRegister.outputsQ.slice(4, 8).reverse()
 
         const _ALUopValue = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
         const _ALUopIndex = displayValuesFromArray(_ALUopValue, false)[1]
@@ -965,86 +965,86 @@ export class CPU extends CPUBase<CPURepr> {
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
 
-        const _ALUoutputs = doALUOp(_ALUop, this._virtualAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
+        const _ALUoutputs = doALUOp(_ALUop, this._internalAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
         // console.log("***"+operandValue)
         // console.log("muxData " + _inputsAccumulatorDataSelector)
         let _inputsAccumulatorData : LogicValue[]
         if (_operandsDataSelectValueIndex === 0) {
             _inputsAccumulatorData = operandValue
         } else if (_operandsDataSelectValueIndex === 1) {
-            // console.log(this._virtualAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
-            _inputsAccumulatorData = this._virtualAccumulatorRegister.outputsQ
+            // console.log(this._internalAccumulatorRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
+            _inputsAccumulatorData = this._internalAccumulatorRegister.outputsQ
         } else if (_operandsDataSelectValueIndex === 2) {
             _inputsAccumulatorData = _ALUoutputs.s
             // console.log(_inputsAccumulatorData)
         } else if (_operandsDataSelectValueIndex === 3) {
             _inputsAccumulatorData = this.inputValues(this.inputs.Din).reverse()
         } else {
-            _inputsAccumulatorData = this._virtualAccumulatorRegister.outputsQ
+            _inputsAccumulatorData = this._internalAccumulatorRegister.outputsQ
         }
 
-        this._virtualAccumulatorRegister.inputsD = _inputsAccumulatorData
+        this._internalAccumulatorRegister.inputsD = _inputsAccumulatorData
 
-        this._virtualFlagsRegister.inputsD[0] = this.allZeros(_ALUoutputs.s)
-        this._virtualFlagsRegister.inputsD[1] = _ALUoutputs.cout
-        // this._virtualFlagsRegister.inputsD[0] = this.allZeros(_inputsAccumulatorData)
+        this._internalFlagsRegister.inputsD[0] = this.allZeros(_ALUoutputs.s)
+        this._internalFlagsRegister.inputsD[1] = _ALUoutputs.cout
+        // this._internalFlagsRegister.inputsD[0] = this.allZeros(_inputsAccumulatorData)
 
-        const c = this._virtualFlagsRegister.outputsQ[1]
-        const z = this._virtualFlagsRegister.outputsQ[0]
+        const c = this._internalFlagsRegister.outputsQ[1]
+        const z = this._internalFlagsRegister.outputsQ[0]
 
         // PROGRAM COUNTER LOGIC
         // STACK MANAGEMENT
-        const _virtualProgramCounterSelectedRegisterOutputs = this._pipeline? this._virtualPreviousProgramCounterRegister.outputsQ : this._virtualProgramCounterRegister.outputsQ
+        const _internalProgramCounterSelectedRegisterOutputs = this._pipeline? this._internalPreviousProgramCounterRegister.outputsQ : this._internalProgramCounterRegister.outputsQ
 
         const _stackPointerModification = opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
         const _stackPointerDecrement = !opCodeValue[0] && _stackPointerModification
         const _stackPointerIncrement = opCodeValue[0] && _stackPointerModification
 
-        const _stackPointerALUinputA = this._virtualStackPointerRegister.outputsQ
+        const _stackPointerALUinputA = this._internalStackPointerRegister.outputsQ
         const _stackPointerALUinputB = [true]
         ArrayClampOrPad(_stackPointerALUinputB, this.numStackBits, false)
         const _stackPointerALUoutputs= doALUOp("A+B", _stackPointerALUinputA, _stackPointerALUinputB,false)
         //console.log("SP " +  _stackPointerALUoutputs.s)
-        //const _stackPointer = _stackPointerDecrement? this._virtualStackPointerRegister.inputsD : _stackPointerALUoutputs.s
+        //const _stackPointer = _stackPointerDecrement? this._internalStackPointerRegister.inputsD : _stackPointerALUoutputs.s
 
-        //console.log("PC selected " + _virtualProgramCounterSelectedRegisterOutputs)
+        //console.log("PC selected " + _internalProgramCounterSelectedRegisterOutputs)
 
-        this._virtualStackPointerRegister.inputsD = this._virtualStackPointerRegister.outputsQ
-        this._virtualStackPointerRegister.inputInc = _stackPointerIncrement
-        this._virtualStackPointerRegister.inputDec = _stackPointerDecrement
+        this._internalStackPointerRegister.inputsD = this._internalStackPointerRegister.outputsQ
+        this._internalStackPointerRegister.inputInc = _stackPointerIncrement
+        this._internalStackPointerRegister.inputDec = _stackPointerDecrement
 
-        this._virtualStack.inputsD = _virtualProgramCounterSelectedRegisterOutputs
-        this._virtualStack.inputWE = _stackPointerDecrement
-        this._virtualStack.inputsAddr = _stackPointerIncrement? _stackPointerALUoutputs.s : this._virtualStackPointerRegister.outputsQ
+        this._internalStack.inputsD = _internalProgramCounterSelectedRegisterOutputs
+        this._internalStack.inputWE = _stackPointerDecrement
+        this._internalStack.inputsAddr = _stackPointerIncrement? _stackPointerALUoutputs.s : this._internalStackPointerRegister.outputsQ
 
-        const _stackPointerRegisterNotOrOnOutputs= !(logicalOROnEveryBits(this._virtualStackPointerRegister.outputsQ))
-        const _stackPointerRegisterAndOnOutputs= logicalANDOnEveryBits(this._virtualStackPointerRegister.outputsQ)
+        const _stackPointerRegisterNotOrOnOutputs= !(logicalOROnEveryBits(this._internalStackPointerRegister.outputsQ))
+        const _stackPointerRegisterAndOnOutputs= logicalANDOnEveryBits(this._internalStackPointerRegister.outputsQ)
 
-        const _virtualStackPointerPreOUflowFlipflopDoutputQ= this._virtualStackPointerPreOUflowFlipflopD.outputQ
-        this._virtualStackPointerPreOUflowFlipflopD.inputD = (_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || !(_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _virtualStackPointerPreOUflowFlipflopDoutputQ)
+        const _internalStackPointerPreOUflowFlipflopDoutputQ= this._internalStackPointerPreOUflowFlipflopD.outputQ
+        this._internalStackPointerPreOUflowFlipflopD.inputD = (_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || !(_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ)
 
-        const _virtualStackPointerOUflowFlipflopDoutputQ= this._virtualStackPointerOUflowFlipflopD.outputQ
-        this._virtualStackPointerOUflowFlipflopD.inputD = ((_stackPointerRegisterAndOnOutputs && _stackPointerDecrement && this._virtualStackPointerPreOUflowFlipflopD.outputQ)
-            || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && this._virtualStackPointerPreOUflowFlipflopD.outputQ̅ )) || _virtualStackPointerOUflowFlipflopDoutputQ
+        const _internalStackPointerOUflowFlipflopDoutputQ= this._internalStackPointerOUflowFlipflopD.outputQ
+        this._internalStackPointerOUflowFlipflopD.inputD = ((_stackPointerRegisterAndOnOutputs && _stackPointerDecrement && this._internalStackPointerPreOUflowFlipflopD.outputQ)
+            || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && this._internalStackPointerPreOUflowFlipflopD.outputQ̅ )) || _internalStackPointerOUflowFlipflopDoutputQ
 
         const _jumpPostPart = opCodeValue[2] && !opCodeValue[3]
         this._jump = ((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && _jumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
         this._backwardJump = opCodeValue[0] && !opCodeValue[1] && _jumpPostPart
 
-        this._virtualProgramCounterRegister.inputInc = !this._jump
+        this._internalProgramCounterRegister.inputInc = !this._jump
 
         //console.log(_jump)
         const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
         //console.log(this._backwardJump)
-        const _programCounterALUinputA= _stackPointerIncrement? this._virtualStack.value.out : _virtualProgramCounterSelectedRegisterOutputs
-        // console.log(this._virtualStack.value.out)
+        const _programCounterALUinputA= _stackPointerIncrement? this._internalStack.value.out : _internalProgramCounterSelectedRegisterOutputs
+        // console.log(this._internalStack.value.out)
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const _programCounterALUinputB = operandValue.slice()
         ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits,false)
 
         if (this._jump) {
             if (this._directAddressingMode) {
-                this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
+                this._internalProgramCounterRegister.inputsD = _programCounterALUinputB
             } else {
                 //console.log(_programCounterALUinputB)
                 let _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, _stackPointerIncrement)
@@ -1052,119 +1052,119 @@ export class CPU extends CPUBase<CPURepr> {
                 // We must go back of one step cylcle
                 if (this._pipeline) {
                     _programCounterALUoutputs = doALUOp("A-1", _programCounterALUoutputs.s, _programCounterALUinputB,false)
-                    this._virtualProgramCounterRegister.inputInc = !this._jump
+                    this._internalProgramCounterRegister.inputInc = !this._jump
                 } else {
-                    this._virtualProgramCounterRegister.inputInc = this._virtualExecuteFlipflopD && !this._jump
+                    this._internalProgramCounterRegister.inputInc = this._internalExecuteFlipflopD && !this._jump
                 }
-                this._virtualProgramCounterRegister.inputsD = _programCounterALUoutputs.s
+                this._internalProgramCounterRegister.inputsD = _programCounterALUoutputs.s
             }
         }
 
-        const ramWESyncValue = this._pipeline ? clockSync : clockSync && this._virtualExecuteFlipflopD.outputQ
+        const ramWESyncValue = this._pipeline ? clockSync : clockSync && this._internalExecuteFlipflopD.outputQ
 
         // CONTROL UNIT
 
-        this._virtualHaltSignalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
-        this._virtualHaltSignalFlipflopD.inputClock = clockSync
-        this._virtualHaltSignalFlipflopD.recalcVirtualValue()
+        this._internalHaltSignalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
+        this._internalHaltSignalFlipflopD.inputClock = clockSync
+        this._internalHaltSignalFlipflopD.recalcInternalValue()
 
-        const _virtualFetchFlipflopDoutputQ̅ = this._virtualRunStopFlipflopD.outputQ̅
-        this._virtualRunStopFlipflopD.inputD = _virtualFetchFlipflopDoutputQ̅
-        this._virtualRunStopFlipflopD.inputClock = (clockSync && this._virtualHaltSignalFlipflopD.outputQ) || this.inputs.RunStop.value
-        this._virtualRunStopFlipflopD.recalcVirtualValue()
+        const _internalFetchFlipflopDoutputQ̅ = this._internalRunStopFlipflopD.outputQ̅
+        this._internalRunStopFlipflopD.inputD = _internalFetchFlipflopDoutputQ̅
+        this._internalRunStopFlipflopD.inputClock = (clockSync && this._internalHaltSignalFlipflopD.outputQ) || this.inputs.RunStop.value
+        this._internalRunStopFlipflopD.recalcInternalValue()
 
-        this._virtualResetStateFlipflopD.inputD = false
-        this._virtualResetStateFlipflopD.inputClock = clockSync
-        this._virtualResetStateFlipflopD.recalcVirtualValue()
+        this._internalResetStateFlipflopD.inputD = false
+        this._internalResetStateFlipflopD.inputClock = clockSync
+        this._internalResetStateFlipflopD.recalcInternalValue()
 
-        //this._virtualPipelineStateFlipflopD.inputD = this.inputs.Pipeline.value
-        this._virtualPipelineStateFlipflopD.inputD = false
-        this._virtualPipelineStateFlipflopD.inputClock = clockSync && this._virtualResetStateFlipflopD.outputQ
-        this._virtualPipelineStateFlipflopD.recalcVirtualValue()
+        //this._internalPipelineStateFlipflopD.inputD = this.inputs.Pipeline.value
+        this._internalPipelineStateFlipflopD.inputD = false
+        this._internalPipelineStateFlipflopD.inputClock = clockSync && this._internalResetStateFlipflopD.outputQ
+        this._internalPipelineStateFlipflopD.recalcInternalValue()
 
-        const _virtualFetchFlipflopDoutputQ = this._virtualFetchFlipflopD.outputQ
-        const _virtualDecodeFlipflopDoutputQ = this._virtualDecodeFlipflopD.outputQ
-        const _virtualExecuteFlipflopDoutputQ = this._virtualExecuteFlipflopD.outputQ
+        const _internalFetchFlipflopDoutputQ = this._internalFetchFlipflopD.outputQ
+        const _internalDecodeFlipflopDoutputQ = this._internalDecodeFlipflopD.outputQ
+        const _internalExecuteFlipflopDoutputQ = this._internalExecuteFlipflopD.outputQ
 
-        this._virtualFetchFlipflopD.inputD = _virtualExecuteFlipflopDoutputQ
-        this._virtualFetchFlipflopD.inputClock = clockSync
-        this._virtualFetchFlipflopD.recalcVirtualValue()
+        this._internalFetchFlipflopD.inputD = _internalExecuteFlipflopDoutputQ
+        this._internalFetchFlipflopD.inputClock = clockSync
+        this._internalFetchFlipflopD.recalcInternalValue()
 
-        this._virtualDecodeFlipflopD.inputD = _virtualFetchFlipflopDoutputQ
-        this._virtualDecodeFlipflopD.inputClock = clockSync
-        this._virtualDecodeFlipflopD.recalcVirtualValue()
+        this._internalDecodeFlipflopD.inputD = _internalFetchFlipflopDoutputQ
+        this._internalDecodeFlipflopD.inputClock = clockSync
+        this._internalDecodeFlipflopD.recalcInternalValue()
 
-        this._virtualExecuteFlipflopD.inputD = _virtualDecodeFlipflopDoutputQ
-        this._virtualExecuteFlipflopD.inputClock = clockSync
-        this._virtualExecuteFlipflopD.recalcVirtualValue()
+        this._internalExecuteFlipflopD.inputD = _internalDecodeFlipflopDoutputQ
+        this._internalExecuteFlipflopD.inputClock = clockSync
+        this._internalExecuteFlipflopD.recalcInternalValue()
 
-        this._virtualOperationStageCounter.inputClock = clockSync
-        this._virtualOperationStageCounter.recalcVirtualValue()
+        this._internalOperationStageCounter.inputClock = clockSync
+        this._internalOperationStageCounter.recalcInternalValue()
 
         if (this._pipeline) {
-            this._virtualInstructionRegister.inputClock = clockSync
-            this._virtualInstructionRegister.recalcVirtualValue()
+            this._internalInstructionRegister.inputClock = clockSync
+            this._internalInstructionRegister.recalcInternalValue()
 
-            this._virtualAccumulatorRegister.inputClock = clockSync
-            this._virtualAccumulatorRegister.recalcVirtualValue()
+            this._internalAccumulatorRegister.inputClock = clockSync
+            this._internalAccumulatorRegister.recalcInternalValue()
 
-            this._virtualFlagsRegister.inputClock = clockSync
-            this._virtualFlagsRegister.recalcVirtualValue()
+            this._internalFlagsRegister.inputClock = clockSync
+            this._internalFlagsRegister.recalcInternalValue()
 
-            this._virtualProgramCounterRegister.inputClock = clockSync
-            this._virtualProgramCounterRegister.recalcVirtualValue()
+            this._internalProgramCounterRegister.inputClock = clockSync
+            this._internalProgramCounterRegister.recalcInternalValue()
 
-            this._virtualPreviousProgramCounterRegister.inputsD = this._virtualProgramCounterRegister.outputsQ
-            this._virtualPreviousProgramCounterRegister.inputClock = clockSync
-            this._virtualPreviousProgramCounterRegister.recalcVirtualValue()
+            this._internalPreviousProgramCounterRegister.inputsD = this._internalProgramCounterRegister.outputsQ
+            this._internalPreviousProgramCounterRegister.inputClock = clockSync
+            this._internalPreviousProgramCounterRegister.recalcInternalValue()
 
-            this._virtualStackPointerRegister.inputClock = clockSync
-            this._virtualStackPointerRegister.recalcVirtualValue()
+            this._internalStackPointerRegister.inputClock = clockSync
+            this._internalStackPointerRegister.recalcInternalValue()
 
-            this._virtualStack.inputClock = clockSync
-            this._virtualStack.value = this._virtualStack.recalcVirtualValue()
+            this._internalStack.inputClock = clockSync
+            this._internalStack.value = this._internalStack.recalcInternalValue()
 
-            this._virtualStackPointerPreOUflowFlipflopD.inputClock = clockSync && ((_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _virtualStackPointerPreOUflowFlipflopDoutputQ))
-            this._virtualStackPointerPreOUflowFlipflopD.recalcVirtualValue()
+            this._internalStackPointerPreOUflowFlipflopD.inputClock = clockSync && ((_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ))
+            this._internalStackPointerPreOUflowFlipflopD.recalcInternalValue()
 
-            this._virtualStackPointerOUflowFlipflopD.inputClock = clockSync
-            this._virtualStackPointerOUflowFlipflopD.recalcVirtualValue()
+            this._internalStackPointerOUflowFlipflopD.inputClock = clockSync
+            this._internalStackPointerOUflowFlipflopD.recalcInternalValue()
         } else {
-            const clockSyncFectch =  clockSync && this._virtualFetchFlipflopD.outputQ
-            const clockSyncDecode =  clockSync && this._virtualDecodeFlipflopD.outputQ
-            const clockSyncExecute =  clockSync && this._virtualExecuteFlipflopD.outputQ
+            const clockSyncFectch =  clockSync && this._internalFetchFlipflopD.outputQ
+            const clockSyncDecode =  clockSync && this._internalDecodeFlipflopD.outputQ
+            const clockSyncExecute =  clockSync && this._internalExecuteFlipflopD.outputQ
 
-            this._virtualInstructionRegister.inputClock = clockSyncFectch
-            this._virtualInstructionRegister.recalcVirtualValue()
+            this._internalInstructionRegister.inputClock = clockSyncFectch
+            this._internalInstructionRegister.recalcInternalValue()
 
-            this._virtualAccumulatorRegister.inputClock = clockSyncDecode
-            this._virtualAccumulatorRegister.recalcVirtualValue()
+            this._internalAccumulatorRegister.inputClock = clockSyncDecode
+            this._internalAccumulatorRegister.recalcInternalValue()
 
-            this._virtualFlagsRegister.inputClock = clockSyncDecode
-            this._virtualFlagsRegister.recalcVirtualValue()
+            this._internalFlagsRegister.inputClock = clockSyncDecode
+            this._internalFlagsRegister.recalcInternalValue()
 
-            this._virtualProgramCounterRegister.inputClock  = clockSyncExecute
-            this._virtualProgramCounterRegister.recalcVirtualValue()
+            this._internalProgramCounterRegister.inputClock  = clockSyncExecute
+            this._internalProgramCounterRegister.recalcInternalValue()
 
-            this._virtualPreviousProgramCounterRegister.inputsD = this._virtualProgramCounterRegister.outputsQ
-            this._virtualPreviousProgramCounterRegister.inputClock = clockSyncExecute
-            this._virtualPreviousProgramCounterRegister.recalcVirtualValue()
+            this._internalPreviousProgramCounterRegister.inputsD = this._internalProgramCounterRegister.outputsQ
+            this._internalPreviousProgramCounterRegister.inputClock = clockSyncExecute
+            this._internalPreviousProgramCounterRegister.recalcInternalValue()
 
-            this._virtualStackPointerRegister.inputClock = clockSyncExecute
-            this._virtualStackPointerRegister.recalcVirtualValue()
+            this._internalStackPointerRegister.inputClock = clockSyncExecute
+            this._internalStackPointerRegister.recalcInternalValue()
 
-            this._virtualStack.inputClock = clockSyncExecute
-            this._virtualStack.value = this._virtualStack.recalcVirtualValue()
+            this._internalStack.inputClock = clockSyncExecute
+            this._internalStack.value = this._internalStack.recalcInternalValue()
 
-            this._virtualStackPointerPreOUflowFlipflopD.inputClock = clockSyncExecute && ((_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _virtualStackPointerPreOUflowFlipflopDoutputQ))
-            this._virtualStackPointerPreOUflowFlipflopD.recalcVirtualValue()
+            this._internalStackPointerPreOUflowFlipflopD.inputClock = clockSyncExecute && ((_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ))
+            this._internalStackPointerPreOUflowFlipflopD.recalcInternalValue()
 
-            this._virtualStackPointerOUflowFlipflopD.inputClock = clockSyncExecute
-            this._virtualStackPointerOUflowFlipflopD.recalcVirtualValue()
+            this._internalStackPointerOUflowFlipflopD.inputClock = clockSyncExecute
+            this._internalStackPointerOUflowFlipflopD.recalcInternalValue()
         }
 
         if (CPU.isClockTrigger(this._trigger, prevClock, clockSync) || clrSignal) {
-            let currentIsaAddress = displayValuesFromArray(this._virtualProgramCounterRegister.outputsQ, false)[1]
+            let currentIsaAddress = displayValuesFromArray(this._internalProgramCounterRegister.outputsQ, false)[1]
             if (currentIsaAddress == Unknown) {
                 currentIsaAddress = -1
             }
@@ -1216,17 +1216,17 @@ export class CPU extends CPUBase<CPURepr> {
             }
         } else {
             newState = {
-                isaadr: this._virtualProgramCounterRegister.outputsQ,
+                isaadr: this._internalProgramCounterRegister.outputsQ,
                 dadr: operandValue,
-                dout: this._virtualAccumulatorRegister.outputsQ,
+                dout: this._internalAccumulatorRegister.outputsQ,
                 ramwesync: ramWESyncValue,
                 ramwe: ramwevalue,
                 resetsync: clrSignal,
                 sync: clockSync,
-                z: this._virtualFlagsRegister.outputsQ[0],
+                z: this._internalFlagsRegister.outputsQ[0],
                 //v: false_,
-                cout: this._virtualFlagsRegister.outputsQ[1],
-                stackouflow: this._virtualStackPointerOUflowFlipflopD.outputQ,
+                cout: this._internalFlagsRegister.outputsQ[1],
+                stackouflow: this._internalStackPointerOUflowFlipflopD.outputQ,
                 haltsignal: haltSignal,
                 runningstate: runningState,
             }
@@ -1384,7 +1384,7 @@ export class CPU extends CPUBase<CPURepr> {
             drawLabel(ctx, this.orient, "Halt", "e", right, this.outputs.HaltSignal, undefined, true)
             drawLabel(ctx, this.orient, "Run state", "e", right, this.outputs.RunningState, undefined, true)
 
-            const counter = displayValuesFromArray(this._virtualOperationStageCounter.outputsQ, false)[1]
+            const counter = displayValuesFromArray(this._internalOperationStageCounter.outputsQ, false)[1]
             const stringRep = formatWithRadix(counter, 10, 16, false)
             const stage = (counter == "?") ? 0 : CPUStages[(counter - 1) % 3]
 
@@ -1480,8 +1480,8 @@ export class CPU extends CPUBase<CPURepr> {
 
                 const valueCenter = ctx.rotatePoint(Orientation.isVertical(this.orient) ? this.inputs.RunStop.posXInParentTransform : this.inputs.ManStep.posXInParentTransform, this.inputs.Isa.group.posYInParentTransform)
 
-                const numCellsToDraw = this._virtualStack.numWords
-                const numDataBits = this._virtualStack.numDataBits
+                const numCellsToDraw = this._internalStack.numWords
+                const numDataBits = this._internalStack.numDataBits
 
                 const cellWidth = 8 * 10 / numDataBits
                 //const cellHeight = 4 * 10 / numCellsToDraw
@@ -1501,7 +1501,7 @@ export class CPU extends CPUBase<CPURepr> {
 
                 for (let i = 0; i < numCellsToDraw; i++) {
                     for (let j = 0; j < numDataBits; j++) {
-                        const v = this._virtualStack.value.mem[i][numDataBits - j - 1]
+                        const v = this._internalStack.value.mem[i][numDataBits - j - 1]
                         if (v !== false) {
                             g.fillStyle = colorForLogicValue(v)
                             g.fillRect(contentLeft + j * cellWidth, contentTop + i * cellHeight, cellWidth, cellHeight)
@@ -1523,10 +1523,10 @@ export class CPU extends CPUBase<CPURepr> {
                 g.lineWidth = borderLineWidth
                 g.strokeRect(contentLeft - borderLineWidth / 2, contentTop - borderLineWidth / 2, contentRight - contentLeft + borderLineWidth, contentBottom - contentTop + borderLineWidth)
 
-                if (!isUnknown(this._virtualStack.currentAddress())) {
-                    const currentVirtualStackAddress = this._virtualStack.currentAddress() as number
-                    if (currentVirtualStackAddress >= 0 && currentVirtualStackAddress < 4) {
-                        const arrowY = contentTop + currentVirtualStackAddress * cellHeight + cellHeight / 2
+                if (!isUnknown(this._internalStack.currentAddress())) {
+                    const currentInternalStackAddress = this._internalStack.currentAddress() as number
+                    if (currentInternalStackAddress >= 0 && currentInternalStackAddress < 4) {
+                        const arrowY = contentTop + currentInternalStackAddress * cellHeight + cellHeight / 2
                         const arrowRight = contentLeft - 3
                         const arrowWidth = 8
                         const arrowHalfHeight = 3
@@ -1575,7 +1575,7 @@ export class CPU extends CPUBase<CPURepr> {
 
     public get opCode(): CPUOpCode | Unknown {
         //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
-        const opCodeValues = this._virtualInstructionRegister.inputsD.slice(0,4)
+        const opCodeValues = this._internalInstructionRegister.inputsD.slice(0,4)
         //opValues.push(this.inputs.Mode.value)
         const opCodeIndex = displayValuesFromArray(opCodeValues, true)[1]
         // TO DO
@@ -1584,11 +1584,11 @@ export class CPU extends CPUBase<CPURepr> {
     }
 
     public get operands(): LogicValue[] {
-        return this._virtualInstructionRegister.inputsD.slice(4,8)
+        return this._internalInstructionRegister.inputsD.slice(4,8)
     }
 
     public get cycle(): number {
-        const cycleValue = displayValuesFromArray(this._virtualOperationStageCounter.outputsQ, false)[1]
+        const cycleValue = displayValuesFromArray(this._internalOperationStageCounter.outputsQ, false)[1]
         return isUnknown(cycleValue) ? 0 : cycleValue
     }
 
