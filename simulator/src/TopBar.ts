@@ -3,7 +3,7 @@ import { Serialization } from "./Serialization"
 import { TimelineState } from "./Timeline"
 import { UndoState } from "./UndoManager"
 import { CustomComponentDef } from "./components/CustomComponent"
-import { Modifier, a, attr, button, cls, div, emptyMod, i, input, mods, raw, span, style, title, type } from "./htmlgen"
+import { Modifier, a, attr, button, cls, div, emptyMod, i, input, mods, raw, span, style, title, type, makeTab, makeButton, makeButtonWithLabel, makeLabel, makeSep, makeLink } from "./htmlgen"
 import { IconName, inlineIconSvgFor } from "./images"
 import { S } from "./strings"
 import { Mode, UIDisplay, setActive, setDisplay, setEnabled, setVisible } from "./utils"
@@ -53,18 +53,18 @@ export class TopBar {
         const s = S.TopBar
         this.alwaysShowCircuitName = editor.isSingleton
 
-        this.dirtyIndicator = this.makeLabel(mods(style("margin: 3px 3px 0 -2px; font-size: 20pt"), "•", title(s.DirtyTooltip)))
-        this.circuitNameLabel = this.makeLink(mods("", title(s.CircuitNameTooltip)), this.runSetCircuitNameDialog.bind(this))
-        this.mainCircuitTab = this.makeTab(
+        this.dirtyIndicator = makeLabel(mods(style("margin: 3px 3px 0 -2px; font-size: 20pt"), "•", title(s.DirtyTooltip)))
+        this.circuitNameLabel = makeLink(mods("", title(s.CircuitNameTooltip)), this.runSetCircuitNameDialog.bind(this), this.editor)
+        this.mainCircuitTab = makeTab(
             this.circuitNameLabel,
         )
-        this.customComponentChevron = this.makeLabel("❯")
+        this.customComponentChevron = makeLabel("❯")
         this.customComponentChevron.style.fontSize = "14pt"
-        this.customComponentNameLabel = this.makeLink(mods("", title(s.CustomComponentCaptionTooltip)), this.runSetCustomComponentCaptionDialog.bind(this))
+        this.customComponentNameLabel = makeLink(mods("", title(s.CustomComponentCaptionTooltip)), this.runSetCustomComponentCaptionDialog.bind(this), this.editor)
         this.customComponentNameLabel.style.fontWeight = "bolder"
-        this.closeCustomComponentButton = this.makeButton("close", s.CloseCircuit, () => editor.tryCloseCustomComponentEditor())
+        this.closeCustomComponentButton = makeButton("close", s.CloseCircuit, () => editor.tryCloseCustomComponentEditor(), this.editor)
         this.closeCustomComponentButton.style.padding = "0"
-        this.customComponentTab = this.makeTab(
+        this.customComponentTab = makeTab(
             this.closeCustomComponentButton,
             this.customComponentNameLabel,
         )
@@ -76,38 +76,38 @@ export class TopBar {
                 this.customComponentTab,
             ).render()
 
-        this.undoButton = this.makeButtonWithLabel("undo", s.Undo,
-            () => this.editor.editTools.undoMgr.undo())
-        this.redoButton = this.makeButtonWithLabel("redo", s.Redo,
-            () => this.editor.editTools.undoMgr.redoOrRepeat())
+        this.undoButton = makeButtonWithLabel("undo", s.Undo,
+            () => this.editor.editTools.undoMgr.undo(), this.editor)
+        this.redoButton = makeButtonWithLabel("redo", s.Redo,
+            () => this.editor.editTools.undoMgr.redoOrRepeat(), this.editor)
 
-        this.resetButton = this.makeButtonWithLabel("reset", s.Reset,
-            () => this.editor.resetCircuit())
+        this.resetButton = makeButtonWithLabel("reset", s.Reset,
+            () => this.editor.resetCircuit(), this.editor)
 
-        this.openButton = this.makeButtonWithLabel("open", s.Open,
-            this.openHandler.bind(this))
-        this.downloadButton = this.makeButtonWithLabel("download", s.Download,
-            this.saveHandler.bind(this))
-        this.screenshotButton = this.makeButtonWithLabel("screenshot", s.Screenshot,
-            this.screenshotHandler.bind(this))
+        this.openButton = makeButtonWithLabel("open", s.Open,
+            this.openHandler.bind(this), this.editor)
+        this.downloadButton = makeButtonWithLabel("download", s.Download,
+            this.saveHandler.bind(this), this.editor)
+        this.screenshotButton = makeButtonWithLabel("screenshot", s.Screenshot,
+            this.screenshotHandler.bind(this), this.editor)
 
-        this.timelineButtonSep = this.makeSep()
-        this.pauseButton = this.makeButtonWithLabel("pause", s.TimelinePause,
-            () => this.editor.timeline.pause())
-        this.playButton = this.makeButtonWithLabel("play", s.TimelinePlay,
-            () => this.editor.timeline.play())
-        this.stepButton = this.makeButtonWithLabel("step", s.TimelineStep,
-            () => this.editor.timeline.step())
+        this.timelineButtonSep = makeSep()
+        this.pauseButton = makeButtonWithLabel("pause", s.TimelinePause,
+            () => this.editor.timeline.pause(), this.editor)
+        this.playButton = makeButtonWithLabel("play", s.TimelinePlay,
+            () => this.editor.timeline.play(), this.editor)
+        this.stepButton = makeButtonWithLabel("step", s.TimelineStep,
+            () => this.editor.timeline.step(), this.editor)
 
-        this.timeLabel = this.makeLabel(s.TimeLabel + "0")
+        this.timeLabel = makeLabel(s.TimeLabel + "0")
         this.timeLabel.style.fontSize = "8pt"
 
-        this.designButton = this.makeButtonWithLabel("mouse", s.Design,
-            () => this.editor.setCurrentMouseAction("edit"))
-        this.deleteButton = this.makeButtonWithLabel("trash", s.Delete,
-            () => this.editor.setCurrentMouseAction("delete"))
-        this.moveButton = this.makeButton("move", s.Move[1],
-            () => this.editor.setCurrentMouseAction("move"))
+        this.designButton = makeButtonWithLabel("mouse", s.Design,
+            () => this.editor.setCurrentMouseAction("edit"), this.editor)
+        this.deleteButton = makeButtonWithLabel("trash", s.Delete,
+            () => this.editor.setCurrentMouseAction("delete"), this.editor)
+        this.moveButton = makeButton("move", s.Move[1],
+            () => this.editor.setCurrentMouseAction("move"), this.editor)
 
         this.flexibleSep = div(style("flex: auto")).render()
 
@@ -120,7 +120,7 @@ export class TopBar {
         this.zoomLevelInput.addEventListener("change",
             editor.wrapHandler(this.zoomLevelHandler.bind(this)))
 
-        const zoomControl = this.makeLabel(mods(
+        const zoomControl = makeLabel(mods(
             this.zoomLevelInput, S.Settings.zoomLevelField[1]
         ))
 
@@ -131,10 +131,10 @@ export class TopBar {
                 this.undoButton,
                 this.redoButton,
 
-                this.makeSep(),
+                makeSep(),
                 this.resetButton,
 
-                this.makeSep(),
+                makeSep(),
                 this.openButton,
                 this.downloadButton,
                 this.screenshotButton,
@@ -145,7 +145,7 @@ export class TopBar {
                 this.stepButton,
                 this.timeLabel,
 
-                this.makeSep(true),
+                makeSep(true),
                 this.designButton,
                 this.deleteButton,
 
@@ -382,44 +382,6 @@ export class TopBar {
         setActive(this.designButton, tool === "edit")
         setActive(this.deleteButton, tool === "delete")
         setActive(this.moveButton, tool === "move")
-    }
-
-
-    // Factory methods
-
-    private makeTab(...modifiers: Modifier[]): HTMLDivElement {
-        return div(cls("barTab"), ...modifiers).render()
-    }
-
-    private makeButtonWithLabel(icon: IconName, labelTooltip: [Modifier, string], handler: (e: MouseEvent) => void): HTMLButtonElement {
-        return this.makeButton(icon, labelTooltip[1], handler, labelTooltip[0])
-    }
-
-    private makeButton(icon: IconName, tooltip: string, handler: (e: MouseEvent) => void, label?: Modifier): HTMLButtonElement {
-        const labelSpan = label === undefined ? emptyMod : span(cls("btnLabel"), label)
-        const but =
-            button(
-                i(cls("svgicon"), raw(inlineIconSvgFor(icon))),
-                title(tooltip),
-                labelSpan
-            ).render()
-        but.addEventListener("click", this.editor.wrapHandler(handler))
-        return but
-    }
-
-    private makeLabel(label: Modifier): HTMLSpanElement {
-        return span(cls("barLabel"), label).render()
-    }
-
-    private makeLink(label: Modifier, handler: (e: MouseEvent) => void): HTMLSpanElement {
-        const link = a(cls("barLabel"), label).render()
-        link.addEventListener("click", this.editor.wrapHandler(handler))
-        return link
-    }
-
-    private makeSep(fat: boolean = false): HTMLElement {
-        const classes = fat ? "sep fat" : "sep"
-        return div(cls(classes)).render()
     }
 
 }

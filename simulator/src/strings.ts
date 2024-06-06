@@ -206,6 +206,30 @@ const Strings_fr = {
         Delete: tuple("Supprimer", "Supprime des éléments du circuit"),
         Move: tuple("Déplacer", "Déplace tout le circuit"),
     },
+    AssemblerEditor: {
+        DirtyTooltip: "Le circuit a été modifié depuis la dernière sauvegarde.",
+        CircuitNameTooltip: "Nom du circuit actuellement édité; cliquez pour modifier",
+        SetCircuitName: "Tapez le nom du circuit (ou laissez vide pour le nom par défaut):",
+        CustomComponentCaptionTooltip: "Nom du sous-circuit actuellement édité; cliquez pour modifier",
+        CloseCircuit: "Retour au circuit complet",
+
+        Undo: tuple("Annuler", "Annule la dernière action"),
+        Redo: tuple("Rétablir", "Rétablit la dernière action annulée ou répète l’action précédente"),
+
+        Download: tuple("Télécharger", "Télécharge le circuit (ou les composants personnalisés avec la touche Option/Alt)"),
+        Screenshot: tuple("Screenshot", "Télécharge le circuit sous forme d’image (PNG ou SVG avec touche Option/Alt)"),
+        Open: tuple("Ouvrir", "Ouvre un circuit précédemment téléchargé"),
+        Reset: tuple("Réinitialiser", "Réinitialise l’état de ce circuit"),
+
+        TimelinePlay: tuple("Play", "Démarre l’écoulement du temps"),
+        TimelinePause: tuple("Pause", "Arrête l’écoulement du temps"),
+        TimelineStep: tuple("Pas à pas", "Avance au prochain événement"),
+        TimeLabel: "Temps: ",
+
+        Design: tuple("Concevoir", "Compose ou modifie le circuit"),
+        Delete: tuple("Supprimer", "Supprime des éléments du circuit"),
+        Move: tuple("Déplacer", "Déplace tout le circuit"),
+    },
     Messages: {
         UnsupportedFileType: template("Type de fichier non pris en charge: ${type}."),
         LoadedDefinitions: template("${n} composant$s{n} personnalisé$s{n} chargé$s{n}"),
@@ -1028,6 +1052,30 @@ const Strings_en: Strings = {
         WireStyleCurve: "Curve",
     },
     TopBar: {
+        DirtyTooltip: "The circuit has been modified since the last download/save",
+        CircuitNameTooltip: "Name of the circuit; click to change",
+        SetCircuitName: "Set the name of the circuit (or leave empty to use the default name):",
+        CustomComponentCaptionTooltip: "Name of the subcircuit currently being edited; click to change",
+        CloseCircuit: "Back to the main circuit",
+
+        Undo: tuple("Undo", "Undo the last action"),
+        Redo: tuple("Redo", "Redo the last undone action or repeat the last action"),
+
+        Download: tuple("Download", "Download the circuit (or the custom components with Option/Alt key down)"),
+        Screenshot: tuple("Screenshot", "Download the circuit as an image (PNG or SVG with Option/Alt key down)"),
+        Open: tuple("Open", "Open a previously downloaded circuit"),
+        Reset: tuple("Reset", "Reset the state of this circuit"),
+
+        TimelinePlay: tuple("Play", "Starts logical time"),
+        TimelinePause: tuple("Pause", "Stops logical time"),
+        TimelineStep: tuple("Step", "Moves logical time to the next scheduled event"),
+        TimeLabel: "Time: ",
+
+        Design: tuple("Design", "Create or modify the circuit"),
+        Delete: tuple("Delete", "Delete elements from the circuit"),
+        Move: tuple("Move", "Move the whole circuit"),
+    },
+    AssemblerEditor: {
         DirtyTooltip: "The circuit has been modified since the last download/save",
         CircuitNameTooltip: "Name of the circuit; click to change",
         SetCircuitName: "Set the name of the circuit (or leave empty to use the default name):",

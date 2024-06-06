@@ -28,6 +28,7 @@ import {
     maxlength,
     selectedIndex,
     Modifier,
+    makeTab, makeButton, makeButtonWithLabel, makeLabel, makeSep, makeLink
 } from "./htmlgen"
 import { ROM, ROMRAMBase } from "./components/ROM"
 import { RAM } from "./components/RAM"
@@ -46,7 +47,7 @@ import { COLOR_BACKGROUND_INVALID, COLOR_MOUSE_OVER_DANGER, COLOR_BACKGROUND,
 import {Library, Serialization, stringifySmart} from "./Serialization"
 import {saveAs} from "file-saver"
 import pngMeta from "png-metadata-writer"
-import {S} from "./strings"
+import { S } from "./strings"
 import {MessageBar} from "./MessageBar"
 import {migrateData} from "./DataMigration"
 import {UndoState} from "./UndoManager"
@@ -103,6 +104,7 @@ const noOperandOpCode = ["NOP", "RET"] as string[]
 export class AssemblerEditor {
     public editor: LogicEditor
 
+
     //private readonly mainDiv: HTMLDivElement
 
     private readonly titleDiv: HTMLDivElement
@@ -156,6 +158,8 @@ export class AssemblerEditor {
 
     public constructor(editor: LogicEditor) {
         this.editor = editor
+
+        const s = S.AssemblerEditor
         /*
         TO DO Get from drag/drop or file
         finding the correct event !!!
@@ -219,6 +223,12 @@ export class AssemblerEditor {
             this.titleName
         ).render()
 
+        this.undoButton = makeButtonWithLabel("undo", s.Undo,
+            () => this.undoProgram(), this.editor)
+
+        this.redoButton = makeButtonWithLabel("redo", s.Redo,
+            () => this.redoProgram(), this.editor)
+        /*
         this.undoButton = button(
             i(cls("svgicon"),
                 raw(inlineIconSvgFor("undo"))),
@@ -235,7 +245,7 @@ export class AssemblerEditor {
         this.redoButton.addEventListener('click', this.editor.wrapHandler((handler) => {
             this.redoProgram()
         }))
-
+        */
         this.controlDivRAMROMSelect = select().render()
         this.getRAMROMList()
         this.controlDivRAMROMSelect.addEventListener('change', this.editor.wrapHandler((handler) => {

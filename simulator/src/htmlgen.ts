@@ -4,6 +4,8 @@
 //
 
 import { isHighImpedance, isUnknown, LogicValue, Unknown } from "./utils"
+import {IconName, inlineIconSvgFor} from "./images";
+import {LogicEditor} from "./LogicEditor";
 
 export interface ModifierObject {
     applyTo(parent: Element): void
@@ -169,4 +171,41 @@ export function tooltipContent(title: Modifier | undefined, body: Modifier, maxW
         title === undefined ? emptyMod : div(style("padding-bottom: 3px; border-bottom: 1px solid grey;"), title),
         div(body)
     )
+}
+
+// Factory methods
+
+export function makeTab(...modifiers: Modifier[]): HTMLDivElement {
+    return div(cls("barTab"), ...modifiers).render()
+}
+
+export function makeButton(icon: IconName, tooltip: string, handler: (e: MouseEvent) => void, editor: LogicEditor, label?: Modifier): HTMLButtonElement {
+    const labelSpan = label === undefined ? emptyMod : span(cls("btnLabel"), label)
+    const but =
+        button(
+            i(cls("svgicon"), raw(inlineIconSvgFor(icon))),
+            title(tooltip),
+            labelSpan
+        ).render()
+    but.addEventListener("click", editor.wrapHandler(handler))
+    return but
+}
+
+export function makeButtonWithLabel(icon: IconName, labelTooltip: [Modifier, string], handler: (e: MouseEvent) => void, editor: LogicEditor): HTMLButtonElement {
+    return makeButton(icon, labelTooltip[1], handler, editor, labelTooltip[0])
+}
+
+export function makeLabel(label: Modifier): HTMLSpanElement {
+    return span(cls("barLabel"), label).render()
+}
+
+export function makeLink(label: Modifier, handler: (e: MouseEvent) => void, editor: LogicEditor): HTMLSpanElement {
+    const link = a(cls("barLabel"), label).render()
+    link.addEventListener("click", editor.wrapHandler(handler))
+    return link
+}
+
+export function makeSep(fat: boolean = false): HTMLElement {
+    const classes = fat ? "sep fat" : "sep"
+    return div(cls(classes)).render()
 }

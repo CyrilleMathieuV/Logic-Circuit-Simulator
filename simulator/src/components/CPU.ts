@@ -961,6 +961,10 @@ export class CPU extends CPUBase<CPURepr> {
             (opCodeValue[2] && opCodeValue[3]) || (!opCodeValue[1] && opCodeValue[3]) || (!opCodeValue[0] && opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3])
         ]
 
+        const _inputsLoadSourceAccumulatorDataSelector = []
+
+        const _inputsLoadOrALUAccumulatorDataSelector = []
+
         let _operandsDataSelectValueIndex = displayValuesFromArray(_inputsAccumulatorDataSelector, false)[1]
 
         _operandsDataSelectValueIndex = isUnknown(_operandsDataSelectValueIndex) ? 3 : _operandsDataSelectValueIndex
@@ -989,8 +993,8 @@ export class CPU extends CPUBase<CPURepr> {
         this._internalFlagsRegister.inputsD[1] = _ALUoutputs.cout
         // this._internalFlagsRegister.inputsD[0] = this.allZeros(_inputsAccumulatorData)
 
-        const c = this._internalFlagsRegister.outputsQ[1]
         const z = this._internalFlagsRegister.outputsQ[0]
+        const c = this._internalFlagsRegister.outputsQ[1]
 
         // PROGRAM COUNTER LOGIC
         // STACK MANAGEMENT
