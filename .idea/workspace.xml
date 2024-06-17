@@ -9,7 +9,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]" />
+    <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU_v6.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU_v6.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/drawutils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/drawutils.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulator/src/strings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/strings.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -170,7 +176,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-WS-241.17011.90" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-WS-241.17890.13" />
       </set>
     </attachedChunks>
   </component>
@@ -332,6 +338,7 @@
       <workItem from="1716826729557" duration="64000" />
       <workItem from="1717065947295" duration="1683000" />
       <workItem from="1717418887953" duration="3000" />
+      <workItem from="1718613002051" duration="13122000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -458,14 +465,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00169" summary="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
-      <option name="closed" value="true" />
-      <created>1698229110555</created>
-      <option name="number" value="00169" />
-      <option name="presentableId" value="LOCAL-00169" />
-      <option name="project" value="LOCAL" />
-      <updated>1698229110556</updated>
     </task>
     <task id="LOCAL-00170" summary="CMN adds Stack to CPU (TODO : better presentation, linking with RAM/ROM added, CPU will control on/off AE, keypad)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
       <option name="closed" value="true" />
@@ -707,7 +706,15 @@
       <option name="project" value="LOCAL" />
       <updated>1716028179161</updated>
     </task>
-    <option name="localTasksCounter" value="200" />
+    <task id="LOCAL-00200" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <option name="closed" value="true" />
+      <created>1717664788658</created>
+      <option name="number" value="00200" />
+      <option name="presentableId" value="LOCAL-00200" />
+      <option name="project" value="LOCAL" />
+      <updated>1717664788658</updated>
+    </task>
+    <option name="localTasksCounter" value="201" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
