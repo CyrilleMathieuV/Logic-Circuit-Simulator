@@ -9,6 +9,7 @@ import { ComparatorDef } from "./components/Comparator"
 import { ParamDef, ParametrizedComponentDef, ParamsFromDefs } from "./components/Component"
 import { ControlledInverterDef } from "./components/ControlledInverter"
 import { CounterDef } from "./components/Counter"
+import { CPUDef } from "./components/CPU"
 import { CustomComponentDef, CustomComponentImageHeight, CustomComponentImageWidth } from "./components/CustomComponent"
 import { DecoderDef } from "./components/Decoder"
 import { Decoder16SegDef } from "./components/Decoder16Seg"
@@ -178,6 +179,8 @@ const componentsMenu: Array<Section> = [{
         Decoder7SegDef.button("Decoder7Seg", { compat: "decoder-7seg" }),
         Decoder16SegDef.button("Decoder16Seg", { compat: "decoder-16seg", visible: withButton }),
         DecoderBCD4Def.button("DecoderBCD4", { compat: "decoder-bcd4", visible: withButton }),
+
+        CPUDef.button({ addressInstructionBits: 8, dataBits: 4, addressDataBits: 4, stackBits: 2, instructionBits: 4 }, "CPU", { compat: "cpu", visible: withButton }),
 
     ],
 }]

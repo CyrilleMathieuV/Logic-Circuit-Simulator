@@ -167,9 +167,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="npm.bundle-watch" />
         <item itemvalue="npm.lint-watch" />
         <item itemvalue="npm.compile-watch" />
+        <item itemvalue="npm.bundle-watch" />
+        <item itemvalue="npm.bundle-watch" />
+        <item itemvalue="npm.lint-watch" />
       </list>
     </recent_temporary>
   </component>
