@@ -193,13 +193,15 @@ export const CPUBaseDef =
             return {
                 ins: {
                     // DISABLED
-                    Pipeline: [-15, inputY, "s", "Pipeline"],
-                    RunStop: [-13, inputY, "s", "Run/Stop", { prefersSpike: true }],
-                    Reset: [-11, inputY, "s", "Reset CPU", { prefersSpike: true }],
-                    ManStep: [-9, inputY, "s","Man STEP", { prefersSpike: true }],
-                    Speed: [-7, inputY, "s", "Select Clock"],
-                    ClockS: [-5, inputY, "s", "Slow Clock", { isClock: true }],
-                    ClockF: [-3, inputY, "s", "Fast Clock", { isClock: true }],
+                    SequentialExecution: [-15, inputY, "s", "Sequential Execution"],
+                    Pipeline: [-13, inputY, "s", "Pipeline"],
+                    RunStop: [-11, inputY, "s", "Run/Stop", { prefersSpike: true }],
+                    Reset: [-9, inputY, "s", "Reset CPU", { prefersSpike: true }],
+                    ManStep: [-7, inputY, "s","Man STEP", { prefersSpike: true }],
+                    Speed: [-5, inputY, "s", "Select Clock"],
+                    ClockS: [-3, inputY, "s", "Slow Clock", { isClock: true }],
+                    ClockF: [-1, inputY, "s", "Fast Clock", { isClock: true }],
+                    AddressingMode: [1, inputY, "s", "Addressing Mode"],
                     //Mode: opCodeMode,
                 },
                 outs: {
@@ -305,7 +307,7 @@ export abstract class CPUBase<
     protected _addProgramRAM: boolean
 
     public _opCodeOperandsInStages : any
-    public _adressesInStages : any
+    public _addressesInStages : any
 
     protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef, params: CPUBaseParams, saved?: TRepr) {
         super(parent, SubclassDef.with(params as any) as any /* TODO */, saved)
@@ -318,7 +320,7 @@ export abstract class CPUBase<
         this.numStackBits = params.numStackBits
 
         this._opCodeOperandsInStages = { FETCH : "", DECODE : "", EXECUTE : "", WRITEBACK : "" }
-        this._adressesInStages = { FETCH : -1, DECODE : -1, EXECUTE : -1, WRITEBACK : -1 }
+        this._addressesInStages = { FETCH : -1, DECODE : -1, EXECUTE : -1, WRITEBACK : -1 }
 
         this._showStage = saved?.showStage ?? CPUDef.aults.showStage
 
@@ -564,13 +566,13 @@ export const CPUDef =
         repr: {
             ...CPUBaseDef.repr,
             instructionBits: typeOrUndefined(t.number),
-            directAddressingMode: typeOrUndefined(t.boolean),
+            //directAddressingMode: typeOrUndefined(t.boolean),
             //trigger: typeOrUndefined(t.keyof(EdgeTrigger)),
         },
         valueDefaults: {
             ...CPUBaseDef.valueDefaults,
-            directAddressingMode: false,
-            trigger: EdgeTrigger.falling,
+            //directAddressingMode: false,
+            //trigger: EdgeTrigger.falling,
         },
         params: {
             instructionAddressBits: CPUBaseDef.params.instructionAddressBits,
@@ -622,7 +624,8 @@ export class CPU extends CPUBase<CPURepr> {
     }
 
     public readonly numInstructionBits: number
-    private _directAddressingMode = CPUDef.aults.directAddressingMode
+    //private _directAddressingMode = CPUDef.aults.directAddressingMode
+    private _addressingMode: LogicValue
     private _pipeline: LogicValue
 
     protected _mustGetFetchInstructionAgain : boolean
@@ -680,7 +683,7 @@ export class CPU extends CPUBase<CPURepr> {
         super(parent, CPUDef, params, saved)
 
         this.numInstructionBits = params.numInstructionBits
-        this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
+        //this._directAddressingMode = saved?.directAddressingMode ?? CPUDef.aults.directAddressingMode
 
         this._trigger = saved?.trigger ?? CPUDef.aults.trigger
 
@@ -716,6 +719,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._control_AddressingModeState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
         this._control_AddressingModeState_InternalFlipflopD.inputClr = true
+        this._addressingMode = this._control_AddressingModeState_InternalFlipflopD.outputQ
 
         this._StackPointer_InternalRegister = new InternalRegister(this.numStackBits, EdgeTrigger.falling)
         this._StackPointer_InternalRegister.inputPre = true
@@ -806,20 +810,20 @@ export class CPU extends CPUBase<CPURepr> {
         return {
             instructionBits: this.numInstructionBits === CPUDef.aults.instructionBits ? undefined : this.numInstructionBits,
             ...this.toJSONBase(),
-            directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
-            trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
+            //directAddressingMode: (this._directAddressingMode !== CPUDef.aults.directAddressingMode) ? this._directAddressingMode : undefined,
+            //trigger: (this._trigger !== CPUDef.aults.trigger) ? this._trigger : undefined,
         }
     }
 
     protected get moduleName() {
         return "CPU"
     }
-
+    /*
     protected doSetDirectAddressingMode(directAddressingMode: boolean) {
         this._directAddressingMode = directAddressingMode
         this.setNeedsRedraw("directAddressingMode changed")
     }
-
+    */
     public static isClockTrigger(trigger: EdgeTrigger, prevClock: LogicValue, clock: LogicValue): boolean {
         return (trigger === EdgeTrigger.rising && prevClock === false && clock === true)
             || (trigger === EdgeTrigger.falling && prevClock === true && clock === false)
@@ -892,29 +896,53 @@ export class CPU extends CPUBase<CPURepr> {
 
         const clrSignal= this.inputs.Reset.value && this._control_RunStopState_InternalFlipflopD.outputQ̅
 
-        this._control_ResetState_InternalFlipflopD.inputPre = clrSignal
-
-        this._control_PipelineState_InternalFlipflopD.inputClr = clrSignal
-
-        this._control_RunStopState_InternalFlipflopD.inputClr = clrSignal
-
-        this._control_HaltState_InternalFlipflopD.inputClr = clrSignal
-
         this._fetchStage_SequentialExecutionClock_InternalFlipflopD.inputPre = clrSignal
         this._decodeStage_SequentialExecutionClock_InternalFlipflopD.inputClr = clrSignal
         this._executeStage_SequentialExecutionClock_InternalFlipflopD.inputClr = clrSignal
+        this._writebackStage_SequentialExecutionClock_InternalFlipflopD.inputClr = clrSignal
 
+        this._control_ResetState_InternalFlipflopD.inputPre = clrSignal
+        if (this.inputs.SequentialExecution.value) {
+            this._control_PipelineState_InternalFlipflopD.inputPre = clrSignal
+        } else {
+            this._control_PipelineState_InternalFlipflopD.inputClr = clrSignal
+        }
+        this._control_SequentialExecutionState_InternalFlipflopD.inputClr = clrSignal
+        if (this.inputs.Pipeline.value) {
+            this._control_PipelineState_InternalFlipflopD.inputPre = clrSignal
+        } else {
+            this._control_PipelineState_InternalFlipflopD.inputClr = clrSignal
+        }
+        this._control_RunStopState_InternalFlipflopD.inputClr = clrSignal
+        this._control_HaltState_InternalFlipflopD.inputClr = clrSignal
+
+        this._ProgramCounter_InternalRegister.inputClr = clrSignal
+
+        this._fetchDecodeStage_Instruction_InternalRegister.inputClr = clrSignal
+        this._fetchDecodeStage_StackPointer_InternalRegister.inputPre = clrSignal
+        this._fetchDecodeStage_NextStackPointer_InternalRegister.inputClr = clrSignal
+        this._fetchDecodeStage_CallStackInput_InternalRegister.inputClr = clrSignal
+        this._fetchDecodeStage_ProgramCounter_InternalRegister.inputClr = clrSignal
         this._fetchDecodeStage_Instruction_InternalRegister.inputClr = clrSignal
 
         this._Accumulator_InternalRegister.inputClr = clrSignal
         this._Flags_InternalRegister.inputClr = clrSignal
+        // this._Flags_InternalRegister.recalcInternalValue()
 
-        this._ProgramCounter_InternalRegister.inputClr = clrSignal
+        this._decodeExecuteStage_DataRAMOutput_InternalRegister.inputClr = clrSignal
+        this._decodeExecuteStage_ALUoperation_InternalRegister.inputClr = clrSignal
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputClr = clrSignal
 
-        this._StackPointer_InternalRegister.inputPre = clrSignal
-        this._CallStack_InternalRAM.inputClr = clrSignal
+        this._executeWritebackStage_CallStackOutput_InternalRegister.inputClr = clrSignal
+        this._executeWritebackStage_ProgramCounter_InternalRegister.inputClr = clrSignal
+        this._executeWritebackStage_DataRAMPAddress_InternalRegister.inputClr = clrSignal
+        this._executeWritebackStage_DataRAMPInput_InternalRegister.inputClr = clrSignal
+        this._executeWritebackStage_DataRAMPInput_InternalRegister.inputClr = clrSignal
+        this._executeWritebackStage_ControlUnit_InternalRegister.inputClr = clrSignal
 
-        this._StackPointerControlUOflow_InternalFlipflopD.inputClr = clrSignal
+        this._CallStack_InternalRAM.inputClr =clrSignal
+
+        this._StackPointerControlUOflow_InternalFlipflopD.inputClr =clrSignal
         this._StackPointerUOflow_InternalFlipflopD.inputClr = clrSignal
 
         this._Operations_InternalCounter.inputClr = clrSignal
@@ -932,10 +960,12 @@ export class CPU extends CPUBase<CPURepr> {
         //console.log(this.getOperandsNumberWithRadix(instruction_FETCH, 2))
         // naive approach !
         // this._fetchDecodeStage_Instruction_InternalRegister.inputsD = instruction_FETCH
-        InternalRegister.setInputValues(this._fetchDecodeStage_Instruction_InternalRegister.inputsD, instruction_FETCH)
         // console.log("*",this._fetchDecodeStage_Instruction_InternalRegister.inputsD)
+        if (this._pipeline) {
+            InternalRegister.setInputValues(this._fetchDecodeStage_Instruction_InternalRegister.inputsD, instruction_FETCH)
+        }
 
-        // const instruction_FETCH_opCodeValue = instruction_FETCH.slice(0, 4).reverse()
+            // const instruction_FETCH_opCodeValue = instruction_FETCH.slice(0, 4).reverse()
         const instruction_FETCH_opCodeValue = instruction_FETCH.slice(0, 4)
         const instruction_FETCH_opCodeIndex = displayValuesFromArray(instruction_FETCH_opCodeValue, true)[1]
         const instruction_FETCH_opCodeName = isUnknown(instruction_FETCH_opCodeIndex) ? Unknown : CPUOpCodes[instruction_FETCH_opCodeIndex]
@@ -952,13 +982,13 @@ export class CPU extends CPUBase<CPURepr> {
                 FETCH: "",
                 DECODE: "",
                 EXECUTE: "",
-                WRITEBAK: ""
+                WRITEBACK: ""
             }
-            this._adressesInStages = {
+            this._addressesInStages = {
                 FETCH: -1,
                 DECODE: -1,
                 EXECUTE: -1,
-                WRITEBAK: -1
+                WRITEBACK: -1
             }
         }
 
@@ -969,18 +999,18 @@ export class CPU extends CPUBase<CPURepr> {
             }
             currentInstructionAddress = clrSignal? -1 : currentInstructionAddress
 
-            console.log("before ",this._adressesInStages)
+            console.log("before ",this._addressesInStages)
             if (!this._pipeline) {
                 for (let eachStage of CPUStages) {
                     if (eachStage == stage) {
                         console.log(stage)
                         this._opCodeOperandsInStages[eachStage] = instruction_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
 
-                        this._adressesInStages[eachStage] = currentInstructionAddress
+                        this._addressesInStages[eachStage] = currentInstructionAddress
                     } else {
                         this._opCodeOperandsInStages[eachStage] = ""
 
-                        this._adressesInStages[eachStage] = -1
+                        this._addressesInStages[eachStage] = -1
                     }
                 }
             }
@@ -991,7 +1021,7 @@ export class CPU extends CPUBase<CPURepr> {
             for (let eachStage of CPUStages) {
                 const stageColor = CPUStageColorKey.color(eachStage)
                 const stageColorBackground = COLOR_CPUSTAGE_BACKGROUND[stageColor]
-                messageForAssemblerEditor += this._adressesInStages[eachStage].toString() + ":" + stageColorBackground + "+"
+                messageForAssemblerEditor += this._addressesInStages[eachStage].toString() + ":" + stageColorBackground + "+"
             }
 
             this.CPUeventDispatcher(messageForAssemblerEditor)
@@ -1109,7 +1139,7 @@ export class CPU extends CPUBase<CPURepr> {
         ArrayClampOrPad(_programCounterALUinputB, this.numInstructionAddressBits,false)
 
         if (this._jump) {
-            if (this._directAddressingMode) {
+            if (this._addressingMode) {
                 this._ProgramCounter_InternalRegister.inputsD = _programCounterALUinputB
             } else {
                 //console.log(_programCounterALUinputB)
@@ -1228,7 +1258,7 @@ export class CPU extends CPUBase<CPURepr> {
             }
             currentInstructionAddress = clrSignal? -1 : currentInstructionAddress
 
-            console.log("before ",this._adressesInStages)
+            console.log("before ",this._addressesInStages)
             if (this._pipeline) {
                 this._opCodeOperandsInStages["EXECUTE"] = this._opCodeOperandsInStages["DECODE"]
                 this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["WRITEBACK"]
@@ -1236,10 +1266,10 @@ export class CPU extends CPUBase<CPURepr> {
                 this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName
                     + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
 
-                this._adressesInStages["EXECUTE"] = this._adressesInStages["DECODE"]
-                this._adressesInStages["DECODE"] = this._adressesInStages["WRITEBACK"]
-                this._adressesInStages["WRITEBACK"] = this._adressesInStages["FETCH"]
-                this._adressesInStages["FETCH"] = currentInstructionAddress
+                this._addressesInStages["EXECUTE"] = this._addressesInStages["DECODE"]
+                this._addressesInStages["DECODE"] = this._addressesInStages["WRITEBACK"]
+                this._addressesInStages["WRITEBACK"] = this._addressesInStages["FETCH"]
+                this._addressesInStages["FETCH"] = currentInstructionAddress
             }
             console.log("after", this._opCodeOperandsInStages)
 
@@ -1248,7 +1278,7 @@ export class CPU extends CPUBase<CPURepr> {
             for (let eachStage of CPUStages) {
                 const stageColor = CPUStageColorKey.color(eachStage)
                 const stageColorBackground = COLOR_CPUSTAGE_BACKGROUND[stageColor]
-                messageForAssemblerEditor += this._adressesInStages[eachStage].toString() + ":" + stageColorBackground + "+"
+                messageForAssemblerEditor += this._addressesInStages[eachStage].toString() + ":" + stageColorBackground + "+"
             }
 
             this.CPUeventDispatcher(messageForAssemblerEditor)
@@ -1317,16 +1347,19 @@ export class CPU extends CPUBase<CPURepr> {
         return []
     }
 */
-    public doRecalcValueAfterClock(): [LogicValue[], LogicValue[], LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue] {
+    public doRecalcValueAfterClock(): [LogicValue[], LogicValue[], LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue, LogicValue] {
         return [
             this.inputValues(this.inputs.Instruction).map(LogicValue.filterHighZ),
             this.inputValues(this.inputs.DataIn).map(LogicValue.filterHighZ),
+            LogicValue.filterHighZ(this.inputs.SequentialExecution.value),
+            LogicValue.filterHighZ(this.inputs.Pipeline.value),
+            LogicValue.filterHighZ(this.inputs.RunStop.value),
             LogicValue.filterHighZ(this.inputs.Reset.value),
             LogicValue.filterHighZ(this.inputs.ManStep.value),
             LogicValue.filterHighZ(this.inputs.Speed.value),
             LogicValue.filterHighZ(this.inputs.ClockS.value),
             LogicValue.filterHighZ(this.inputs.ClockF.value),
-            LogicValue.filterHighZ(this.inputs.RunStop.value)
+            LogicValue.filterHighZ(this.inputs.AddressingMode.value)
         ]
     }
 
@@ -1622,12 +1655,25 @@ export class CPU extends CPUBase<CPURepr> {
 
         }
     }
-
+    /*
     protected override doDrawGenericCaption(g: GraphicsRendering, ctx: DrawContextExt) {
         if (this.numInstructionAddressBits != this.numDataBits) {
             this.doSetDirectAddressingMode(false)
         } else {
-            if (this._directAddressingMode) {
+            //if (this._directAddressingMode) {
+            if (this._addressingMode) {
+                    const fontSize = 11
+                    g.font = `bold ${fontSize}px sans-serif`
+                    g.fillStyle = COLOR_DARK_RED
+                    g.textAlign = "center"
+                    g.textBaseline = "middle"
+                    const valueCenter = ctx.rotatePoint(this.outputs.InstructionAddress.group.posXInParentTransform + (Orientation.isVertical(this.orient)? 15 : 0), this.outputs.InstructionAddress.group.posYInParentTransform + (Orientation.isVertical(this.orient)? 63 : 35))
+                    g.fillText("Adressage direct", ...valueCenter)
+            }
+        }
+     */
+    protected override doDrawGenericCaption(g: GraphicsRendering, ctx: DrawContextExt) {
+        if (this._addressingMode) {
                 const fontSize = 11
                 g.font = `bold ${fontSize}px sans-serif`
                 g.fillStyle = COLOR_DARK_RED
@@ -1635,7 +1681,6 @@ export class CPU extends CPUBase<CPURepr> {
                 g.textBaseline = "middle"
                 const valueCenter = ctx.rotatePoint(this.outputs.InstructionAddress.group.posXInParentTransform + (Orientation.isVertical(this.orient)? 15 : 0), this.outputs.InstructionAddress.group.posYInParentTransform + (Orientation.isVertical(this.orient)? 63 : 35))
                 g.fillText("Adressage direct", ...valueCenter)
-            }
         }
     }
 
@@ -1662,7 +1707,7 @@ export class CPU extends CPUBase<CPURepr> {
         let cycleValue = this.cycle
         return CPUStages[(cycleValue-1) % CPUStages.length]
     }
-
+    /*
     protected override makeCPUSpecificContextMenuItems(): MenuItems {
         const s = S.Components.CPU.contextMenu
         const iconDirectAddressingMode = this._directAddressingMode? "check" : "none"
@@ -1671,11 +1716,14 @@ export class CPU extends CPUBase<CPURepr> {
                 () => {this.doSetDirectAddressingMode(!this._directAddressingMode)}
             )],
         ]
+
         return [
             ...toggleDirectAddressingMode,
         ]
     }
+    */
 }
+
 
 function logicalOROnEveryBits(logicArray: LogicValue[]): LogicValue {
     let initialValue: boolean | "Z" | "?" = false
