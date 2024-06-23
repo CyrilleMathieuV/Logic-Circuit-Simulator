@@ -625,8 +625,9 @@ export class CPU extends CPUBase<CPURepr> {
 
     public readonly numInstructionBits: number
     //private _directAddressingMode = CPUDef.aults.directAddressingMode
-    private _addressingMode: LogicValue
+
     private _pipeline: LogicValue
+    private _addressingMode: LogicValue
 
     protected _mustGetFetchInstructionAgain : boolean
 
@@ -892,7 +893,7 @@ export class CPU extends CPUBase<CPURepr> {
         }
 */
 
-        // CLR Button
+        // Reset Button
 
         const clrSignal= this.inputs.Reset.value && this._control_RunStopState_InternalFlipflopD.outputQ̅
 
@@ -901,19 +902,28 @@ export class CPU extends CPUBase<CPURepr> {
         this._executeStage_SequentialExecutionClock_InternalFlipflopD.inputClr = clrSignal
         this._writebackStage_SequentialExecutionClock_InternalFlipflopD.inputClr = clrSignal
 
-        this._control_ResetState_InternalFlipflopD.inputPre = clrSignal
         if (this.inputs.SequentialExecution.value) {
-            this._control_PipelineState_InternalFlipflopD.inputPre = clrSignal
+            this._control_SequentialExecutionState_InternalFlipflopD.inputPre = clrSignal
         } else {
-            this._control_PipelineState_InternalFlipflopD.inputClr = clrSignal
+            this._control_SequentialExecutionState_InternalFlipflopD.inputClr = clrSignal
         }
-        this._control_SequentialExecutionState_InternalFlipflopD.inputClr = clrSignal
+
         if (this.inputs.Pipeline.value) {
             this._control_PipelineState_InternalFlipflopD.inputPre = clrSignal
         } else {
             this._control_PipelineState_InternalFlipflopD.inputClr = clrSignal
         }
+
         this._control_RunStopState_InternalFlipflopD.inputClr = clrSignal
+
+        this._control_ResetState_InternalFlipflopD.inputPre = clrSignal
+
+        if (this.inputs.AddressingMode.value) {
+            this._control_AddressingModeState_InternalFlipflopD.inputPre = clrSignal
+        } else {
+            this._control_AddressingModeState_InternalFlipflopD.inputClr = clrSignal
+        }
+
         this._control_HaltState_InternalFlipflopD.inputClr = clrSignal
 
         this._ProgramCounter_InternalRegister.inputClr = clrSignal
@@ -948,6 +958,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._Operations_InternalCounter.inputClr = clrSignal
 
         this._pipeline = this._control_PipelineState_InternalFlipflopD.outputQ
+        this._addressingMode = this._control_AddressingModeState_InternalFlipflopD.outputQ
 
         // FETCH Stage
 
@@ -1391,6 +1402,7 @@ export class CPU extends CPUBase<CPURepr> {
             drawWireLineToComponent(g, input, input.posXInParentTransform, bottom)
         }
         // DISABLED
+        drawWireLineToComponent(g, this.inputs.SequentialExecution, this.inputs.SequentialExecution.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.Pipeline, this.inputs.Pipeline.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.RunStop, this.inputs.RunStop.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.Reset, this.inputs.Reset.posXInParentTransform, bottom)
@@ -1398,6 +1410,7 @@ export class CPU extends CPUBase<CPURepr> {
         drawWireLineToComponent(g, this.inputs.Speed, this.inputs.Speed.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.ClockS, this.inputs.ClockS.posXInParentTransform, bottom)
         drawWireLineToComponent(g, this.inputs.ClockF, this.inputs.ClockF.posXInParentTransform, bottom)
+        drawWireLineToComponent(g, this.inputs.AddressingMode, this.inputs.AddressingMode.posXInParentTransform, bottom)
 
         // outputs
         for (const output of this.outputs.InstructionAddress) {
@@ -1450,6 +1463,7 @@ export class CPU extends CPUBase<CPURepr> {
             // bottom inputs
             drawLabel(ctx, this.orient, "DataIn", "s", this.inputs.DataIn, bottom)
             // DISABLED
+            drawLabel(ctx, this.orient, "Seq Exec", "s", this.inputs.SequentialExecution, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Pipeline", "s", this.inputs.Pipeline, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom, undefined, true)
@@ -1457,6 +1471,7 @@ export class CPU extends CPUBase<CPURepr> {
             drawLabel(ctx, this.orient, "Speed", "s", this.inputs.Speed, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Clock S", "s", this.inputs.ClockS, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom, undefined, true)
+            drawLabel(ctx, this.orient, "Addr Mode", "s", this.inputs.AddressingMode, bottom, undefined, true)
 
             // top outputs
             drawLabel(ctx, this.orient, "InstrAddr", "n", this.outputs.InstructionAddress, top)
