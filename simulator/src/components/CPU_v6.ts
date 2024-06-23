@@ -137,9 +137,9 @@ export const CPUBaseDef_v6 =
     defineAbstractParametrizedComponent( {
         button: { imgWidth: 40 },
         repr: {
-            addressInstructionBits: typeOrUndefined(t.number),
+            instructionAddressBits: typeOrUndefined(t.number),
             dataBits: typeOrUndefined(t.number),
-            addressDataBits: typeOrUndefined(t.number),
+            dataAddressBits: typeOrUndefined(t.number),
             showStage: typeOrUndefined(t.boolean),
             showOpCode: typeOrUndefined(t.boolean),
             showOperands: typeOrUndefined(t.boolean),
@@ -159,16 +159,16 @@ export const CPUBaseDef_v6 =
             trigger: EdgeTrigger.falling,
         },
         params: {
-            addressInstructionBits: param(4, [4, 8]),
+            instructionAddressBits: param(4, [4, 8]),
             dataBits: param(4, [4]),
-            addressDataBits: param(4, [4]),
+            dataAddressBits: param(4, [4]),
             // future use
             // extOpCode: paramBool(), // has the extended opcode
         },
-        validateParams: ({ addressInstructionBits, dataBits, addressDataBits}) => ({
-            numAddressInstructionBits: addressInstructionBits,
+        validateParams: ({ instructionAddressBits, dataBits, dataAddressBits}) => ({
+            numInstructionAddressBits: instructionAddressBits,
             numDataBits: dataBits,
-            numAddressDataBits: addressDataBits,
+            numDataAddressBits: dataAddressBits,
             //usesExtendedOpCode: extOpCode,
         }),
         size: ({ numDataBits }) => ({
@@ -177,7 +177,7 @@ export const CPUBaseDef_v6 =
             gridWidth: 32,
             gridHeight: 32,
         }),
-        makeNodes: ({ numAddressInstructionBits, numDataBits, numAddressDataBits, /*usesExtendedOpCode*/ gridWidth, gridHeight }) => {
+        makeNodes: ({ numInstructionAddressBits: numInstructionAddressBits, numDataBits, numDataAddressBits: numDataAddressBits, /*usesExtendedOpCode*/ gridWidth, gridHeight }) => {
             const bottom = gridHeight / 2
             const top = -bottom
             const right = gridWidth / 2
@@ -198,9 +198,9 @@ export const CPUBaseDef_v6 =
                     //Mode: opCodeMode,
                 },
                 outs: {
-                    Isaadr: groupHorizontal("n", -midX, -inputY, numAddressInstructionBits),
-                    Dadr: groupHorizontal("n", midX, -inputY, numAddressDataBits),
-                    Dout: groupVertical("e", inputX, -midY, numDataBits),
+                    InstructionAddress: groupHorizontal("n", -midX, -inputY, numInstructionAddressBits),
+                    DataAddress: groupHorizontal("n", midX, -inputY, numDataAddressBits),
+                    DataOut: groupVertical("e", inputX, -midY, numDataBits),
                     RAMweSync: [inputX, 1, "e", "RAM WE sync"],
                     RAMwe: [inputX, 3, "e", "RAM WE"],
                     ResetSync: [inputX, 5, "e", "Reset sync"],
@@ -217,9 +217,9 @@ export const CPUBaseDef_v6 =
         initialValue: (saved, defaults) => {
             const false_ = false as LogicValue
             const undefinedState = {
-                isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
-                dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
-                dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                instructionaddress: ArrayFillWith<LogicValue>(false_, defaults.numInstructionAddressBits),
+                dataaddress: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                dataout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                 ramwesync: false_,
                 ramwe: false_,
                 resetsync: false_,
@@ -235,9 +235,9 @@ export const CPUBaseDef_v6 =
                 initialState = undefinedState
             } else {
                 initialState = {
-                    isaadr: ArrayFillWith<LogicValue>(false_, defaults.numAddressInstructionBits),
-                    dadr: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
-                    dout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                    instructionaddress: ArrayFillWith<LogicValue>(false_, defaults.numInstructionAddressBits),
+                    dataaddress: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                    dataout: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                     ramwesync: false_,
                     ramwe: false_,
                     resetsync: false_,
@@ -271,10 +271,10 @@ export abstract class CPUBase_v6<
     NodesOut<TRepr>,
     true, true
 > {
-    public readonly numAddressInstructionBits: number
+    public readonly numInstructionAddressBits: number
 
     public readonly numDataBits: number
-    public readonly numAddressDataBits: number
+    public readonly numDataAddressBits: number
 
     protected _trigger: EdgeTrigger
     protected _isInInvalidState = false
@@ -297,10 +297,10 @@ export abstract class CPUBase_v6<
     protected constructor(parent: DrawableParent, SubclassDef: typeof CPUDef_v6, params: CPUBaseParams_v6, saved?: TRepr) {
         super(parent, SubclassDef.with(params as any) as any /* TODO */, saved)
 
-        this.numAddressInstructionBits = params.numAddressInstructionBits
+        this.numInstructionAddressBits = params.numInstructionAddressBits
 
         this.numDataBits = params.numDataBits
-        this.numAddressDataBits = params.numAddressDataBits
+        this.numDataAddressBits = params.numDataAddressBits
 
         this._opCodeOperandsInStages = { FETCH : "", DECODE : "", EXECUTE : ""}
 
@@ -325,9 +325,9 @@ export abstract class CPUBase_v6<
         const false_ = false as LogicValue
         let newState : any
         newState = {
-            isaadr: ArrayFillWith<LogicValue>(false_, this.numAddressInstructionBits),
-            dadr: ArrayFillWith<LogicValue>(false_, this.numDataBits),
-            dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
+            instructionaddress: ArrayFillWith<LogicValue>(false_, this.numInstructionAddressBits),
+            dataaddress: ArrayFillWith<LogicValue>(false_, this.numDataAddressBits),
+            dataout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
             ramwesync: false_,
             ramwe: false_,
             resetsync: false_,
@@ -344,9 +344,9 @@ export abstract class CPUBase_v6<
     public makeStateFromMainValue(val: LogicValue): CPUBaseValue_v6 {
         let newState : any
         newState = {
-            isaadr: ArrayFillWith<LogicValue>(val, this.numAddressInstructionBits),
-            dadr: ArrayFillWith<LogicValue>(val, this.numDataBits),
-            dout: ArrayFillWith<LogicValue>(val, this.numDataBits),
+            instructionaddress: ArrayFillWith<LogicValue>(val, this.numInstructionAddressBits),
+            dataaddress: ArrayFillWith<LogicValue>(val, this.numDataAddressBits),
+            datatout: ArrayFillWith<LogicValue>(val, this.numDataBits),
             ramwesync: val,
             ramwe: val,
             resetsync: val,
@@ -373,9 +373,9 @@ export abstract class CPUBase_v6<
 
     public override toJSONBase() {
         return {
-            addressInstructionBits: this.numAddressInstructionBits === CPUDef_v6.aults.addressInstructionBits ? undefined : this.numAddressInstructionBits,
+            instructionAddressBits: this.numInstructionAddressBits === CPUDef_v6.aults.instructionAddressBits ? undefined : this.numInstructionAddressBits,
             dataBits: this.numDataBits === CPUDef_v6.aults.dataBits ? undefined : this.numDataBits,
-            addressDataBits: this.numAddressDataBits === CPUDef_v6.aults.addressDataBits ? undefined : this.numAddressDataBits,
+            dataAddressBits: this.numDataAddressBits === CPUDef_v6.aults.dataAddressBits ? undefined : this.numDataAddressBits,
             ...super.toJSONBase(),
             //extOpCode: this.usesExtendedOpCode === CPUDef.aults.extOpCode ? undefined : this.usesExtendedOpCode,
             showStage: (this._showStage !== CPUDef_v6.aults.showStage) ? this._showStage : undefined,
@@ -469,7 +469,7 @@ export abstract class CPUBase_v6<
             ["mid", MenuData.sep()],
             ["mid", toggleAddProgramRAMItem],
             ["mid", MenuData.sep()],
-            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numAddressInstructionBits, "addressInstructionBits"),
+            this.makeChangeParamsContextMenuItem("inputs", S.Components.Generic.contextMenu.ParamNumAddressBits, this.numInstructionAddressBits, "instructionAddressBits"),
             ...this.makeCPUSpecificContextMenuItems(),
             ["mid", MenuData.sep()],
             //this.makeChangeBooleanParamsContextMenuItem(s.ParamUseExtendedOpCode, this.usesExtendedOpCode, "extOpCode"),
@@ -521,7 +521,7 @@ export abstract class CPUBase_v6<
 
 export const CPUDef_v6 =
     defineParametrizedComponent("CPU", true, true, {
-        variantName: ({ addressInstructionBits }) => `CPU-${addressInstructionBits}`,
+        variantName: ({ instructionAddressBits }) => `CPU-${instructionAddressBits}`,
         idPrefix: "CPU",
         ...CPUBaseDef_v6,
         repr: {
@@ -536,16 +536,16 @@ export const CPUDef_v6 =
             trigger: EdgeTrigger.falling,
         },
         params: {
-            addressInstructionBits: CPUBaseDef_v6.params.addressInstructionBits,
+            instructionAddressBits: CPUBaseDef_v6.params.instructionAddressBits,
             dataBits: CPUBaseDef_v6.params.dataBits,
-            addressDataBits: CPUBaseDef_v6.params.addressDataBits,
+            dataAddressBits: CPUBaseDef_v6.params.dataAddressBits,
             instructionBits: param(8, [8]),
             //extOpCode: CPUBaseDef.params.extOpCode,
         },
-        validateParams: ({ addressInstructionBits, dataBits, addressDataBits, instructionBits}) => ({
-            numAddressInstructionBits: addressInstructionBits,
+        validateParams: ({ instructionAddressBits, dataBits, dataAddressBits, instructionBits}) => ({
+            numInstructionAddressBits: instructionAddressBits,
             numDataBits: dataBits,
-            numAddressDataBits: addressDataBits,
+            numDataAddressBits: dataAddressBits,
             numInstructionBits: instructionBits,
             //usesExtendedOpCode: extOpCode,
         }),
@@ -562,8 +562,8 @@ export const CPUDef_v6 =
             return {
                 ins: {
                     ...base.ins,
-                    Isa: groupVertical("w", -inputX, 0, params.numInstructionBits),
-                    Din: groupHorizontal("s", midX, inputY, params.numDataBits),
+                    Instruction: groupVertical("w", -inputX, 0, params.numInstructionBits),
+                    DataIn: groupHorizontal("s", midX, inputY, params.numDataBits),
                 },
                 outs: base.outs,
             }
@@ -625,7 +625,7 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
         // this._internalHaltSignalFlipflopD.recalcInternalValue()
 
         this._internalInstructionRegister = new InternalRegister(this.numInstructionBits, EdgeTrigger.falling)
-        // const isaInit = this.inputValues(this.inputs.Isa)
+        // const isaInit = this.inputValues(this.inputs.Instr)
         // Needs to revert all inputs to be compatible with choosen ISA
         // const isaInit_FETCH = isaInit.reverse()
         // this._fetchDecodeStage_Instruction_InternalRegister.inputsD = isaInit_FETCH
@@ -646,10 +646,10 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
         // this._Flags_InternalRegister.inputClr = true
         // this._Flags_InternalRegister.recalcInternalValue()
 
-        this. _internalProgramCounterRegister = new InternalRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
+        this. _internalProgramCounterRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
         // this. _ProgramCounterInternalRegister.inputClr = true
         // this. _ProgramCounterInternalRegister.recalcInternalValue()
-        this. _internalPreviousProgramCounterRegister = new InternalRegister(this.numAddressInstructionBits, EdgeTrigger.falling)
+        this. _internalPreviousProgramCounterRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
         // this. _internalPreviousProgramCounterRegister.inputClr = true
         // this. _internalPreviousProgramCounterRegister.recalcInternalValue()
 
@@ -673,9 +673,9 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
 
         this._lastClock = Unknown
 
-        this._currentAddressEvent = new CustomEvent("instrAddr", {
+        this._currentAddressEvent = new CustomEvent("instructionAddress", {
             bubbles: true,
-            detail: { text: () => this.outputs.Isaadr },
+            detail: { text: () => this.outputs.InstructionAddress },
         });
     }
 
@@ -705,11 +705,11 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
         protected doRecalcValue(): CPUBaseValue {
             const false_ = false as LogicValue
             const result: any = {
-                    isaadr: ArrayFillWith<LogicValue>(false_, this.numAddressInstructionBits),
-                    dadr: ArrayFillWith<LogicValue>(false_, this.numDataBits),
-                    dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
-                    //isa: ArrayFillWith<LogicValue>(false_, defaults.numInstructionBits),
-                    //din: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
+                    instructionaddress: ArrayFillWith<LogicValue>(false_, this.numInstructionAddressBits),
+                    dataaddress: ArrayFillWith<LogicValue>(false_, this.numDataAddressBits),
+                    dataout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
+                    //instruction: ArrayFillWith<LogicValue>(false_, defaults.numInstructionBits),
+                    //datatin: ArrayFillWith<LogicValue>(false_, defaults.numDataBits),
                     ramwesync: false_,
                     ramwe: false_,
                     resetsync: false_,
@@ -793,12 +793,12 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
 
         // FETCH Stage
 
-        const isa = this.inputValues(this.inputs.Isa)
+        const instruction = this.inputValues(this.inputs.Instruction)
 
-        //const isa = this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ)
+        //const instruction = this.inputValues(this.inputs.Instr).map(LogicValue.filterHighZ)
         //console.log(this._internalFetchFlipflopD.outputQ)
         // Needs to revert all inputs to be compatible with choosen ISA
-        const isa_FETCH = isa.reverse()
+        const isa_FETCH = instruction.reverse()
         //console.log(this.getOperandsNumberWithRadix(isa_FETCH, 2))
         // naive approach !
         // this._fetchDecodeStage_Instruction_InternalRegister.inputsD = isa_FETCH
@@ -877,16 +877,16 @@ ISA5
 
         this._operandsValue = this._fetchDecodeStage_Instruction_InternalRegister.outputsQ.slice(4, 8).reverse()
 
-        const _ALUoutputs = doALUOp(_ALUop, this._Accumulator_InternalRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
+        const _ALUoutputs = doALUOp(_ALUop, this._Accumulator_InternalRegister.outputsQ, this.inputValues(this.inputs.DataIn).reverse(), false)
 
         let _operandsData : LogicValue[]
         if (_operandsDataSelectValueIndex === 0) {
             _operandsData = this._Accumulator_InternalRegister.outputsQ
         } else if (_operandsDataSelectValueIndex === 1) {
-            //console.log(this._Accumulator_InternalRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
+            //console.log(this._Accumulator_InternalRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.DataIn).reverse())
             _operandsData = _ALUoutputs.s
         } else if (_operandsDataSelectValueIndex === 2) {
-            _operandsData = this.inputValues(this.inputs.Din).reverse()
+            _operandsData = this.inputValues(this.inputs.DataIn).reverse()
             //console.log(_operandsData)
         } else if (_operandsDataSelectValueIndex === 3) {
             _operandsData = this._operandsValue
@@ -907,19 +907,19 @@ ISA5
 
         this._operandsValue = this._internalInstructionRegister.outputsQ.slice(4, 8).reverse()
 
-        const _ALUoutputs = doALUOp(_ALUop, this._internalAccumulatorRegister.outputsQ, this.inputValues(this.inputs.Din).reverse(), false)
+        const _ALUoutputs = doALUOp(_ALUop, this._internalAccumulatorRegister.outputsQ, this.inputValues(this.inputs.DataIn).reverse(), false)
         //console.log(_operandsDataSelectValueIndex)
         let _operandsData : LogicValue[]
         if (_operandsDataSelectValueIndex === 0) {
             _operandsData = this._operandsValue
         } else if (_operandsDataSelectValueIndex === 1) {
-            //console.log(this._Accumulator_InternalRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.Din).reverse())
+            //console.log(this._Accumulator_InternalRegister.outputsQ, " ", _ALUop, " ", this.inputValues(this.inputs.DataIn).reverse())
             _operandsData = this._internalAccumulatorRegister.outputsQ
         } else if (_operandsDataSelectValueIndex === 2) {
             _operandsData = _ALUoutputs.s
             //console.log(_operandsData)
         } else if (_operandsDataSelectValueIndex === 3) {
-            _operandsData = this.inputValues(this.inputs.Din).reverse()
+            _operandsData = this.inputValues(this.inputs.DataIn).reverse()
         } else {
             _operandsData = this._internalAccumulatorRegister.outputsQ
         }
@@ -965,7 +965,7 @@ ISA5
         //console.log(_programCounterALUinputA)
         // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
         const _programCounterALUinputB = this._operandsValue.slice()
-        ArrayClampOrPad(_programCounterALUinputB, this.numAddressInstructionBits, false)
+        ArrayClampOrPad(_programCounterALUinputB, this.numInstructionAddressBits, false)
         if (!this._noJump) {
             if (this._directAddressingMode) {
                 this._internalProgramCounterRegister.inputsD = _programCounterALUinputB
@@ -1024,8 +1024,8 @@ ISA5
 
         if (isUnknown(opCodeName)) {
             newState = {
-                isaadr: ArrayFillWith<LogicValue>(false_, this.numAddressInstructionBits),
-                dadr: ArrayFillWith<LogicValue>(false_, this.numDataBits),
+                isaadr: ArrayFillWith<LogicValue>(false_, this.numInstructionAddressBits),
+                dadr: ArrayFillWith<LogicValue>(false_, this.numDataAddressBits),
                 dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
                 ramwesync: false_,
                 ramwe: false_,
@@ -1058,15 +1058,15 @@ ISA5
     }
 
     public override propagateValue(newValue: CPUValue_v6) {
-        this.outputValues(this.outputs.Isaadr , newValue.isaadr, true)
-        this.outputValues(this.outputs.Dadr , newValue.dadr, true)
-        this.outputValues(this.outputs.Dout , newValue.dout)
+        this.outputValues(this.outputs.InstructionAddress , newValue.instructionaddress, true)
+        this.outputValues(this.outputs.DataAddress , newValue.dataaddress, true)
+        this.outputValues(this.outputs.DataOut , newValue.dataout)
         this.outputs.RAMweSync.value = newValue.ramwesync
         this.outputs.RAMwe.value = newValue.ramwe
         this.outputs.ResetSync.value = newValue.resetsync
         this.outputs.Sync.value = newValue.sync
         this.outputs.Z.value = newValue.z
-        //this.outputs.Z.value = allZeros(newValue.dout)
+        //this.outputs.Z.value = allZeros(newValue.dataout)
         //this.outputs.V.value = newValue.v
         this.outputs.Cout.value = newValue.cout
         this.outputs.HaltSignal.value = newValue.haltsignal
@@ -1079,8 +1079,8 @@ ISA5
     */
     public doRecalcValueAfterClock(): [LogicValue[], LogicValue[], LogicValue,LogicValue,LogicValue,LogicValue,LogicValue,LogicValue] {
         return [
-            this.inputValues(this.inputs.Isa).map(LogicValue.filterHighZ),
-            this.inputValues(this.inputs.Din).map(LogicValue.filterHighZ),
+            this.inputValues(this.inputs.Instruction).map(LogicValue.filterHighZ),
+            this.inputValues(this.inputs.DataIn).map(LogicValue.filterHighZ),
             LogicValue.filterHighZ(this.inputs.Reset.value),
             LogicValue.filterHighZ(this.inputs.ManStep.value),
             LogicValue.filterHighZ(this.inputs.Speed.value),
@@ -1111,10 +1111,10 @@ ISA5
         const lowerRight = right - 2 * GRID_STEP
 
         // inputs
-        for (const input of this.inputs.Isa) {
+        for (const input of this.inputs.Instruction) {
             drawWireLineToComponent(g, input, left, input.posYInParentTransform)
         }
-        for (const input of this.inputs.Din) {
+        for (const input of this.inputs.DataIn) {
             drawWireLineToComponent(g, input, input.posXInParentTransform, bottom)
         }
         drawWireLineToComponent(g, this.inputs.RunStop, this.inputs.RunStop.posXInParentTransform, bottom)
@@ -1125,13 +1125,13 @@ ISA5
         drawWireLineToComponent(g, this.inputs.ClockF, this.inputs.ClockF.posXInParentTransform, bottom)
 
         // outputs
-        for (const output of this.outputs.Isaadr) {
+        for (const output of this.outputs.InstructionAddress) {
             drawWireLineToComponent(g, output, output.posXInParentTransform, top)
         }
-        for (const output of this.outputs.Dout) {
+        for (const output of this.outputs.DataOut) {
             drawWireLineToComponent(g, output, right, output.posYInParentTransform)
         }
-        for (const output of this.outputs.Dadr) {
+        for (const output of this.outputs.DataAddress) {
             drawWireLineToComponent(g, output, output.posXInParentTransform, top)
         }
         drawWireLineToComponent(g, this.outputs.ResetSync, right, this.outputs.ResetSync.posYInParentTransform)
@@ -1160,11 +1160,11 @@ ISA5
         g.stroke()
 
         // groups
-        this.drawGroupBox(g, this.inputs.Isa.group, bounds)
-        this.drawGroupBox(g, this.inputs.Din.group, bounds)
-        this.drawGroupBox(g, this.outputs.Isaadr.group, bounds)
-        this.drawGroupBox(g, this.outputs.Dout.group, bounds)
-        this.drawGroupBox(g, this.outputs.Dadr.group, bounds)
+        this.drawGroupBox(g, this.inputs.Instruction.group, bounds)
+        this.drawGroupBox(g, this.inputs.DataIn.group, bounds)
+        this.drawGroupBox(g, this.outputs.InstructionAddress.group, bounds)
+        this.drawGroupBox(g, this.outputs.DataOut.group, bounds)
+        this.drawGroupBox(g, this.outputs.DataAddress.group, bounds)
 
         // labels
         ctx.inNonTransformedFrame(ctx => {
@@ -1172,7 +1172,7 @@ ISA5
             g.font = "11px sans-serif"
 
             // bottom inputs
-            drawLabel(ctx, this.orient, "Din", "s", this.inputs.Din, bottom)
+            drawLabel(ctx, this.orient, "Din", "s", this.inputs.DataIn, bottom)
             drawLabel(ctx, this.orient, "Run/Stop", "s", this.inputs.RunStop, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Reset", "s", this.inputs.Reset, bottom, undefined, true)
             drawLabel(ctx, this.orient, "Man Step", "s", this.inputs.ManStep, bottom, undefined, true)
@@ -1181,14 +1181,14 @@ ISA5
             drawLabel(ctx, this.orient, "Clock F", "s", this.inputs.ClockF, bottom, undefined, true)
 
             // top outputs
-            drawLabel(ctx, this.orient, "IsaAdr", "n", this.outputs.Isaadr, top)
-            drawLabel(ctx, this.orient, "DAdr", "n", this.outputs.Dadr, top)
+            drawLabel(ctx, this.orient, "IsaAdr", "n", this.outputs.InstructionAddress, top)
+            drawLabel(ctx, this.orient, "DAdr", "n", this.outputs.DataAddress, top)
 
             // left inputs
-            drawLabel(ctx, this.orient, "Isa", "w", left, this.inputs.Isa)
+            drawLabel(ctx, this.orient, "Isa", "w", left, this.inputs.Instruction)
 
             // right outputs
-            drawLabel(ctx, this.orient, "Dout", "e", right, this.outputs.Dout)
+            drawLabel(ctx, this.orient, "Dout", "e", right, this.outputs.DataOut)
             drawLabel(ctx, this.orient, "RAM Sync", "e", right, this.outputs.RAMweSync, undefined, true)
             drawLabel(ctx, this.orient, "Reset Sync", "e", right, this.outputs.ResetSync, undefined, true)
             drawLabel(ctx, this.orient, "RAM WE", "e", right, this.outputs.RAMwe, undefined, true)
@@ -1214,7 +1214,7 @@ ISA5
                     const valueCenterDeltaY = (this.orient == "n") ? 100 : (this.orient == "s") ? -100 : 0
 
                     let valueCenterX = this.posX
-                    let valueCenterY = Orientation.isVertical(this.orient) ? this.inputs.Isa.group.posYInParentTransform : this.inputs.Isa.group.posYInParentTransform - 50
+                    let valueCenterY = Orientation.isVertical(this.orient) ? this.inputs.Instruction.group.posYInParentTransform : this.inputs.Instruction.group.posYInParentTransform - 50
                     switch (eachStage) {
                         case "FETCH":
                             valueCenterX = valueCenterX - valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 20 : -20 : 0)
@@ -1301,13 +1301,13 @@ ISA5
             g.fillStyle = COLOR_DARK_RED
             g.textAlign = "center"
             g.textBaseline = "middle"
-            const valueCenter = ctx.rotatePoint(this.outputs.Isaadr.group.posXInParentTransform + (Orientation.isVertical(this.orient)? 15 : 0), this.outputs.Isaadr.group.posYInParentTransform + (Orientation.isVertical(this.orient)? 63 : 35))
+            const valueCenter = ctx.rotatePoint(this.outputs.InstructionAddress.group.posXInParentTransform + (Orientation.isVertical(this.orient)? 15 : 0), this.outputs.InstructionAddress.group.posYInParentTransform + (Orientation.isVertical(this.orient)? 63 : 35))
             g.fillText("Adressage direct", ...valueCenter)
         }
     }
 
     public get opCode(): CPUOpCode_v6 | Unknown {
-        //const opValues = this.inputValues(this.inputs.Isa.reverse()).slice(0,4)
+        //const opValues = this.inputValues(this.inputs.Instr.reverse()).slice(0,4)
         const opCodeValues = this._internalInstructionRegister.inputsD.slice(0,4)
         //opValues.push(this.inputs.Mode.value)
         const opCodeIndex = displayValuesFromArray(opCodeValues, true)[1]
@@ -1333,7 +1333,7 @@ ISA5
     protected override makeCPUSpecificContextMenuItems(): MenuItems {
         const s = S.Components.CPU.contextMenu
         const iconDirectAddressingMode = this._directAddressingMode? "check" : "none"
-        const toggleDirectAddressingMode: MenuItems = this.numAddressInstructionBits != 4 ? [] : [
+        const toggleDirectAddressingMode: MenuItems = this.numInstructionAddressBits != 4 ? [] : [
             ["mid", MenuData.item(iconDirectAddressingMode, s.toggleDirectAddressingMode,
                 () => {this.doSetDirectAddressingMode(!this._directAddressingMode)}
             )],

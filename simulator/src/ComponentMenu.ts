@@ -180,7 +180,7 @@ const componentsMenu: Array<Section> = [{
         Decoder16SegDef.button("Decoder16Seg", { compat: "decoder-16seg", visible: withButton }),
         DecoderBCD4Def.button("DecoderBCD4", { compat: "decoder-bcd4", visible: withButton }),
 
-        CPUDef.button({ addressInstructionBits: 8, dataBits: 4, addressDataBits: 4, stackBits: 2, instructionBits: 4 }, "CPU", { compat: "cpu", visible: withButton }),
+        CPUDef.button({ instructionAddressBits: 8, dataBits: 4, dataAddressBits: 4, stackBits: 2, instructionBits: 4 }, "CPU", { compat: "cpu", visible: withButton }),
 
     ],
 }]

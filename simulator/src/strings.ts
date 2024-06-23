@@ -825,7 +825,7 @@ const Strings_fr = {
                 desc: template("Stocke ${numWords} ligne$s{numWords} de ${numDataBits} bit$s{numDataBits}."),
             },
             contextMenu: {
-                SelectedDataDisplay: "Affichage des données addressées",
+                SelectedDataDisplay: "Affichage des données adressées",
                 EditContent: "Éditer le contenu…",
                 EditContentPrompt: "Tapez le nouveau contenu de la mémoire en séparant les lignes par des espaces. S’il y a autant de caractères que de bits, les données sont lues comme étant du binaire, sinon, comme de l'hexadécimal.",
                 SaveContent: "Sauvegarder le contenu",
