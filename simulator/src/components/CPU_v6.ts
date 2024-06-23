@@ -617,8 +617,8 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
         this._mustGetFetchInstructionAgain = true
 
         this._internalRunStopFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        // this._controlRegister_RunStopState_InternalFlipflopD.inputClr = true
-        // this._controlRegister_RunStopState_InternalFlipflopD.recalcInternalValue()
+        // this._control_RunStopState_InternalFlipflopD.inputClr = true
+        // this._control_RunStopState_InternalFlipflopD.recalcInternalValue()
 
         this._internalHaltSignalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
         // this._internalHaltSignalFlipflopD.inputClr = true
@@ -744,7 +744,7 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
         const clrSignal = this.inputs.Reset.value && this._internalRunStopFlipflopD.outputQ̅
 
         const runningState = this._internalRunStopFlipflopD.outputQ̅ ? this.inputs.ManStep.value && !this._internalRunStopFlipflopD.outputQ̅: this._internalRunStopFlipflopD.outputQ
-        //console.log((this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._internalHaltSignalFlipflopD.outputQ̅)
+        //console.log((this._control_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._internalHaltSignalFlipflopD.outputQ̅)
 
         this._internalRunStopFlipflopD.inputD = this._internalRunStopFlipflopD.outputQ̅
         //console.log(this._internalHaltSignalFlipflopD.outputQ && clockSync)
@@ -753,21 +753,21 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
         this._internalRunStopFlipflopD.recalcInternalValue()
 
         /*
-        if (InternalFlipflop.isInternalClockTrigger(this._controlRegister_RunStopState_InternalFlipflopD.trigger, prevClock, clockSync)) {
+        if (InternalFlipflop.isInternalClockTrigger(this._control_RunStopState_InternalFlipflopD.trigger, prevClock, clockSync)) {
             if (prevClock) {
                 if (!clockSync) {
                     console.log("Falling")
-                    console.log("! ", this._controlRegister_RunStopState_InternalFlipflopD.value)
+                    console.log("! ", this._control_RunStopState_InternalFlipflopD.value)
                 }
             }
             if (clockSync) {
                 if (prevClock) {
                     console.log("Rising")
-                    console.log("* ", this._controlRegister_RunStopState_InternalFlipflopD.value)
+                    console.log("* ", this._control_RunStopState_InternalFlipflopD.value)
                 }
             }
-            const newValue : LogicValue = LogicValue.filterHighZ(this._controlRegister_RunStopState_InternalFlipflopD.inputD)
-            this._controlRegister_RunStopState_InternalFlipflopD.propagateInternalValue([newValue, !newValue])
+            const newValue : LogicValue = LogicValue.filterHighZ(this._control_RunStopState_InternalFlipflopD.inputD)
+            this._control_RunStopState_InternalFlipflopD.propagateInternalValue([newValue, !newValue])
         }
 */
 

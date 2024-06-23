@@ -613,6 +613,8 @@ export class AssemblerEditor {
                             const CPUstageDECODEcolor = message.split("+")[1].split(":")[1]
                             const CPUstageEXECUTEline = parseInt(message.split("+")[2].split(":")[0])
                             const CPUstageEXECUTEcolor = message.split("+")[2].split(":")[1]
+                            const CPUstageWRITEBACKline = parseInt(message.split("+")[2].split(":")[0])
+                            const CPUstageWRITEBACKcolor = message.split("+")[2].split(":")[1]
                             const program = this.programOl.getElementsByClassName("line")
                             for(let _i = 0; _i < program.length; _i++) {
                                 const line = program[_i] as HTMLLIElement
@@ -622,6 +624,8 @@ export class AssemblerEditor {
                                     applyModifierTo(line, style("background-color: " + `${CPUstageDECODEcolor}`))
                                     } else if (_i == CPUstageEXECUTEline) {
                                     applyModifierTo(line, style("background-color: " + `${CPUstageEXECUTEcolor}`))
+                                        } else if (_i == CPUstageWRITEBACKline) {
+                                         applyModifierTo(line, style("background-color: " + `${CPUstageWRITEBACKcolor}`))
                                 } else {
                                     applyModifierTo(line, style("background-color: rgb(221, 221, 221)"))
                                 }

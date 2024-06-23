@@ -87,8 +87,8 @@ export const CPUOpCode = {
 }
 
 export const CPUStages = [
-    "FETCH", "DECODE", "EXECUTE", "WRITE_BACK"
-    //    0         1          2             3
+    "FETCH", "DECODE", "EXECUTE", "WRITEBACK"
+    //    0         1          2            3
 ] as const
 
 export type CPUStage = typeof CPUStages[number]
@@ -317,8 +317,8 @@ export abstract class CPUBase<
 
         this.numStackBits = params.numStackBits
 
-        this._opCodeOperandsInStages = { FETCH : "", DECODE : "", EXECUTE : "", WRITE_BACK : "" }
-        this._adressesInStages = { FETCH : -1, DECODE : -1, EXECUTE : -1, WRITE_BACK : -1 }
+        this._opCodeOperandsInStages = { FETCH : "", DECODE : "", EXECUTE : "", WRITEBACK : "" }
+        this._adressesInStages = { FETCH : -1, DECODE : -1, EXECUTE : -1, WRITEBACK : -1 }
 
         this._showStage = saved?.showStage ?? CPUDef.aults.showStage
 
@@ -516,7 +516,10 @@ export abstract class CPUBase<
         return []
     }
 
-    public getInstructionParts(instructionString: string, part :"opCode" | "operands"): string {
+    public getInstructionParts(instructionString: string | undefined, part :"opCode" | "operands"): string {
+        if (instructionString === undefined || instructionString == "") {
+            instructionString = "NOP+0"
+        }
         const instructionParts = instructionString.split(/\++/)
         switch (part) {
             case "opCode":
@@ -629,12 +632,12 @@ export class CPU extends CPUBase<CPURepr> {
     protected _executeStage_SequentialExecutionClock_InternalFlipflopD : InternalFlipflopD
     protected _writebackStage_SequentialExecutionClock_InternalFlipflopD : InternalFlipflopD
 
-    protected _controlRegister_PipelineState_InternalFlipflopD : InternalFlipflopD
-    protected _controlRegister_ResetState_InternalFlipflopD : InternalFlipflopD
-    protected _controlRegister_RunStopState_InternalFlipflopD : InternalFlipflopD
-    protected _controlRegister_SequentialExecutionState_InternalFlipflopD : InternalFlipflopD
-    protected _controlRegister_HaltState_InternalFlipflopD : InternalFlipflopD
-    protected _controlRegister_AddressingModeState_InternalFlipflopD : InternalFlipflopD
+    protected _control_PipelineState_InternalFlipflopD : InternalFlipflopD
+    protected _control_ResetState_InternalFlipflopD : InternalFlipflopD
+    protected _control_RunStopState_InternalFlipflopD : InternalFlipflopD
+    protected _control_SequentialExecutionState_InternalFlipflopD : InternalFlipflopD
+    protected _control_HaltState_InternalFlipflopD : InternalFlipflopD
+    protected _control_AddressingModeState_InternalFlipflopD : InternalFlipflopD
 
     protected _StackPointer_InternalRegister : InternalRegister
     protected _ProgramCounter_InternalRegister : InternalRegister
@@ -687,41 +690,50 @@ export class CPU extends CPUBase<CPURepr> {
         this._fetchStage_SequentialExecutionClock_InternalFlipflopD.inputPre = true
 
         this._decodeStage_SequentialExecutionClock_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._decodeStage_SequentialExecutionClock_InternalFlipflopD.inputPre = true
+        this._decodeStage_SequentialExecutionClock_InternalFlipflopD.inputClr = true
 
         this._executeStage_SequentialExecutionClock_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._executeStage_SequentialExecutionClock_InternalFlipflopD.inputPre = true
+        this._executeStage_SequentialExecutionClock_InternalFlipflopD.inputClr = true
 
         this._writebackStage_SequentialExecutionClock_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._writebackStage_SequentialExecutionClock_InternalFlipflopD.inputPre = true
+        this._writebackStage_SequentialExecutionClock_InternalFlipflopD.inputClr = true
 
-        this._controlRegister_ResetState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._controlRegister_ResetState_InternalFlipflopD.inputPre = true
+        this._control_ResetState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._control_ResetState_InternalFlipflopD.inputPre = true
 
-        this._controlRegister_PipelineState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._controlRegister_PipelineState_InternalFlipflopD.inputClr = true
-        this._pipeline = this._controlRegister_PipelineState_InternalFlipflopD.outputQ
+        this._control_PipelineState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._control_PipelineState_InternalFlipflopD.inputClr = true
+        this._pipeline = this._control_PipelineState_InternalFlipflopD.outputQ
 
-        this._controlRegister_RunStopState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._controlRegister_RunStopState_InternalFlipflopD.inputClr = true
+        this._control_RunStopState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._control_RunStopState_InternalFlipflopD.inputClr = true
 
-        this._controlRegister_RunStopState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._controlRegister_RunStopState_InternalFlipflopD.inputClr = true
+        this._control_SequentialExecutionState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._control_SequentialExecutionState_InternalFlipflopD.inputClr = true
 
-        this._controlRegister_SequentialExecutionState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._controlRegister_SequentialExecutionState_InternalFlipflopD.inputClr = true
+        this._control_HaltState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._control_HaltState_InternalFlipflopD.inputClr = true
 
-        this._controlRegister_HaltState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._controlRegister_HaltState_InternalFlipflopD.inputClr = true
+        this._control_AddressingModeState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
+        this._control_AddressingModeState_InternalFlipflopD.inputClr = true
 
-        this._controlRegister_AddressingModeState_InternalFlipflopD = new InternalFlipflopD(EdgeTrigger.falling)
-        this._controlRegister_AddressingModeState_InternalFlipflopD.inputClr = true
+        this._StackPointer_InternalRegister = new InternalRegister(this.numStackBits, EdgeTrigger.falling)
+        this._StackPointer_InternalRegister.inputPre = true
+        this._ProgramCounter_InternalRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
+        this._ProgramCounter_InternalRegister.inputClr = true
+        // this. _ProgramCounterInternalRegister.recalcInternalValue()
 
         this._fetchDecodeStage_StackPointer_InternalRegister = new InternalRegister(this.numStackBits, EdgeTrigger.falling)
+        this._fetchDecodeStage_StackPointer_InternalRegister.inputPre = true
         this._fetchDecodeStage_NextStackPointer_InternalRegister = new InternalRegister(this.numStackBits, EdgeTrigger.falling)
-        this._fetchDecodeStage_CallStackInput_InternalRegister = new InternalRegister(this.numDataAddressBits, EdgeTrigger.falling)
+        this._fetchDecodeStage_NextStackPointer_InternalRegister.inputClr = true
+        this._fetchDecodeStage_CallStackInput_InternalRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
+        this._fetchDecodeStage_CallStackInput_InternalRegister.inputClr = true
         this._fetchDecodeStage_ProgramCounter_InternalRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
+        this._fetchDecodeStage_ProgramCounter_InternalRegister.inputClr = true
         this._fetchDecodeStage_Instruction_InternalRegister = new InternalRegister(this.numInstructionBits, EdgeTrigger.falling)
+        this._fetchDecodeStage_Instruction_InternalRegister.inputClr = true
+
         // const instructionInit = this.inputValues(this.inputs.Instr)
         // Needs to revert all inputs to be compatible with choosen ISA
         // const instructionInit_FETCH = instructionInit.reverse()
@@ -736,36 +748,40 @@ export class CPU extends CPUBase<CPURepr> {
         // this._fetchDecodeStage_Instruction_InternalRegister.inputClr = true
         // this._fetchDecodeStage_Instruction_InternalRegister.recalcInternalValue()
 
-
-        this._decodeExecuteStage_CallStackOutput_InternalRegister = new InternalRegister(this.numDataAddressBits, EdgeTrigger.falling)
-        this._decodeExecuteStage_ProgramCounter_InternalRegister = new InternalRegister(this.numDataAddressBits, EdgeTrigger.falling)
+        this._decodeExecuteStage_CallStackOutput_InternalRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
+        this._decodeExecuteStage_CallStackOutput_InternalRegister.inputClr = true
+        this._decodeExecuteStage_ProgramCounter_InternalRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
+        this._decodeExecuteStage_ProgramCounter_InternalRegister.inputClr = true
         this._decodeExecuteStage_Operand_InternalRegister = new InternalRegister(this.numDataBits, EdgeTrigger.falling)
+        this._decodeExecuteStage_Operand_InternalRegister.inputClr = true
 
         this._Accumulator_InternalRegister = new InternalRegister(this.numDataBits, EdgeTrigger.falling)
         this._Accumulator_InternalRegister.inputClr = true
         // this._fetchDecodeStage_Instruction_InternalRegister.recalcInternalValue()
 
         this._decodeExecuteStage_DataRAMOutput_InternalRegister = new InternalRegister(this.numDataBits, EdgeTrigger.falling)
+        this._decodeExecuteStage_DataRAMOutput_InternalRegister.inputClr = true
         this._decodeExecuteStage_ALUoperation_InternalRegister = new InternalRegister(this.numDataBits, EdgeTrigger.falling)
+        this._decodeExecuteStage_ALUoperation_InternalRegister.inputClr = true
         this._decodeExecuteStage_ControlUnit_InternalRegister = new InternalRegister(8, EdgeTrigger.falling)
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputClr = true
 
         this._Flags_InternalRegister = new InternalRegister(4, EdgeTrigger.falling)
         this._Flags_InternalRegister.inputClr = true
         // this._Flags_InternalRegister.recalcInternalValue()
 
-        this._executeWritebackStage_CallStackOutput_InternalRegister = new InternalRegister(this.numDataAddressBits, EdgeTrigger.falling)
-        this._executeWritebackStage_ProgramCounter_InternalRegister = new InternalRegister(this.numDataAddressBits, EdgeTrigger.falling)
+        this._executeWritebackStage_CallStackOutput_InternalRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
+        this._executeWritebackStage_CallStackOutput_InternalRegister.inputClr = true
+        this._executeWritebackStage_ProgramCounter_InternalRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
+        this._executeWritebackStage_ProgramCounter_InternalRegister.inputClr = true
         this._executeWritebackStage_DataRAMPAddress_InternalRegister = new InternalRegister(this.numDataAddressBits, EdgeTrigger.falling)
+        this._executeWritebackStage_DataRAMPAddress_InternalRegister.inputClr = true
         this._executeWritebackStage_DataRAMPInput_InternalRegister = new InternalRegister(this.numDataBits, EdgeTrigger.falling)
+        this._executeWritebackStage_DataRAMPInput_InternalRegister.inputClr = true
         this._executeWritebackStage_ALUOuput_InternalRegister = new InternalRegister(this.numDataBits, EdgeTrigger.falling)
+        this._executeWritebackStage_DataRAMPInput_InternalRegister.inputClr = true
         this._executeWritebackStage_ControlUnit_InternalRegister = new InternalRegister(8, EdgeTrigger.falling)
-
-        this._ProgramCounter_InternalRegister = new InternalRegister(this.numInstructionAddressBits, EdgeTrigger.falling)
-        this._ProgramCounter_InternalRegister.inputClr = true
-        // this. _ProgramCounterInternalRegister.recalcInternalValue()
-
-        this._StackPointer_InternalRegister = new InternalRegister(this.numStackBits, EdgeTrigger.falling)
-        this._StackPointer_InternalRegister.inputPre = true
+        this._executeWritebackStage_ControlUnit_InternalRegister.inputClr = true
 
         this._CallStack_InternalRAM = new InternalRAM(this.numInstructionAddressBits, this.numStackBits)
         this._CallStack_InternalRAM.inputClr =true
@@ -847,42 +863,42 @@ export class CPU extends CPUBase<CPURepr> {
         // RUN CONTROL LOGIC
         const prevClock= this._lastClock
         const clockSpeed= this.inputs.Speed.value ? this.inputs.ClockF.value : this.inputs.ClockS.value
-        const clockSync= this._lastClock = (this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._controlRegister_HaltState_InternalFlipflopD.outputQ̅
+        const clockSync= this._lastClock = (this._control_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._control_HaltState_InternalFlipflopD.outputQ̅
 
-        const runningState = this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value && this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅ : this._controlRegister_RunStopState_InternalFlipflopD.outputQ
-        const haltSignal = this._controlRegister_HaltState_InternalFlipflopD.outputQ || (this._controlRegister_ResetState_InternalFlipflopD.outputQ̅  && this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅ )
-        //console.log((this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._internalHaltSignalFlipflopD.outputQ̅)
-        //console.log(this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅ )
+        const runningState = this._control_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value && this._control_RunStopState_InternalFlipflopD.outputQ̅ : this._control_RunStopState_InternalFlipflopD.outputQ
+        const haltSignal = this._control_HaltState_InternalFlipflopD.outputQ || (this._control_ResetState_InternalFlipflopD.outputQ̅  && this._control_RunStopState_InternalFlipflopD.outputQ̅ )
+        //console.log((this._control_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._internalHaltSignalFlipflopD.outputQ̅)
+        //console.log(this._control_RunStopState_InternalFlipflopD.outputQ̅ )
         /*
-        if (InternalFlipflop.isInternalClockTrigger(this._controlRegister_RunStopState_InternalFlipflopD.trigger, prevClock, clockSync)) {
+        if (InternalFlipflop.isInternalClockTrigger(this._control_RunStopState_InternalFlipflopD.trigger, prevClock, clockSync)) {
             if (prevClock) {
                 if (!clockSync) {
                     console.log("Falling")
-                    console.log("! ", this._controlRegister_RunStopState_InternalFlipflopD.value)
+                    console.log("! ", this._control_RunStopState_InternalFlipflopD.value)
                 }
             }
             if (clockSync) {
                 if (prevClock) {
                     console.log("Rising")
-                    console.log("* ", this._controlRegister_RunStopState_InternalFlipflopD.value)
+                    console.log("* ", this._control_RunStopState_InternalFlipflopD.value)
                 }
             }
-            const newValue : LogicValue = LogicValue.filterHighZ(this._controlRegister_RunStopState_InternalFlipflopD.inputD)
-            this._controlRegister_RunStopState_InternalFlipflopD.propagateInternalValue([newValue, !newValue])
+            const newValue : LogicValue = LogicValue.filterHighZ(this._control_RunStopState_InternalFlipflopD.inputD)
+            this._control_RunStopState_InternalFlipflopD.propagateInternalValue([newValue, !newValue])
         }
 */
 
         // CLR Button
 
-        const clrSignal= this.inputs.Reset.value && this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅
+        const clrSignal= this.inputs.Reset.value && this._control_RunStopState_InternalFlipflopD.outputQ̅
 
-        this._controlRegister_ResetState_InternalFlipflopD.inputPre = clrSignal
+        this._control_ResetState_InternalFlipflopD.inputPre = clrSignal
 
-        this._controlRegister_PipelineState_InternalFlipflopD.inputClr = clrSignal
+        this._control_PipelineState_InternalFlipflopD.inputClr = clrSignal
 
-        this._controlRegister_RunStopState_InternalFlipflopD.inputClr = clrSignal
+        this._control_RunStopState_InternalFlipflopD.inputClr = clrSignal
 
-        this._controlRegister_HaltState_InternalFlipflopD.inputClr = clrSignal
+        this._control_HaltState_InternalFlipflopD.inputClr = clrSignal
 
         this._fetchStage_SequentialExecutionClock_InternalFlipflopD.inputPre = clrSignal
         this._decodeStage_SequentialExecutionClock_InternalFlipflopD.inputClr = clrSignal
@@ -903,7 +919,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._Operations_InternalCounter.inputClr = clrSignal
 
-        this._pipeline = this._controlRegister_PipelineState_InternalFlipflopD.outputQ
+        this._pipeline = this._control_PipelineState_InternalFlipflopD.outputQ
 
         // FETCH Stage
 
@@ -935,12 +951,14 @@ export class CPU extends CPUBase<CPURepr> {
             this._opCodeOperandsInStages = {
                 FETCH: "",
                 DECODE: "",
-                EXECUTE: ""
+                EXECUTE: "",
+                WRITEBAK: ""
             }
             this._adressesInStages = {
                 FETCH: -1,
                 DECODE: -1,
-                EXECUTE: -1
+                EXECUTE: -1,
+                WRITEBAK: -1
             }
         }
 
@@ -1112,23 +1130,23 @@ export class CPU extends CPUBase<CPURepr> {
 
         // CONTROL UNIT
 
-        this._controlRegister_HaltState_InternalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
-        this._controlRegister_HaltState_InternalFlipflopD.inputClock = clockSync
-        this._controlRegister_HaltState_InternalFlipflopD.recalcInternalValue()
+        this._control_HaltState_InternalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
+        this._control_HaltState_InternalFlipflopD.inputClock = clockSync
+        this._control_HaltState_InternalFlipflopD.recalcInternalValue()
 
-        const _internalFetchFlipflopDoutputQ̅ = this._controlRegister_RunStopState_InternalFlipflopD.outputQ̅
-        this._controlRegister_RunStopState_InternalFlipflopD.inputD = _internalFetchFlipflopDoutputQ̅
-        this._controlRegister_RunStopState_InternalFlipflopD.inputClock = (clockSync && this._controlRegister_HaltState_InternalFlipflopD.outputQ) || this.inputs.RunStop.value
-        this._controlRegister_RunStopState_InternalFlipflopD.recalcInternalValue()
+        const _internalFetchFlipflopDoutputQ̅ = this._control_RunStopState_InternalFlipflopD.outputQ̅
+        this._control_RunStopState_InternalFlipflopD.inputD = _internalFetchFlipflopDoutputQ̅
+        this._control_RunStopState_InternalFlipflopD.inputClock = (clockSync && this._control_HaltState_InternalFlipflopD.outputQ) || this.inputs.RunStop.value
+        this._control_RunStopState_InternalFlipflopD.recalcInternalValue()
 
-        this._controlRegister_ResetState_InternalFlipflopD.inputD = false
-        this._controlRegister_ResetState_InternalFlipflopD.inputClock = clockSync
-        this._controlRegister_ResetState_InternalFlipflopD.recalcInternalValue()
+        this._control_ResetState_InternalFlipflopD.inputD = false
+        this._control_ResetState_InternalFlipflopD.inputClock = clockSync
+        this._control_ResetState_InternalFlipflopD.recalcInternalValue()
 
-        this._controlRegister_PipelineState_InternalFlipflopD.inputD = this.inputs.Pipeline.value
-        this._controlRegister_PipelineState_InternalFlipflopD.inputD = false
-        this._controlRegister_PipelineState_InternalFlipflopD.inputClock = clockSync && this._controlRegister_ResetState_InternalFlipflopD.outputQ
-        this._controlRegister_PipelineState_InternalFlipflopD.recalcInternalValue()
+        this._control_PipelineState_InternalFlipflopD.inputD = this.inputs.Pipeline.value
+        this._control_PipelineState_InternalFlipflopD.inputD = false
+        this._control_PipelineState_InternalFlipflopD.inputClock = clockSync && this._control_ResetState_InternalFlipflopD.outputQ
+        this._control_PipelineState_InternalFlipflopD.recalcInternalValue()
 
         const _internalFetchFlipflopDoutputQ = this._fetchStage_SequentialExecutionClock_InternalFlipflopD.outputQ
         const _internalDecodeFlipflopDoutputQ = this._decodeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
@@ -1213,14 +1231,14 @@ export class CPU extends CPUBase<CPURepr> {
             console.log("before ",this._adressesInStages)
             if (this._pipeline) {
                 this._opCodeOperandsInStages["EXECUTE"] = this._opCodeOperandsInStages["DECODE"]
-                this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["WRITE_BACK"]
-                this._opCodeOperandsInStages["WRITE_BACK"] = this._opCodeOperandsInStages["FETCH"]
+                this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["WRITEBACK"]
+                this._opCodeOperandsInStages["WRITEBACK"] = this._opCodeOperandsInStages["FETCH"]
                 this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName
                     + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
 
                 this._adressesInStages["EXECUTE"] = this._adressesInStages["DECODE"]
-                this._adressesInStages["DECODE"] = this._adressesInStages["WRITE_BACK"]
-                this._adressesInStages["WRITE_BACK"] = this._adressesInStages["FETCH"]
+                this._adressesInStages["DECODE"] = this._adressesInStages["WRITEBACK"]
+                this._adressesInStages["WRITEBACK"] = this._adressesInStages["FETCH"]
                 this._adressesInStages["FETCH"] = currentInstructionAddress
             }
             console.log("after", this._opCodeOperandsInStages)
@@ -1456,7 +1474,7 @@ export class CPU extends CPUBase<CPURepr> {
                             valueCenterX = valueCenterX + valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 50 : 25 : 0) - 37.5
                             valueCenterY = valueCenterY + valueCenterDeltaY
                             break
-                        case "WRITE_BACK":
+                        case "WRITEBACK":
                             valueCenterX = valueCenterX + 2 * valueCenterDeltaX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? 50 : 25 : 0) - 37.5
                             valueCenterY = valueCenterY + 2 * valueCenterDeltaY
                             break

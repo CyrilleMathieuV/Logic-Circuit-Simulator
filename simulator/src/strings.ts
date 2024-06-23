@@ -399,13 +399,13 @@ const Strings_fr = {
                 "FETCH": tuple("Fetch", "Fetch"),
                 "DECODE": tuple("Decode", "Decode"),
                 "EXECUTE": tuple("Execute", "Execute"),
-                "WRITE_BACK": tuple("Write back", "Write back"),
+                "WRITEBACK": tuple("Write back", "Write back"),
             },
             StageColor: {
                 "FETCH": "green",
                 "DECODE": "blue",
                 "EXECUTE": "orange",
-                "WRITE_BACK": "black",
+                "WRITEBACK": "black",
             },
             tooltip: {
                 title: "Unité centrale (CPU)",
@@ -447,13 +447,13 @@ const Strings_fr = {
                 "FETCH": tuple("Fetch", "Fetch"),
                 "DECODE": tuple("Decode", "Decode"),
                 "EXECUTE": tuple("Execute", "Execute"),
-                "WRITE_BACK": tuple("Write back", "Write back"),
+                "WRITEBACK": tuple("Write back", "Write back"),
             },
             StageColor: {
                 "FETCH": "green",
                 "DECODE": "blue",
                 "EXECUTE": "orange",
-                "WRITE_BACK": "black",
+                "WRITEBACK": "black",
             },
             tooltip: {
                 title: "Unité centrale (CPU)",
@@ -1272,13 +1272,13 @@ const Strings_en: Strings = {
                 "FETCH": tuple("Fetch", "Fetch"),
                 "DECODE": tuple("Decode", "Decode"),
                 "EXECUTE": tuple("Execute", "Execute"),
-                "WRITE_BACK": tuple("Write back", "Write back"),
+                "WRITEBACK": tuple("Write back", "Write back"),
             },
             StageColor: {
                 "FETCH": "green",
                 "DECODE": "blue",
                 "EXECUTE": "orange",
-                "WRITE_BACK": "black",
+                "WRITEBACK": "black",
             },
             tooltip: {
                 title: "Central Processing Unit (CPU)",
@@ -1320,13 +1320,13 @@ const Strings_en: Strings = {
                 "FETCH": tuple("Fetch", "Fetch"),
                 "DECODE": tuple("Decode", "Decode"),
                 "EXECUTE": tuple("Execute", "Execute"),
-                "WRITE_BACK": tuple("Write back", "Write back"),
+                "WRITEBACK": tuple("Write back", "Write back"),
             },
             StageColor: {
                 "FETCH": "green",
                 "DECODE": "blue",
                 "EXECUTE": "orange",
-                "WRITE_BACK": "black",
+                "WRITEBACK": "black",
             },
             tooltip: {
                 title: "Central Processing Unit (CPU)",
