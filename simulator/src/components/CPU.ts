@@ -946,8 +946,8 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._Operations_InternalCounter.inputClr = resetSignal
 
-        this._pipeline = !(this._control_SequentialExecutionState_InternalFlipflopD.outputQ && this._control_PipelineState_InternalFlipflopD.outputQ)
-        this._sequentialExecution = this._control_PipelineState_InternalFlipflopD.outputQ
+        this._sequentialExecution = this._control_SequentialExecutionState_InternalFlipflopD.outputQ && this._control_PipelineState_InternalFlipflopD.outputQ̅
+        this._pipeline = this._control_PipelineState_InternalFlipflopD.outputQ
         this._addressingMode = this._control_AddressingModeState_InternalFlipflopD.outputQ
 
         // FETCH instruction : first because we need all signals to prepare the inputs for the next CPU's state
