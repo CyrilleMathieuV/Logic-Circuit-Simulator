@@ -963,7 +963,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._Operations_InternalCounter.inputClr = resetSignal
 
-        this._sequentialExecution = this._control_SequentialExecutionState_InternalFlipflopD.outputQ
+        this._sequentialExecution = !(this._control_SequentialExecutionState_InternalFlipflopD.outputQ && this._control_PipelineState_InternalFlipflopD.outputQ)
         this._pipeline = this._control_PipelineState_InternalFlipflopD.outputQ
         this._addressingMode = this._control_AddressingModeState_InternalFlipflopD.outputQ
 
@@ -1292,13 +1292,13 @@ export class CPU extends CPUBase<CPURepr> {
 
         const ramWESyncValue = this._sequentialExecution ? clockSync : clockSync && this._writebackStage_SequentialExecutionClock_InternalFlipflopD.outputQ
 
-        // CONTROL UNIT
-        this._control_HaltState_InternalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
+        // Compute state after clock
+        this._control_HaltState_InternalFlipflopD.inputD = _halt
         this._control_HaltState_InternalFlipflopD.inputClock = clockSync
         this._control_HaltState_InternalFlipflopD.recalcInternalValue()
 
         const _internalFetchFlipflopDoutputQ̅ = this._control_RunStopState_InternalFlipflopD.outputQ̅
-        this._control_RunStopState_InternalFlipflopD.inputD = _internalFetchFlipflopDoutputQ̅
+        this._control_RunStopState_InternalFlipflopD.inputD = this._control_RunStopState_InternalFlipflopD.outputQ̅
         this._control_RunStopState_InternalFlipflopD.inputClock = (clockSync && this._control_HaltState_InternalFlipflopD.outputQ) || this.inputs.RunStop.value
         this._control_RunStopState_InternalFlipflopD.recalcInternalValue()
 
@@ -1307,9 +1307,12 @@ export class CPU extends CPUBase<CPURepr> {
         this._control_ResetState_InternalFlipflopD.recalcInternalValue()
 
         this._control_PipelineState_InternalFlipflopD.inputD = this.inputs.Pipeline.value
-        this._control_PipelineState_InternalFlipflopD.inputD = false
         this._control_PipelineState_InternalFlipflopD.inputClock = clockSync && this._control_ResetState_InternalFlipflopD.outputQ
         this._control_PipelineState_InternalFlipflopD.recalcInternalValue()
+
+        this._control_SequentialExecutionState_InternalFlipflopD.inputD = this.inputs.SequentialExecution.value
+        this._control_SequentialExecutionState_InternalFlipflopD.inputClock = clockSync && this._control_ResetState_InternalFlipflopD.outputQ
+        this._control_SequentialExecutionState_InternalFlipflopD.recalcInternalValue()
 
         const _internalFetchFlipflopDoutputQ = this._fetchStage_SequentialExecutionClock_InternalFlipflopD.outputQ
         const _internalDecodeFlipflopDoutputQ = this._decodeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
