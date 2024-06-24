@@ -1076,7 +1076,7 @@ export class CPU extends CPUBase<CPURepr> {
         const _returnFromSubroutine_controlUnitBit_5 = _subroutineCall && opCodeValue[3]
         const __jump = !opCodeValue[0] && opCodeValue[1] && !opCodeValue[2]
         const _jumpUp_controlUnitBit_0 = __jump && opCodeValue[3]
-        const _programCounterNonSequentialStep_controlUnitBit_4 = _subroutineCall || __jump
+        const _jumpCallDetection_controlUnitBit_4 = _subroutineCall || __jump
         const __branch = !opCodeValue[0] && opCodeValue[1] && opCodeValue[2]
         const _branchOnZ_controlUnitBit_1 = __branch && !opCodeValue[3]
         const _branchOnC_controlUnitBit_2 = __branch && opCodeValue[3]
@@ -1087,15 +1087,7 @@ export class CPU extends CPUBase<CPURepr> {
             ramwevalue = this._executeWritebackStage_ControlUnit_InternalRegister.outputsQ[6]
         } else {
             ramwevalue = _saveAccumulatorToRAM_controlUnitBit_6
-        } 
-        
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[0] = _jumpUp_controlUnitBit_0
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[1] = _branchOnZ_controlUnitBit_1
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[2] = _branchOnC_controlUnitBit_2
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[4] = _programCounterNonSequentialStep_controlUnitBit_4
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[5] = _returnFromSubroutine_controlUnitBit_5
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[6] = _saveAccumulatorToRAM_controlUnitBit_6
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[7] = _ALUoperation_controlUnitBit_7
+        }
 
         this._executeWritebackStage_ControlUnit_InternalRegister.inputsD = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ
 
@@ -1118,31 +1110,12 @@ export class CPU extends CPUBase<CPURepr> {
             this._StackPointer_InternalRegister.inputsD = this._StackPointer_InternalRegister.outputsQ
         }
 
-        //console.log("SP " +  _stackPointerALUoutputss.s)
-        //const _stackPointer = _jumpToSubroutine? this._internalStackPointerRegister.inputsD : _stackPointerALUoutputss.s
-
-        //console.log("PC selected " + _internalProgramCounterSelectedRegisterOutputs)
-
         // FETCH PROGRAM COUNTER
         const _programCounterALUInputA = this._ProgramCounter_InternalRegister.outputsQ
         const _programCounterALUInputB = [true]
         ArrayClampOrPad(_programCounterALUInputB, this.numInstructionAddressBits, false)
 
         const _programCounterALUoutputs= doALUOp("A+B", _programCounterALUInputA, _programCounterALUInputB,false)
-
-        if (this._pipeline) {
-            if (this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[4]) {
-                this._ProgramCounter_InternalRegister.inputsD = _programCounterALUoutputs.s
-            } else {
-                this._ProgramCounter_InternalRegister.inputsD = this._ProgramCounter_InternalRegister.outputsQ
-            }
-        } else {
-            if (_programCounterNonSequentialStep_controlUnitBit_4) {
-                this._ProgramCounter_InternalRegister.inputsD = _programCounterALUoutputs.s
-            } else {
-                this._ProgramCounter_InternalRegister.inputsD = this._ProgramCounter_InternalRegister.outputsQ
-            }
-        }
 
         // fetchDecode Transition
         this._fetchDecodeStage_StackPointer_InternalRegister.inputsD = this._StackPointer_InternalRegister.outputsQ
@@ -1202,7 +1175,6 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         // DECODE STACK UOFLOW
-
         const _stackPointerRegisterNotOrOnOutputs= !(logicalOROnEveryBits(this._StackPointer_InternalRegister.outputsQ))
         const _stackPointerRegisterAndOnOutputs= logicalANDOnEveryBits(this._StackPointer_InternalRegister.outputsQ)
 
@@ -1216,11 +1188,9 @@ export class CPU extends CPUBase<CPURepr> {
         this._StackPointerUOflow_InternalFlipflopD.inputD = _stackPointerUOflowValue
 
         // DECODE DATA ADDRESS
-
         this._decodeExecuteStage_Operand_InternalRegister.inputsD = operandValue
 
-        // DECODE DATA ACCUMULATOR first stage
-
+        // DECODE DATA ACCUMULATOR first step
         let _inputsAccumulatorData: LogicValue[]
         if (_loadDataInputToAccumulatorSelector) {
             _inputsAccumulatorData = this.inputValues(this.inputs.DataIn).reverse()
@@ -1229,7 +1199,6 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         // DECODE DATA ALU
-
         let _dataALUopValue: LogicValue[]
         if (this._pipeline) {
             _dataALUopValue = this._decodeExecuteStage_ALUoperation_InternalRegister.outputsQ
@@ -1238,7 +1207,8 @@ export class CPU extends CPUBase<CPURepr> {
         }
         const _dataALUopIndex = displayValuesFromArray(_dataALUopValue, false)[1]
         const _dataALUop = isUnknown(_dataALUopIndex) ? "A+B" : ALUOps[_dataALUopIndex]
-        
+
+        // EXCUTE DATA ALU
         const _dataALUinputA = this._Accumulator_InternalRegister.outputsQ
         let _dataALUinputB : LogicValue[]
         if (this._pipeline) {
@@ -1249,6 +1219,39 @@ export class CPU extends CPUBase<CPURepr> {
 
         const _dataALUoutputs = doALUOp(_dataALUop, _dataALUinputA, _dataALUinputB, false)
 
+        this._Flags_InternalRegister.inputsD[0] = this.allZeros(_dataALUoutputs.s)
+        this._Flags_InternalRegister.inputsD[1] = _dataALUoutputs.cout
+
+        let _programCounterNonSequentialStep_controlUnitBit_3: LogicValue
+        if (this._pipeline) {
+            _programCounterNonSequentialStep_controlUnitBit_3 = (this._Flags_InternalRegister.outputsQ[0] && this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[1]) || (this._Flags_InternalRegister.outputsQ[1] && this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[2]) || this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[4]
+        } else {
+            _programCounterNonSequentialStep_controlUnitBit_3 = (this._Flags_InternalRegister.outputsQ[0] && _branchOnZ_controlUnitBit_1) || (this._Flags_InternalRegister.outputsQ[1] && _branchOnC_controlUnitBit_2) || _jumpCallDetection_controlUnitBit_4
+        }
+
+        if (this._pipeline) {
+            if (this._executeWritebackStage_ControlUnit_InternalRegister.outputsQ[3]) {
+                if (this._executeWritebackStage_ControlUnit_InternalRegister.outputsQ[5]) {
+                    this._ProgramCounter_InternalRegister.inputsD = this._executeWritebackStage_CallStackOutput_InternalRegister.outputsQ
+                } else {
+                    this._ProgramCounter_InternalRegister.inputsD = this._executeWritebackStage_ProgramCounter_InternalRegister.outputsQ
+                }
+            } else {
+                this._ProgramCounter_InternalRegister.inputsD = _programCounterALUoutputs.s
+            }
+        } else {
+            if (_programCounterNonSequentialStep_controlUnitBit_3) {
+                if (_returnFromSubroutine_controlUnitBit_5) {
+                    this._ProgramCounter_InternalRegister.inputsD = this._CallStack_InternalRAM.outputsQ
+                } else {
+                    this._ProgramCounter_InternalRegister.inputsD = _programCounterJumpValue
+                }
+            } else {
+                this._ProgramCounter_InternalRegister.inputsD = _programCounterALUoutputs.s
+            }
+        }
+
+        // DECODE DATA ACCUMULATOR second step
         if (_ALUoperation_controlUnitBit_7) {
             if (this._pipeline) {
                 _inputsAccumulatorData = this._executeWritebackStage_ALUOuput_InternalRegister.outputsQ
@@ -1257,29 +1260,41 @@ export class CPU extends CPUBase<CPURepr> {
             }
         }
 
-        this._Accumulator_InternalRegister.inputsD = _inputsAccumulatorData
+        // decodeExecute Transition
+        this._decodeExecuteStage_CallStackOutput_InternalRegister.inputsD = this._CallStack_InternalRAM.outputsQ
+        this._decodeExecuteStage_ProgramCounter_InternalRegister.inputsD = _programCounterJumpValue
 
+        this._decodeExecuteStage_Operand_InternalRegister.inputsD = operandValue
+        this._Accumulator_InternalRegister.inputsD = _inputsAccumulatorData
+        this._decodeExecuteStage_DataRAMInput_InternalRegister.inputsD = this.inputValues(this.inputs.DataIn).reverse()
+        this._decodeExecuteStage_ALUoperation_InternalRegister.inputsD = [opCodeValue[0], !opCodeValue[3], opCodeValue[1], opCodeValue[2]]
+
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[0] = _jumpUp_controlUnitBit_0
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[1] = _branchOnZ_controlUnitBit_1
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[2] = _branchOnC_controlUnitBit_2
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[4] = _jumpCallDetection_controlUnitBit_4
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[5] = _returnFromSubroutine_controlUnitBit_5
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[6] = _saveAccumulatorToRAM_controlUnitBit_6
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[7] = _ALUoperation_controlUnitBit_7
+
+        // executeWriteback Transition
+        this._executeWritebackStage_CallStackOutput_InternalRegister.inputsD = this._decodeExecuteStage_CallStackOutput_InternalRegister.outputsQ
+        this._executeWritebackStage_ProgramCounter_InternalRegister.inputsD = this._decodeExecuteStage_ProgramCounter_InternalRegister.outputsQ
+
+        this._executeWritebackStage_DataRAMAddress_InternalRegister.inputsD = this._decodeExecuteStage_Operand_InternalRegister.outputsQ
         this._executeWritebackStage_DataRAMOutput_InternalRegister.inputsD = this._Accumulator_InternalRegister.outputsQ
         this._executeWritebackStage_ALUOuput_InternalRegister.inputsD = _dataALUoutputs.s
 
-        this._Flags_InternalRegister.inputsD[0] = this.allZeros(_dataALUoutputs.s)
-        this._Flags_InternalRegister.inputsD[1] = _dataALUoutputs.cout
-        // this._Flags_InternalRegister.inputsD[0] = this.allZeros(_inputsAccumulatorData)
-
-        const z = this._Flags_InternalRegister.outputsQ[0]
-        const c = this._Flags_InternalRegister.outputsQ[1]
-
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[4] = __jump
+        this._executeWritebackStage_ControlUnit_InternalRegister.inputsD[3] = _programCounterNonSequentialStep_controlUnitBit_3
+        this._executeWritebackStage_ControlUnit_InternalRegister.inputsD[5] = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[5]
+        this._executeWritebackStage_ControlUnit_InternalRegister.inputsD[6] = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[6]
+        this._executeWritebackStage_ControlUnit_InternalRegister.inputsD[7] = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[7]
 
         const ramWESyncValue = this._pipeline ? clockSync : clockSync && this._executeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
 
-        // EXECUTE DATA ADDRESS
+        //  executeWriteback Transition
 
-        if (this._pipeline) {
-            this._executeWritebackStage_DataRAMAddress_InternalRegister.inputsD = this._decodeExecuteStage_Operand_InternalRegister.outputsQ
-        } else {
-            this._executeWritebackStage_DataRAMAddress_InternalRegister.inputsD = operandValue
-        }
+
 
         // CONTROL UNIT
 
