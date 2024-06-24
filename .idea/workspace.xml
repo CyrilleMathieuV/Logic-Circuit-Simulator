@@ -11,8 +11,6 @@
   <component name="ChangeListManager">
     <list default="true" id="30f93589-dc48-4a39-8b55-6521af5560ea" name="Changes" comment="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -342,7 +340,7 @@
       <workItem from="1719063472573" duration="11198000" />
       <workItem from="1719120130865" duration="1925000" />
       <workItem from="1719127759035" duration="8717000" />
-      <workItem from="1719151379930" duration="22968000" />
+      <workItem from="1719151379930" duration="24883000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -469,14 +467,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00176" summary="CMN adds Stack to CPU (TODO : {finish AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states, debug } + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
-      <option name="closed" value="true" />
-      <created>1698358138826</created>
-      <option name="number" value="00176" />
-      <option name="presentableId" value="LOCAL-00176" />
-      <option name="project" value="LOCAL" />
-      <updated>1698358138828</updated>
     </task>
     <task id="LOCAL-00177" summary="CMN adds Stack to CPU (TODO : {finish AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (ALMOST DONE), debug } + Keypad will be done later)&#10;[CPU_v6 and AssemblerEditor_6 are keeped]">
       <option name="closed" value="true" />
@@ -718,7 +708,15 @@
       <option name="project" value="LOCAL" />
       <updated>1719165493823</updated>
     </task>
-    <option name="localTasksCounter" value="207" />
+    <task id="LOCAL-00207" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <option name="closed" value="true" />
+      <created>1719231448658</created>
+      <option name="number" value="00207" />
+      <option name="presentableId" value="LOCAL-00207" />
+      <option name="project" value="LOCAL" />
+      <updated>1719231448658</updated>
+    </task>
+    <option name="localTasksCounter" value="208" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
