@@ -899,58 +899,55 @@ export class CPU extends CPUBase<CPURepr> {
         } else {
             this._control_SequentialExecutionState_InternalFlipflopD.inputClr = resetSignal
         }
-
         if (this.inputs.Pipeline.value) {
             this._control_PipelineState_InternalFlipflopD.inputPre = resetSignal
         } else {
             this._control_PipelineState_InternalFlipflopD.inputClr = resetSignal
         }
-
         this._control_RunStopState_InternalFlipflopD.inputClr = resetSignal
-
         this._control_ResetState_InternalFlipflopD.inputPre = resetSignal
-
         if (this.inputs.AddressingMode.value) {
             this._control_AddressingModeState_InternalFlipflopD.inputPre = resetSignal
         } else {
             this._control_AddressingModeState_InternalFlipflopD.inputClr = resetSignal
         }
-
         this._control_HaltState_InternalFlipflopD.inputClr = resetSignal
 
+        this._StackPointer_InternalRegister.inputPre = resetSignal
         this._ProgramCounter_InternalRegister.inputClr = resetSignal
 
         this._fetchDecodeStage_Instruction_InternalRegister.inputClr = resetSignal
         this._fetchDecodeStage_StackPointer_InternalRegister.inputPre = resetSignal
-        this._fetchDecodeStage_StackPointerALUoutputs_InternalRegister.inputClr = resetSignal
         this._fetchDecodeStage_CallStack_InternalRegister.inputClr = resetSignal
         this._fetchDecodeStage_ProgramCounter_InternalRegister.inputClr = resetSignal
         this._fetchDecodeStage_Instruction_InternalRegister.inputClr = resetSignal
 
-        this._Accumulator_InternalRegister.inputClr = resetSignal
-        this._Flags_InternalRegister.inputClr = resetSignal
-        // this._Flags_InternalRegister.recalcInternalValue()
+        this._CallStack_InternalRAM.inputClr = resetSignal
+        this._StackPointerControlUOflow_InternalFlipflopD.inputClr = resetSignal
+        this._StackPointerUOflow_InternalFlipflopD.inputClr = resetSignal
 
         this._decodeExecuteStage_DataRAMIn_InternalRegister.inputClr = resetSignal
         this._decodeExecuteStage_ALUoperation_InternalRegister.inputClr = resetSignal
         this._decodeExecuteStage_ControlUnit_InternalRegister.inputClr = resetSignal
+        this._Accumulator_InternalRegister.inputClr = resetSignal
+        this._decodeExecuteStage_DataRAMIn_InternalRegister.inputClr = resetSignal
+        this._decodeExecuteStage_ALUoperation_InternalRegister.inputClr = resetSignal
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputClr  = resetSignal
 
         this._executeWritebackStage_CallStack_InternalRegister.inputClr = resetSignal
         this._executeWritebackStage_ProgramCounter_InternalRegister.inputClr = resetSignal
         this._executeWritebackStage_DataRAMAddress_InternalRegister.inputClr = resetSignal
         this._executeWritebackStage_DataRAMOut_InternalRegister.inputClr = resetSignal
         this._executeWritebackStage_ALUOuputs_InternalRegister.inputClr = resetSignal
+        this._Flags_InternalRegister.inputClr = resetSignal
         this._executeWritebackStage_ControlUnit_InternalRegister.inputClr = resetSignal
 
-        this._CallStack_InternalRAM.inputClr = resetSignal
-
-        this._StackPointerControlUOflow_InternalFlipflopD.inputClr = resetSignal
-        this._StackPointerUOflow_InternalFlipflopD.inputClr = resetSignal
+        // this._Flags_InternalRegister.recalcInternalValue()
 
         this._Operations_InternalCounter.inputClr = resetSignal
 
-        this._sequentialExecution = !(this._control_SequentialExecutionState_InternalFlipflopD.outputQ && this._control_PipelineState_InternalFlipflopD.outputQ)
-        this._pipeline = this._control_PipelineState_InternalFlipflopD.outputQ
+        this._pipeline = !(this._control_SequentialExecutionState_InternalFlipflopD.outputQ && this._control_PipelineState_InternalFlipflopD.outputQ)
+        this._sequentialExecution = this._control_PipelineState_InternalFlipflopD.outputQ
         this._addressingMode = this._control_AddressingModeState_InternalFlipflopD.outputQ
 
         // FETCH instruction : first because we need all signals to prepare the inputs for the next CPU's state
