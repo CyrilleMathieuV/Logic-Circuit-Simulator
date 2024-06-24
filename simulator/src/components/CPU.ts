@@ -1219,7 +1219,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         this._decodeExecuteStage_Operand_InternalRegister.inputsD = operandValue
 
-        // DECODE ACCUMULATOR DATA IN first stage
+        // DECODE DATA ACCUMULATOR first stage
 
         let _inputsAccumulatorData: LogicValue[]
         if (_loadDataInputToAccumulatorSelector) {
@@ -1228,7 +1228,7 @@ export class CPU extends CPUBase<CPURepr> {
             _inputsAccumulatorData = operandValue
         }
 
-        // DECODE ALU DATA
+        // DECODE DATA ALU
 
         let _dataALUopValue: LogicValue[]
         if (this._pipeline) {
@@ -1339,7 +1339,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._CallStack_InternalRAM.inputClock = clockSync
             this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
 
-            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSync && ((_stackPointerRegisterNotOrOnOutputs && _jumpToSubroutine) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ))
+            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSync
             this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
 
             this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSync
@@ -1367,7 +1367,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._CallStack_InternalRAM.inputClock = clockSyncExecute
             this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
 
-            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSyncExecute && ((_stackPointerRegisterNotOrOnOutputs && _jumpToSubroutine) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ))
+            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSyncExecute
             this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
 
             this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSyncExecute
