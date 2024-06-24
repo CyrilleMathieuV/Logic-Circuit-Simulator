@@ -1290,14 +1290,9 @@ export class CPU extends CPUBase<CPURepr> {
         this._executeWritebackStage_ControlUnit_InternalRegister.inputsD[6] = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[6]
         this._executeWritebackStage_ControlUnit_InternalRegister.inputsD[7] = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[7]
 
-        const ramWESyncValue = this._pipeline ? clockSync : clockSync && this._executeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
-
-        //  executeWriteback Transition
-
-
+        const ramWESyncValue = this._sequentialExecution ? clockSync : clockSync && this._writebackStage_SequentialExecutionClock_InternalFlipflopD.outputQ
 
         // CONTROL UNIT
-
         this._control_HaltState_InternalFlipflopD.inputD = !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3] && this.allZeros(operandValue)
         this._control_HaltState_InternalFlipflopD.inputClock = clockSync
         this._control_HaltState_InternalFlipflopD.recalcInternalValue()
@@ -1319,6 +1314,7 @@ export class CPU extends CPUBase<CPURepr> {
         const _internalFetchFlipflopDoutputQ = this._fetchStage_SequentialExecutionClock_InternalFlipflopD.outputQ
         const _internalDecodeFlipflopDoutputQ = this._decodeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
         const _internalExecuteFlipflopDoutputQ = this._executeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
+        const _internalWriteBackFlipflopDoutputQ =  this._writebackStage_SequentialExecutionClock_InternalFlipflopD.outputQ
 
         this._fetchStage_SequentialExecutionClock_InternalFlipflopD.inputD = _internalExecuteFlipflopDoutputQ
         this._fetchStage_SequentialExecutionClock_InternalFlipflopD.inputClock = clockSync
@@ -1335,34 +1331,11 @@ export class CPU extends CPUBase<CPURepr> {
         this._Operations_InternalCounter.inputClock = clockSync
         this._Operations_InternalCounter.recalcInternalValue()
 
-        if (this._pipeline) {
-            this._fetchDecodeStage_Instruction_InternalRegister.inputClock = clockSync
-            this._fetchDecodeStage_Instruction_InternalRegister.recalcInternalValue()
-
-            this._Accumulator_InternalRegister.inputClock = clockSync
-            this._Accumulator_InternalRegister.recalcInternalValue()
-
-            this._Flags_InternalRegister.inputClock = clockSync
-            this._Flags_InternalRegister.recalcInternalValue()
-
-            this._ProgramCounter_InternalRegister.inputClock = clockSync
-            this._ProgramCounter_InternalRegister.recalcInternalValue()
-
-            this._StackPointer_InternalRegister.inputClock = clockSync
-            this._StackPointer_InternalRegister.recalcInternalValue()
-
-            this._CallStack_InternalRAM.inputClock = clockSync
-            this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
-
-            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSync
-            this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
-
-            this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSync
-            this._StackPointerUOflow_InternalFlipflopD.recalcInternalValue()
-        } else {
+        if (this._sequentialExecution) {
             const clockSyncFectch =  clockSync && this._fetchStage_SequentialExecutionClock_InternalFlipflopD.outputQ
             const clockSyncDecode =  clockSync && this._decodeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
             const clockSyncExecute =  clockSync && this._executeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
+            const clockSyncWriteback =  clockSync && this._writebackStage_SequentialExecutionClock_InternalFlipflopD.outputQ
 
             this._fetchDecodeStage_Instruction_InternalRegister.inputClock = clockSyncFectch
             this._fetchDecodeStage_Instruction_InternalRegister.recalcInternalValue()
@@ -1386,6 +1359,30 @@ export class CPU extends CPUBase<CPURepr> {
             this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
 
             this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSyncExecute
+            this._StackPointerUOflow_InternalFlipflopD.recalcInternalValue()
+        } else {
+            this._fetchDecodeStage_Instruction_InternalRegister.inputClock = clockSync
+            this._fetchDecodeStage_Instruction_InternalRegister.recalcInternalValue()
+
+            this._Accumulator_InternalRegister.inputClock = clockSync
+            this._Accumulator_InternalRegister.recalcInternalValue()
+
+            this._Flags_InternalRegister.inputClock = clockSync
+            this._Flags_InternalRegister.recalcInternalValue()
+
+            this._ProgramCounter_InternalRegister.inputClock = clockSync
+            this._ProgramCounter_InternalRegister.recalcInternalValue()
+
+            this._StackPointer_InternalRegister.inputClock = clockSync
+            this._StackPointer_InternalRegister.recalcInternalValue()
+
+            this._CallStack_InternalRAM.inputClock = clockSync
+            this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
+
+            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSync
+            this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
+
+            this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSync
             this._StackPointerUOflow_InternalFlipflopD.recalcInternalValue()
         }
 
@@ -1427,6 +1424,24 @@ export class CPU extends CPUBase<CPURepr> {
 
         let newState : any
 
+        let dataaddressState : LogicValue[]
+        if (this._pipeline) {
+            if (this._executeWritebackStage_ControlUnit_InternalRegister.outputsQ[6]) {
+                dataaddressState = this._executeWritebackStage_DataRAMAddress_InternalRegister.outputsQ
+            } else {
+                dataaddressState = operandValue
+            }
+        } else {
+            dataaddressState = operandValue
+        }
+
+        let dataState : LogicValue[]
+        if (this._pipeline) {
+            dataaddressState = this._executeWritebackStage_DataRAMOutput_InternalRegister.outputsQ
+        } else {
+            dataaddressState = this._Accumulator_InternalRegister.outputsQ
+        }
+
         if (isUnknown(opCodeName)) {
             newState = {
                 instructionaddress: ArrayFillWith<LogicValue>(false_, this.numInstructionAddressBits),
@@ -1446,8 +1461,8 @@ export class CPU extends CPUBase<CPURepr> {
         } else {
             newState = {
                 instructionaddress: this._ProgramCounter_InternalRegister.outputsQ,
-                dataaddress: operandValue,
-                dataout: this._Accumulator_InternalRegister.outputsQ,
+                dataaddress: dataaddressState,
+                dataout: dataaddressState,
                 ramwesync: ramWESyncValue,
                 ramwe: ramwevalue,
                 resetsync: resetSignal,
