@@ -57,6 +57,7 @@ import { InternalRAM } from "./InternalRAM";
 import { InternalComponent } from "./InternalComponent";
 import {number} from "fp-ts";
 import {CPUDef_v6} from "./CPU_v6";
+import {Clock} from "./Clock";
 
 export const CPUOpCodes = [
     "NOP", "STA", "LDA", "LDK",
@@ -876,6 +877,7 @@ export class CPU extends CPUBase<CPURepr> {
         const runningState = this._control_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value && this._control_RunStopState_InternalFlipflopD.outputQ̅ : this._control_RunStopState_InternalFlipflopD.outputQ
         const haltSignal = this._control_HaltState_InternalFlipflopD.outputQ || (this._control_ResetState_InternalFlipflopD.outputQ̅ && this._control_RunStopState_InternalFlipflopD.outputQ̅)
         const directAddressingMode = this._control_ResetState_InternalFlipflopD.outputQ && this.inputs.AddressingMode.value
+
         //console.log((this._control_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._internalHaltSignalFlipflopD.outputQ̅)
         //console.log(this._control_RunStopState_InternalFlipflopD.outputQ̅ )
         /*
@@ -895,7 +897,7 @@ export class CPU extends CPUBase<CPURepr> {
             const newValue : LogicValue = LogicValue.filterHighZ(this._control_RunStopState_InternalFlipflopD.inputD)
             this._control_RunStopState_InternalFlipflopD.propagateInternalValue([newValue, !newValue])
         }
-*/
+        */
 
         // Reset Button
 
@@ -1048,7 +1050,6 @@ export class CPU extends CPUBase<CPURepr> {
         // We must get it again, but why ?
         this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
 
-        // DECCODE Stage
         // ISA_v8
 
         const opCodeValue = instruction_FETCH.slice(0, 4).reverse()
@@ -1056,6 +1057,165 @@ export class CPU extends CPUBase<CPURepr> {
         const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
 
         const operandValue = instruction_FETCH.slice(4, 8).reverse()
+
+        // Control Unit Signals
+        let _ALUoperation_controlUnitBit_7: LogicValue
+        _ALUoperation_controlUnitBit_7 = (opCodeValue[0] && !opCodeValue[1] && !opCodeValue[2]) || (opCodeValue[0] && opCodeValue[1])
+        const __loadToAccumulator = !opCodeValue[0] && !opCodeValue[1] && opCodeValue[2]
+        const _loadDataInputToAccumulatorSelector= __loadToAccumulator && !opCodeValue[3]
+        let _accumulatorInputSelector: LogicValue
+        if (this._pipeline) {
+            _accumulatorInputSelector = this._executeWritebackStage_ControlUnit_InternalRegister.outputsQ[7]
+        } else {
+            _accumulatorInputSelector = _ALUoperation_controlUnitBit_7
+        }
+        let _accumulatorClock = _accumulatorInputSelector || __loadToAccumulator
+        const _saveAccumulatorToRAM_controlUnitBit_6 = !opCodeValue[0] && !opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
+        const _subroutineCall = opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
+        const _jumpToSubroutine = _subroutineCall && !opCodeValue[3]
+        const _returnFromSubroutine_controlUnitBit_5 = _subroutineCall && opCodeValue[3]
+        const __jump = !opCodeValue[0] && opCodeValue[1] && !opCodeValue[2]
+        const _jumpUp_controlUnitBit_0 = __jump && opCodeValue[3]
+        const _programCounterNonSequentialStep_controlUnitBit_4 = _subroutineCall || __jump
+        const __branch = !opCodeValue[0] && opCodeValue[1] && opCodeValue[2]
+        const _branchOnZ_controlUnitBit_1 = __branch && !opCodeValue[3]
+        const _branchOnC_controlUnitBit_2 = __branch && opCodeValue[3]
+        const _halt = this.allZeros(operandValue) && __jump
+
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[0] = _jumpUp_controlUnitBit_0
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[1] = _branchOnZ_controlUnitBit_1
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[2] = _branchOnC_controlUnitBit_2
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[4] = _programCounterNonSequentialStep_controlUnitBit_4
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[5] = _returnFromSubroutine_controlUnitBit_5
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[6] = _saveAccumulatorToRAM_controlUnitBit_6
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[7] = _ALUoperation_controlUnitBit_7
+
+        this._executeWritebackStage_ControlUnit_InternalRegister.inputsD = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ
+
+        // FETCH STACK MANAGEMENT
+
+        const _stackPointerALUinputA = this._StackPointer_InternalRegister.outputsQ
+        const _stackPointerALUinputB = [true]
+        ArrayClampOrPad(_stackPointerALUinputB, this.numStackBits, false)
+
+        let _stackPointerALUoutput
+        if (_jumpToSubroutine) {
+            _stackPointerALUoutput= doALUOp("A-B", _stackPointerALUinputA, _stackPointerALUinputB,false)
+        } else {
+            _stackPointerALUoutput= doALUOp("A+B", _stackPointerALUinputA, _stackPointerALUinputB,false)
+        }
+
+        if (_subroutineCall) {
+            this._StackPointer_InternalRegister.inputsD = _stackPointerALUoutput.s
+        } else {
+            this._StackPointer_InternalRegister.inputsD = this._StackPointer_InternalRegister.outputsQ
+        }
+
+        //console.log("SP " +  _stackPointerALUoutputs.s)
+        //const _stackPointer = _jumpToSubroutine? this._internalStackPointerRegister.inputsD : _stackPointerALUoutputs.s
+
+        //console.log("PC selected " + _internalProgramCounterSelectedRegisterOutputs)
+
+        // FETCH PROGRAM COUNTER
+        const _programCounterALUInputA = this._ProgramCounter_InternalRegister.outputsQ
+        const _programCounterALUInputB = [true]
+        ArrayClampOrPad(_programCounterALUInputB, this.numInstructionAddressBits, false)
+
+        const _programCounterALUoutput= doALUOp("A+B", _programCounterALUInputA, _programCounterALUInputB,false)
+
+        if (this._pipeline) {
+            if (this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ[4]) {
+                this._ProgramCounter_InternalRegister.inputsD = _programCounterALUoutput.s
+            } else {
+                this._ProgramCounter_InternalRegister.inputsD = this._ProgramCounter_InternalRegister.outputsQ
+            }
+        } else {
+            if (_programCounterNonSequentialStep_controlUnitBit_4) {
+                this._ProgramCounter_InternalRegister.inputsD = _programCounterALUoutput.s
+            } else {
+                this._ProgramCounter_InternalRegister.inputsD = this._ProgramCounter_InternalRegister.outputsQ
+            }
+        }
+
+        // fetchDecode Transition
+        this._fetchDecodeStage_StackPointer_InternalRegister.inputsD = this._StackPointer_InternalRegister.outputsQ
+        this._fetchDecodeStage_NextStackPointer_InternalRegister.inputsD = _stackPointerALUoutput.s
+
+        this._fetchDecodeStage_CallStackInput_InternalRegister.inputsD = _programCounterALUoutput.s
+        this._fetchDecodeStage_ProgramCounter_InternalRegister.inputsD = this._ProgramCounter_InternalRegister.outputsQ
+
+        this._fetchDecodeStage_Instruction_InternalRegister.inputsD = this.inputValues(this.inputs.Instruction)
+
+        // DECODE CALL STACK
+        if (_returnFromSubroutine_controlUnitBit_5) {
+            if (this._pipeline) {
+                this._CallStack_InternalRAM.inputsAddr = this._fetchDecodeStage_NextStackPointer_InternalRegister.outputsQ
+            } else {
+                this._CallStack_InternalRAM.inputsAddr = _stackPointerALUoutput.s
+            }
+
+        } else {
+            if (this._pipeline) {
+                this._CallStack_InternalRAM.inputsAddr = this._fetchDecodeStage_StackPointer_InternalRegister.outputsQ
+            } else {
+                this._CallStack_InternalRAM.inputsAddr = this._StackPointer_InternalRegister.outputsQ
+            }
+        }
+
+        if (this._pipeline) {
+            this._CallStack_InternalRAM.inputsD = this._fetchDecodeStage_CallStackInput_InternalRegister.outputsQ
+        } else {
+            this._CallStack_InternalRAM.inputsD = _programCounterALUoutput.s
+        }
+
+        this._CallStack_InternalRAM.inputWE = _jumpToSubroutine
+
+        // DECODE PROGRAM COUNTER
+        let _programCounterJumpALUInputA : LogicValue[]
+        if (this._pipeline) {
+            _programCounterJumpALUInputA = this._fetchDecodeStage_ProgramCounter_InternalRegister.outputsQ
+        } else {
+            _programCounterJumpALUInputA = this._ProgramCounter_InternalRegister.outputsQ
+        }
+        const _programCounterJumpALUInputB = operandValue
+        ArrayClampOrPad(_programCounterJumpALUInputB, this.numInstructionAddressBits, false)
+
+        let _ProgramCounterJumpALUoutput
+        if (_jumpUp_controlUnitBit_0) {
+            _ProgramCounterJumpALUoutput= doALUOp("A-B", _programCounterJumpALUInputA, _programCounterJumpALUInputB,false)
+        } else {
+            _ProgramCounterJumpALUoutput= doALUOp("A+B", _programCounterJumpALUInputA, _programCounterJumpALUInputB,false)
+        }
+
+        let _programCounterJumpValue : LogicValue[]
+        if (this._addressingMode) {
+            _programCounterJumpValue = _programCounterJumpALUInputB
+        } else {
+            _programCounterJumpValue = _ProgramCounterJumpALUoutput.s
+        }
+
+        // DECODE STACK UOFLOW
+
+        const _stackPointerRegisterNotOrOnOutputs= !(logicalOROnEveryBits(this._StackPointer_InternalRegister.outputsQ))
+        const _stackPointerRegisterAndOnOutputs= logicalANDOnEveryBits(this._StackPointer_InternalRegister.outputsQ)
+
+        const _stackPointerControlUOflowSelector= (_jumpToSubroutine && _stackPointerRegisterNotOrOnOutputs && this._StackPointerControlUOflow_InternalFlipflopD.outputQ̅) || (_returnFromSubroutine_controlUnitBit_5 && _stackPointerRegisterAndOnOutputs && this._StackPointerControlUOflow_InternalFlipflopD.outputQ)
+        if (_stackPointerControlUOflowSelector) {
+            this._StackPointerControlUOflow_InternalFlipflopD.inputD = this._StackPointerControlUOflow_InternalFlipflopD.outputQ̅
+        } else {
+            this._StackPointerControlUOflow_InternalFlipflopD.inputD = this._StackPointerControlUOflow_InternalFlipflopD.outputQ
+        }
+        const _stackPointerUOflowValue= ((_returnFromSubroutine_controlUnitBit_5 && _stackPointerRegisterAndOnOutputs && this._StackPointerControlUOflow_InternalFlipflopD.outputQ̅) || (_jumpToSubroutine && _stackPointerRegisterNotOrOnOutputs && this._StackPointerControlUOflow_InternalFlipflopD.outputQ)) || this._StackPointerUOflow_InternalFlipflopD.outputQ
+        this._StackPointerUOflow_InternalFlipflopD.inputD = _stackPointerUOflowValue
+
+        // DECODE ACCUMULATOR DATA IN
+
+        let _inputsAccumulatorData: LogicValue[]
+        if (_loadDataInputToAccumulatorSelector) {
+            _inputsAccumulatorData = this.inputValues(this.inputs.DataIn).reverse()
+        } else {
+            _inputsAccumulatorData = operandValue
+        }
 
         this._decodeExecuteStage_Operand_InternalRegister.inputsD = operandValue
 
@@ -1076,27 +1236,14 @@ export class CPU extends CPUBase<CPURepr> {
 
         const ramwevalue = opCodeValue[0] && !opCodeValue[1] && !opCodeValue[2] && !opCodeValue[3]
 
-        let _CPUcomputesALUop: LogicValue
-        if (this._pipeline) {
-            _CPUcomputesALUop = this._executeWritebackStage_ControlUnit_InternalRegister.outputsQ[7]
-        } else {
-            _CPUcomputesALUop = (opCodeValue[0] && !opCodeValue[1] && !opCodeValue[2]) || (opCodeValue[0] && opCodeValue[1])
-        }
 
-        const _loadedDataToAccumulatorSelector = !opCodeValue[0] && !opCodeValue[1] && opCodeValue[2] && !opCodeValue[3]
-        const _accumulatorClk = !opCodeValue[0] && !opCodeValue[1] && opCodeValue[2] && clockSync
 
         const _inputsLoadSourceAccumulatorDataSelector = []
         const _inputsLoadOrALUAccumulatorDataSelector = []
 
         // console.log("***"+operandValue)
         // console.log("muxData " + _inputsAccumulatorDataSelector)
-        let _inputsAccumulatorData: LogicValue[]
-        if (_loadedDataToAccumulatorSelector) {
-            _inputsAccumulatorData = operandValue
-        } else {
-            _inputsAccumulatorData = this.inputValues(this.inputs.DataIn).reverse()
-        }
+
         /*
             if (_loadedDataToAccumulatorSelector) {
 
@@ -1122,7 +1269,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         const _ALUoutputs = doALUOp(_ALUop, this._Accumulator_InternalRegister.outputsQ, _ALUinputB, false)
 
-        if (_CPUcomputesALUop) {
+        if (_ALUoperation_controlUnitBit_7) {
             if (this._pipeline) {
                 _inputsAccumulatorData = this._executeWritebackStage_ALUOuput_InternalRegister.outputsQ
             } else {
@@ -1142,101 +1289,15 @@ export class CPU extends CPUBase<CPURepr> {
         const z = this._Flags_InternalRegister.outputsQ[0]
         const c = this._Flags_InternalRegister.outputsQ[1]
 
-
-        // PROGRAM COUNTER LOGIC
-        const _internalProgramCounterSelectedRegisterOutputs = this._pipeline? this._decodeExecuteStage_ProgramCounter_InternalRegister.outputsQ : this._ProgramCounter_InternalRegister.outputsQ
-
-        // FETCH STACK MANAGEMENT
-        const _stackPointerModification = opCodeValue[1] && !opCodeValue[2] && opCodeValue[3]
-        const _stackPointerDecrement = _stackPointerModification && !opCodeValue[0]
-
-        const _stackPointerALUinputA = this._StackPointer_InternalRegister.outputsQ
-        const _stackPointerALUinputB = [true]
-        ArrayClampOrPad(_stackPointerALUinputB, this.numStackBits, false)
-        let _stackPointerALUoutputs
-        if (_stackPointerDecrement) {
-            _stackPointerALUoutputs= doALUOp("A-B", _stackPointerALUinputA, _stackPointerALUinputB,false)
-        } else {
-            _stackPointerALUoutputs= doALUOp("A+B", _stackPointerALUinputA, _stackPointerALUinputB,false)
-        }
-
-        if (_stackPointerModification) {
-            this._StackPointer_InternalRegister.inputsD = _stackPointerALUoutputs.s
-        } else {
-            this._StackPointer_InternalRegister.inputsD = this._StackPointer_InternalRegister.outputsQ
-        }
-
-        this._fetchDecodeStage_StackPointer_InternalRegister.inputsD = this._StackPointer_InternalRegister.outputsQ
-        this._fetchDecodeStage_NextStackPointer_InternalRegister.inputsD = _stackPointerALUoutputs.s
-        //console.log("SP " +  _stackPointerALUoutputs.s)
-        //const _stackPointer = _stackPointerDecrement? this._internalStackPointerRegister.inputsD : _stackPointerALUoutputs.s
-
-        //console.log("PC selected " + _internalProgramCounterSelectedRegisterOutputs)
-        // FETCH PROGRAM COUNTER LOGIC
-        const _jumpDecoded = !opCodeValue[0] && opCodeValue[1] && !opCodeValue[2]
-        const _ProgramCounterNonSequentialStepDecoded = _stackPointerModification || _jumpDecoded
-        const _jumpUpDecoded = _jumpDecoded && opCodeValue[3]
-        const _jumpToSubroutineDecoded = _stackPointerModification && !opCodeValue[3]
-        const _returnFromSubroutineDecoded = _stackPointerModification && opCodeValue[3]
-        const _branchDecoded = !opCodeValue[0] && opCodeValue[1] && opCodeValue[2]
-        const _branchOnZ = _branchDecoded && !opCodeValue[3]
-        const _branchOnC = _branchDecoded && opCodeValue[3]
-
-        const _haltDecoded = this.allZeros(operandValue) && _jumpDecoded
-
-        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[4] = _jumpDecoded
-
-        //this._jump = ((((((c && opCodeValue[0]) || (z && !opCodeValue[0])) && opCodeValue[1]) || !opCodeValue[1]) && _jumpPostPart) || opCodeValue[1] && !opCodeValue[2] && opCodeValue[3])
-
-
-        this._CallStack_InternalRAM.inputsD = _internalProgramCounterSelectedRegisterOutputs
-        this._CallStack_InternalRAM.inputWE = _stackPointerDecrement
-        this._CallStack_InternalRAM.inputsAddr = _stackPointerIncrement? _stackPointerALUoutputs.s : this._StackPointer_InternalRegister.outputsQ
-
-        this._fetchDecodeStage_CallStackInput_InternalRegister.inputsD = this._StackPointer_InternalRegister.outputsQ
-        this._fetchDecodeStage_NextStackPointer_InternalRegister.inputsD = this._StackPointer_InternalRegister.outputsQ
-
-        const _stackPointerRegisterNotOrOnOutputs= !(logicalOROnEveryBits(this._StackPointer_InternalRegister.outputsQ))
-        const _stackPointerRegisterAndOnOutputs= logicalANDOnEveryBits(this._StackPointer_InternalRegister.outputsQ)
-
-        const _internalStackPointerPreOUflowFlipflopDoutputQ= this._StackPointerControlUOflow_InternalFlipflopD.outputQ
-        this._StackPointerControlUOflow_InternalFlipflopD.inputD = (_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || !(_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ)
-
-        const _internalStackPointerOUflowFlipflopDoutputQ= this._StackPointerUOflow_InternalFlipflopD.outputQ
-        this._StackPointerUOflow_InternalFlipflopD.inputD = ((_stackPointerRegisterAndOnOutputs && _stackPointerDecrement && this._StackPointerControlUOflow_InternalFlipflopD.outputQ)
-            || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && this._StackPointerControlUOflow_InternalFlipflopD.outputQ̅ )) || _internalStackPointerOUflowFlipflopDoutputQ
-
+        this._decodeExecuteStage_ControlUnit_InternalRegister.inputsD[4] = __jump
 
         this._backwardJump = opCodeValue[0] && !opCodeValue[1] && _jumpPostPart
 
         this._ProgramCounter_InternalRegister.inputInc = !this._jump
 
-        //console.log(_jump)
-        const _programCounterALUop = this._backwardJump? "A-B" : "A+B"
-        //console.log(this._backwardJump)
-        const _programCounterALUinputA= _stackPointerIncrement? this._CallStack_InternalRAM.value.out : _internalProgramCounterSelectedRegisterOutputs
-        // console.log(this._CallStack_InternalRAM.value.out)
-        // A clone of the array "operands" array is needed cause ArrayClamOrPad returns the array
-        const _programCounterALUinputB = operandValue.slice()
-        ArrayClampOrPad(_programCounterALUinputB, this.numInstructionAddressBits,false)
 
-        if (this._jump) {
-            if (this._addressingMode) {
-                this._ProgramCounter_InternalRegister.inputsD = _programCounterALUinputB
-            } else {
-                //console.log(_programCounterALUinputB)
-                let _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, _stackPointerIncrement)
-                //console.log(_programCounterALUoutputs.s)
-                // We must go back of one step cylcle
-                if (this._pipeline) {
-                    _programCounterALUoutputs = doALUOp("A-1", _programCounterALUoutputs.s, _programCounterALUinputB,false)
-                    this._ProgramCounter_InternalRegister.inputInc = !this._jump
-                } else {
-                    this._ProgramCounter_InternalRegister.inputInc = this._executeStage_SequentialExecutionClock_InternalFlipflopD && !this._jump
-                }
-                this._ProgramCounter_InternalRegister.inputsD = _programCounterALUoutputs.s
-            }
-        }
+
+
 
         const ramWESyncValue = this._pipeline ? clockSync : clockSync && this._executeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
 
@@ -1298,7 +1359,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._CallStack_InternalRAM.inputClock = clockSync
             this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
 
-            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSync && ((_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ))
+            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSync && ((_stackPointerRegisterNotOrOnOutputs && _jumpToSubroutine) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ))
             this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
 
             this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSync
@@ -1326,7 +1387,7 @@ export class CPU extends CPUBase<CPURepr> {
             this._CallStack_InternalRAM.inputClock = clockSyncExecute
             this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
 
-            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSyncExecute && ((_stackPointerRegisterNotOrOnOutputs && _stackPointerDecrement) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ))
+            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSyncExecute && ((_stackPointerRegisterNotOrOnOutputs && _jumpToSubroutine) || (_stackPointerRegisterAndOnOutputs && _stackPointerIncrement && _internalStackPointerPreOUflowFlipflopDoutputQ))
             this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
 
             this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSyncExecute
