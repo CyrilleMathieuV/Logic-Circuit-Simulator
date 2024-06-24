@@ -1335,49 +1335,100 @@ export class CPU extends CPUBase<CPURepr> {
         this._Operations_InternalCounter.recalcInternalValue()
 
         if (this._sequentialExecution) {
-            const clockSyncFectch =  clockSync && this._fetchStage_SequentialExecutionClock_InternalFlipflopD.outputQ
-            const clockSyncDecode =  clockSync && this._decodeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
-            const clockSyncExecute =  clockSync && this._executeStage_SequentialExecutionClock_InternalFlipflopD.outputQ
-            const clockSyncWriteback =  clockSync && this._writebackStage_SequentialExecutionClock_InternalFlipflopD.outputQ
+            const clockSyncFectch =  clockSync && _internalFetchFlipflopDoutputQ
+            const clockSyncDecode =  clockSync && _internalDecodeFlipflopDoutputQ
+            const clockSyncExecute =  clockSync && _internalExecuteFlipflopDoutputQ
+            const clockSyncWriteback =  clockSync && _internalWriteBackFlipflopDoutputQ
 
-            this._fetchDecodeStage_Instruction_InternalRegister.inputClock = clockSyncFectch
-            this._fetchDecodeStage_Instruction_InternalRegister.recalcInternalValue()
-
-            this._Accumulator_InternalRegister.inputClock = clockSyncDecode
-            this._Accumulator_InternalRegister.recalcInternalValue()
-
-            this._Flags_InternalRegister.inputClock = clockSyncDecode
-            this._Flags_InternalRegister.recalcInternalValue()
-
-            this._ProgramCounter_InternalRegister.inputClock  = clockSyncExecute
-            this._ProgramCounter_InternalRegister.recalcInternalValue()
-
-            this._StackPointer_InternalRegister.inputClock = clockSyncExecute
+            this._StackPointer_InternalRegister.inputClock = clockSyncFectch
             this._StackPointer_InternalRegister.recalcInternalValue()
 
-            this._CallStack_InternalRAM.inputClock = clockSyncExecute
-            this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
+            this._ProgramCounter_InternalRegister.inputClock = clockSyncFectch
+            this._ProgramCounter_InternalRegister.recalcInternalValue()
 
-            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSyncExecute
-            this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
+            this._fetchDecodeStage_StackPointer_InternalRegister.inputClock = clockSyncDecode
+            this._fetchDecodeStage_StackPointer_InternalRegister.recalcInternalValue
 
-            this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSyncExecute
-            this._StackPointerUOflow_InternalFlipflopD.recalcInternalValue()
-        } else {
-            this._fetchDecodeStage_Instruction_InternalRegister.inputClock = clockSync
+            this._fetchDecodeStage_NextStackPointer_InternalRegister.inputClock = clockSyncDecode
+            this._fetchDecodeStage_NextStackPointer_InternalRegister.recalcInternalValue
+
+            this._fetchDecodeStage_CallStackInput_InternalRegister.inputClock = clockSyncDecode
+            this._fetchDecodeStage_CallStackInput_InternalRegister.recalcInternalValue
+
+            this._fetchDecodeStage_ProgramCounter_InternalRegister.inputClock = clockSyncDecode
+            this._fetchDecodeStage_ProgramCounter_InternalRegister.recalcInternalValue()
+
+            this._fetchDecodeStage_Instruction_InternalRegister.inputClock = clockSyncDecode
             this._fetchDecodeStage_Instruction_InternalRegister.recalcInternalValue()
 
-            this._Accumulator_InternalRegister.inputClock = clockSync
+            this._CallStack_InternalRAM.inputClock = clockSyncDecode
+            this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
+
+            this._StackPointerControlUOflow_InternalFlipflopD.inputClock = clockSyncDecode
+            this._StackPointerControlUOflow_InternalFlipflopD.recalcInternalValue()
+
+            this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSyncDecode
+            this._StackPointerUOflow_InternalFlipflopD.recalcInternalValue()
+
+            this._decodeExecuteStage_CallStackOutput_InternalRegister.inputClock = clockSyncExecute
+            this._decodeExecuteStage_CallStackOutput_InternalRegister.recalcInternalValue()
+
+            this._decodeExecuteStage_ProgramCounter_InternalRegister.inputClock = clockSyncExecute
+            this._decodeExecuteStage_ProgramCounter_InternalRegister.recalcInternalValue()
+
+            this._decodeExecuteStage_Operand_InternalRegister.inputClock = clockSyncExecute
+            this._decodeExecuteStage_Operand_InternalRegister.recalcInternalValue()
+
+            this._Accumulator_InternalRegister.inputClock = clockSyncExecute && _accumulatorClock
             this._Accumulator_InternalRegister.recalcInternalValue()
 
-            this._Flags_InternalRegister.inputClock = clockSync
+            this._decodeExecuteStage_DataRAMInput_InternalRegister.inputClock = clockSyncExecute
+            this._decodeExecuteStage_DataRAMInput_InternalRegister.recalcInternalValue()
+
+            this._decodeExecuteStage_ControlUnit_InternalRegister.inputClock = clockSyncExecute
+            this._decodeExecuteStage_ControlUnit_InternalRegister.recalcInternalValue()
+
+            this._Flags_InternalRegister.inputClock = clockSyncExecute
             this._Flags_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_CallStackOutput_InternalRegister.inputClock = clockSyncWriteback
+            this._executeWritebackStage_CallStackOutput_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_ProgramCounter_InternalRegister.inputClock = clockSyncWriteback
+            this._executeWritebackStage_ProgramCounter_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_DataRAMAddress_InternalRegister.inputClock = clockSyncWriteback
+            this._executeWritebackStage_DataRAMAddress_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_DataRAMOutput_InternalRegister.inputClock = clockSyncWriteback
+            this._executeWritebackStage_DataRAMOutput_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_ALUOuput_InternalRegister.inputClock = clockSyncWriteback
+            this._executeWritebackStage_ALUOuput_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_ControlUnit_InternalRegister.inputClock = clockSyncWriteback
+            this._executeWritebackStage_ControlUnit_InternalRegister.recalcInternalValue()
+        } else {
+            this._StackPointer_InternalRegister.inputClock = clockSync
+            this._StackPointer_InternalRegister.recalcInternalValue()
 
             this._ProgramCounter_InternalRegister.inputClock = clockSync
             this._ProgramCounter_InternalRegister.recalcInternalValue()
 
-            this._StackPointer_InternalRegister.inputClock = clockSync
-            this._StackPointer_InternalRegister.recalcInternalValue()
+            this._fetchDecodeStage_StackPointer_InternalRegister.inputClock = clockSync
+            this._fetchDecodeStage_StackPointer_InternalRegister.recalcInternalValue
+
+            this._fetchDecodeStage_NextStackPointer_InternalRegister.inputClock = clockSync
+            this._fetchDecodeStage_NextStackPointer_InternalRegister.recalcInternalValue
+
+            this._fetchDecodeStage_CallStackInput_InternalRegister.inputClock = clockSync
+            this._fetchDecodeStage_CallStackInput_InternalRegister.recalcInternalValue
+
+            this._fetchDecodeStage_ProgramCounter_InternalRegister.inputClock = clockSync
+            this._fetchDecodeStage_ProgramCounter_InternalRegister.recalcInternalValue()
+
+            this._fetchDecodeStage_Instruction_InternalRegister.inputClock = clockSync
+            this._fetchDecodeStage_Instruction_InternalRegister.recalcInternalValue()
 
             this._CallStack_InternalRAM.inputClock = clockSync
             this._CallStack_InternalRAM.value = this._CallStack_InternalRAM.recalcInternalValue()
@@ -1387,6 +1438,45 @@ export class CPU extends CPUBase<CPURepr> {
 
             this._StackPointerUOflow_InternalFlipflopD.inputClock = clockSync
             this._StackPointerUOflow_InternalFlipflopD.recalcInternalValue()
+
+            this._decodeExecuteStage_CallStackOutput_InternalRegister.inputClock = clockSync
+            this._decodeExecuteStage_CallStackOutput_InternalRegister.recalcInternalValue()
+
+            this._decodeExecuteStage_ProgramCounter_InternalRegister.inputClock = clockSync
+            this._decodeExecuteStage_ProgramCounter_InternalRegister.recalcInternalValue()
+
+            this._decodeExecuteStage_Operand_InternalRegister.inputClock = clockSync
+            this._decodeExecuteStage_Operand_InternalRegister.recalcInternalValue()
+
+            this._Accumulator_InternalRegister.inputClock = clockSync && _accumulatorClock
+            this._Accumulator_InternalRegister.recalcInternalValue()
+
+            this._decodeExecuteStage_DataRAMInput_InternalRegister.inputClock = clockSync
+            this._decodeExecuteStage_DataRAMInput_InternalRegister.recalcInternalValue()
+
+            this._decodeExecuteStage_ControlUnit_InternalRegister.inputClock = clockSync
+            this._decodeExecuteStage_ControlUnit_InternalRegister.recalcInternalValue()
+
+            this._Flags_InternalRegister.inputClock = clockSync
+            this._Flags_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_CallStackOutput_InternalRegister.inputClock = clockSync
+            this._executeWritebackStage_CallStackOutput_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_ProgramCounter_InternalRegister.inputClock = clockSync
+            this._executeWritebackStage_ProgramCounter_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_DataRAMAddress_InternalRegister.inputClock = clockSync
+            this._executeWritebackStage_DataRAMAddress_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_DataRAMOutput_InternalRegister.inputClock = clockSync
+            this._executeWritebackStage_DataRAMOutput_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_ALUOuput_InternalRegister.inputClock = clockSync
+            this._executeWritebackStage_ALUOuput_InternalRegister.recalcInternalValue()
+
+            this._executeWritebackStage_ControlUnit_InternalRegister.inputClock = clockSync
+            this._executeWritebackStage_ControlUnit_InternalRegister.recalcInternalValue()
         }
 
         if (CPU.isClockTrigger(this._trigger, prevClock, clockSync) || resetSignal) {

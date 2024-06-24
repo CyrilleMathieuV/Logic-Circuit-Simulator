@@ -342,7 +342,7 @@
       <workItem from="1719063472573" duration="11198000" />
       <workItem from="1719120130865" duration="1925000" />
       <workItem from="1719127759035" duration="8717000" />
-      <workItem from="1719151379930" duration="33239000" />
+      <workItem from="1719151379930" duration="35252000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -469,14 +469,6 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
-    </task>
-    <task id="LOCAL-00181" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
-      <option name="closed" value="true" />
-      <created>1698508321610</created>
-      <option name="number" value="00181" />
-      <option name="presentableId" value="LOCAL-00181" />
-      <option name="project" value="LOCAL" />
-      <updated>1698508321611</updated>
     </task>
     <task id="LOCAL-00182" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
       <option name="closed" value="true" />
@@ -718,7 +710,15 @@
       <option name="project" value="LOCAL" />
       <updated>1719245171434</updated>
     </task>
-    <option name="localTasksCounter" value="212" />
+    <task id="LOCAL-00212" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <option name="closed" value="true" />
+      <created>1719246832856</created>
+      <option name="number" value="00212" />
+      <option name="presentableId" value="LOCAL-00212" />
+      <option name="project" value="LOCAL" />
+      <updated>1719246832856</updated>
+    </task>
+    <option name="localTasksCounter" value="213" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
