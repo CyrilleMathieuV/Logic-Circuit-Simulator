@@ -360,7 +360,7 @@ export abstract class CPUBase_v6<
         return newState as CPUBaseValue_v6
     }
 
-    //protected abstract makeStateAfterClock(): CPUBaseValue
+    //protected abstract makeStateAfterClock(): CPUBaseValue_v6
 
     public get trigger() {
         return this._trigger
@@ -702,7 +702,7 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
             || (trigger === EdgeTrigger.falling && prevClock === true && clock === false)
     }
     /*
-        protected doRecalcValue(): CPUBaseValue {
+        protected doRecalcValue(): CPUBaseValue_v6 {
             const false_ = false as LogicValue
             const result: any = {
                     instructionaddress: ArrayFillWith<LogicValue>(false_, this.numInstructionAddressBits),
@@ -720,11 +720,11 @@ export class CPU_v6 extends CPUBase_v6<CPURepr_v6> {
                     haltsignal: false_,
                     runningstate: false_
                 }
-                return result as CPUBaseValue
+                return result as CPUBaseValue_v6
         }
     */
     /*
-    public static doRecalcValueForSyncComponent(trigger: EdgeTrigger, prevClock: LogicValue, clock: LogicValue, value: CPUBaseValue): CPUBaseValue {
+    public static doRecalcValueForSyncComponent(trigger: EdgeTrigger, prevClock: LogicValue, clock: LogicValue, value: CPUBaseValue_v6): CPUBaseValue_v6 {
         if (!CPU.isClockTrigger(trigger, prevClock, clock)) {
             return value
         } else {
@@ -1024,9 +1024,9 @@ ISA5
 
         if (isUnknown(opCodeName)) {
             newState = {
-                isaadr: ArrayFillWith<LogicValue>(false_, this.numInstructionAddressBits),
-                dadr: ArrayFillWith<LogicValue>(false_, this.numDataAddressBits),
-                dout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
+                instructionaddress: ArrayFillWith<LogicValue>(false_, this.numInstructionAddressBits),
+                dataaddress: ArrayFillWith<LogicValue>(false_, this.numDataAddressBits),
+                dataout: ArrayFillWith<LogicValue>(false_, this.numDataBits),
                 ramwesync: false_,
                 ramwe: false_,
                 resetsync: false_,
@@ -1039,9 +1039,9 @@ ISA5
             }
         } else {
             newState = {
-                isaadr: this._internalProgramCounterRegister.outputsQ,
-                dadr: this._operandsValue,
-                dout: this._internalAccumulatorRegister.outputsQ,
+                instructionaddress: this._internalProgramCounterRegister.outputsQ,
+                dataaddress: this._operandsValue,
+                dataout: this._internalAccumulatorRegister.outputsQ,
                 ramwesync: ramwesyncvalue,
                 ramwe: ramwevalue,
                 resetsync: clrSignal,
@@ -1073,7 +1073,7 @@ ISA5
         this.outputs.RunningState.value = newValue.runningstate
     }
     /*
-        public makeStateAfterClock(): CPUBaseValue {
+        public makeStateAfterClock(): CPUBaseValue_v6 {
             return []
         }
     */
