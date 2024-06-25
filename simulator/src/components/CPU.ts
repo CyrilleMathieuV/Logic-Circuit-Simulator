@@ -931,7 +931,7 @@ export class CPU extends CPUBase<CPURepr> {
         const clockSync= this._lastClock = (_control_RunStopState_InternalFlipflopD_outputQ̅ ? _ManStep_input : clockSpeed) && _control_HaltState_InternalFlipflopD_outputQ̅
 
         const runningState= _control_RunStopState_InternalFlipflopD_outputQ̅ ? _ManStep_input && _control_RunStopState_InternalFlipflopD_outputQ̅ : _control_RunStopState_InternalFlipflopD_outputQ
-        const haltSignal= _control_HaltState_InternalFlipflopD_outputQ || (_control_ResetState_InternalFlipflopD_outputQ̅ && this._control_RunStopState_InternalFlipflopD.outputQ̅)
+        const haltSignal= _control_HaltState_InternalFlipflopD_outputQ || (_control_ResetState_InternalFlipflopD_outputQ̅ && _control_RunStopState_InternalFlipflopD_outputQ̅)
         const directAddressingMode= _control_ResetState_InternalFlipflopD_outputQ && _AddressingMode_input
 
         //console.log((this._control_RunStopState_InternalFlipflopD.outputQ̅ ? this.inputs.ManStep.value : clockSpeed) && this._internalHaltSignalFlipflopD.outputQ̅)
@@ -1044,23 +1044,25 @@ export class CPU extends CPUBase<CPURepr> {
         const instruction_FETCH_opCodeValue = instruction_FETCH.slice(0, 4)
         const instruction_FETCH_opCodeIndex = displayValuesFromArray(instruction_FETCH_opCodeValue, true)[1]
         const instruction_FETCH_opCodeName = isUnknown(instruction_FETCH_opCodeIndex) ? Unknown : CPUOpCodes[instruction_FETCH_opCodeIndex]
-
-        // const instruction_FETCH_operands = instruction_FETCH.slice(4, 8).reverse()
         const instruction_FETCH_operands = instruction_FETCH.slice(4, 8)
 
+        // console.log(instruction_FETCH_opCodeName + "*" + instruction_FETCH_operands)
+
+        // const instruction_FETCH_operands = instruction_FETCH.slice(4, 8).reverse()
+
         const cycle = this.cycle
-        const stage = this._pipeline ? CPUStages[(cycle) % CPUStages.length] : CPUStages[(cycle) % CPUStages.length]
+        const stage = this._pipeline ? CPUStages[(cycle) % CPUStages.length] : "FETCH"
 
         if (resetSignal || cycle == 0) {
             //this._lastClock = Unknown
             this._opCodeOperandsInStages = {
-                FETCH: "",
+                FETCH: instruction_FETCH_opCodeName,
                 DECODE: "",
                 EXECUTE: "",
                 WRITEBACK: ""
             }
             this._addressesInStages = {
-                FETCH: -1,
+                FETCH: instruction_FETCH_operands,
                 DECODE: -1,
                 EXECUTE: -1,
                 WRITEBACK: -1
@@ -1076,18 +1078,26 @@ export class CPU extends CPUBase<CPURepr> {
 
             console.log("before ", this._addressesInStages)
             if (!this._pipeline) {
+                this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
+                this._addressesInStages["FETCH"] = currentInstructionAddress
+                this._opCodeOperandsInStages["DECODE"] = ""
+                this._addressesInStages["DECODE"] = currentInstructionAddress
+                this._opCodeOperandsInStages["EXECUTE"] = ""
+                this._addressesInStages["EXECUTE"] = currentInstructionAddress
+                this._opCodeOperandsInStages["EXECUTE"] = ""
+                this._addressesInStages["EXECUTE"] = currentInstructionAddress
+                /*
                 for (let eachStage of CPUStages) {
                     if (eachStage == stage) {
                         console.log(stage)
                         this._opCodeOperandsInStages[eachStage] = instruction_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
-
                         this._addressesInStages[eachStage] = currentInstructionAddress
                     } else {
                         this._opCodeOperandsInStages[eachStage] = ""
-
                         this._addressesInStages[eachStage] = -1
                     }
                 }
+                */
             }
             console.log("after", this._opCodeOperandsInStages)
 
@@ -1103,15 +1113,16 @@ export class CPU extends CPUBase<CPURepr> {
         }
 
         // We must get it again, but why ?
-        this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
+        //this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
 
         // ISA_v8
 
         const opCodeValue = instruction_FETCH.slice(0, 4).reverse()
         const opCodeIndex = displayValuesFromArray(opCodeValue, false)[1]
         const opCodeName = isUnknown(opCodeIndex) ? Unknown : CPUOpCodes[opCodeIndex]
-
         const operandValue = instruction_FETCH.slice(4, 8).reverse()
+
+        //console.log("**" + opCodeName + "*" + operandValue)
 
         // Control Unit Signals
         let _ALUoperation_controlUnitBit_7: LogicValue
@@ -1162,7 +1173,7 @@ export class CPU extends CPUBase<CPURepr> {
         if (_subroutineCall) {
             this._StackPointer_InternalRegister.inputsD = _stackPointerALUoutputs.s
         } else {
-            this._StackPointer_InternalRegister.inputsD = _StackPointer_InternalRegister_outputsQ
+            this._StackPointer_InternalRegister.inputsD = _StackPointer_InternalRegister_outputsQ.slice()
         }
 
         // FETCH PROGRAM COUNTER
@@ -1188,7 +1199,6 @@ export class CPU extends CPUBase<CPURepr> {
             } else {
                 this._CallStack_InternalRAM.inputsAddr = _stackPointerALUoutputs.s
             }
-
         } else {
             if (this._pipeline) {
                 this._CallStack_InternalRAM.inputsAddr = _fetchDecodeStage_StackPointer_InternalRegister_outputsQ
@@ -1208,24 +1218,24 @@ export class CPU extends CPUBase<CPURepr> {
         // DECODE PROGRAM COUNTER
         let _programCounterJumpALUInputA : LogicValue[]
         if (this._pipeline) {
-            _programCounterJumpALUInputA = _fetchDecodeStage_ProgramCounter_InternalRegister_outputsQ
+            _programCounterJumpALUInputA = _fetchDecodeStage_ProgramCounter_InternalRegister_outputsQ.slice()
         } else {
-            _programCounterJumpALUInputA = _ProgramCounter_InternalRegister_outputsQ
+            _programCounterJumpALUInputA = _ProgramCounter_InternalRegister_outputsQ.slice()
         }
         // We must make an arrays clone
-        const _programCounterJumpALUInputB = operandValue.slice()
+        const _programCounterJumpALUInputB= operandValue.slice()
         ArrayClampOrPad(_programCounterJumpALUInputB, this.numInstructionAddressBits, false)
 
         let _ProgramCounterJumpALUoutputs
         if (_jumpUp_controlUnitBit_0) {
-            _ProgramCounterJumpALUoutputs= doALUOp("A-B", _programCounterJumpALUInputA, _programCounterJumpALUInputB,false)
+            _ProgramCounterJumpALUoutputs = doALUOp("A-B", _programCounterJumpALUInputA, _programCounterJumpALUInputB,false)
         } else {
-            _ProgramCounterJumpALUoutputs= doALUOp("A+B", _programCounterJumpALUInputA, _programCounterJumpALUInputB,false)
+            _ProgramCounterJumpALUoutputs = doALUOp("A+B", _programCounterJumpALUInputA, _programCounterJumpALUInputB,false)
         }
 
         let _programCounterJumpValue : LogicValue[]
         if (this._addressingMode) {
-            _programCounterJumpValue = _programCounterJumpALUInputB
+            _programCounterJumpValue = operandValue.slice()
         } else {
             _programCounterJumpValue = _ProgramCounterJumpALUoutputs.s
         }
@@ -1284,6 +1294,8 @@ export class CPU extends CPUBase<CPURepr> {
         } else {
             _programCounterNonSequentialStep_controlUnitBit_3 = (_Flags_InternalRegister_outputsQ[0] && _branchOnZ_controlUnitBit_1) || (_Flags_InternalRegister_outputsQ[1] && _branchOnC_controlUnitBit_2) || _jumpCallDetection_controlUnitBit_4
         }
+
+        //console.log("JB" + _programCounterNonSequentialStep_controlUnitBit_3)
 
         if (this._pipeline) {
             if (_executeWritebackStage_ControlUnit_InternalRegister_outputsQ[3]) {
@@ -1346,7 +1358,7 @@ export class CPU extends CPUBase<CPURepr> {
         this._executeWritebackStage_ControlUnit_InternalRegister.inputsD[6] = _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ[6]
         this._executeWritebackStage_ControlUnit_InternalRegister.inputsD[7] = _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ[7]
 
-        const ramWESyncValue = this._sequentialExecution ? clockSync : clockSync && _writebackStage_SequentialExecutionClock_InternalFlipflopD_outputQ
+        const ramWESyncValue = this._sequentialExecution ? clockSync && _writebackStage_SequentialExecutionClock_InternalFlipflopD_outputQ : clockSync
 
         // Compute state after clock
         this._control_HaltState_InternalFlipflopD.inputD = _halt
@@ -1542,16 +1554,25 @@ export class CPU extends CPUBase<CPURepr> {
 
             console.log("before ",this._addressesInStages)
             if (this._pipeline) {
+                this._opCodeOperandsInStages["WRITEBACK"] = this._opCodeOperandsInStages["EXECUTE"]
                 this._opCodeOperandsInStages["EXECUTE"] = this._opCodeOperandsInStages["DECODE"]
-                this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["WRITEBACK"]
-                this._opCodeOperandsInStages["WRITEBACK"] = this._opCodeOperandsInStages["FETCH"]
-                this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName
-                    + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
+                this._opCodeOperandsInStages["DECODE"] = this._opCodeOperandsInStages["FETCH"]
+                this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
 
+                this._addressesInStages["WRITEBACK"] = this._addressesInStages["EXECUTE"]
                 this._addressesInStages["EXECUTE"] = this._addressesInStages["DECODE"]
-                this._addressesInStages["DECODE"] = this._addressesInStages["WRITEBACK"]
-                this._addressesInStages["WRITEBACK"] = this._addressesInStages["FETCH"]
+                this._addressesInStages["DECODE"] = this._addressesInStages["FETCH"]
                 this._addressesInStages["FETCH"] = currentInstructionAddress
+            } else {
+                this._opCodeOperandsInStages["FETCH"] = instruction_FETCH_opCodeName + "+" + this.getOperandsNumberWithRadix(instruction_FETCH_operands, 2)
+                this._opCodeOperandsInStages["DECODE"] = ""
+                this._opCodeOperandsInStages["EXECUTE"] = ""
+                this._opCodeOperandsInStages["WRITEBACK"] = ""
+
+                this._addressesInStages["FETCH"] = 1
+                this._addressesInStages["DECODE"] = -1
+                this._addressesInStages["EXECUTE"] = -1
+                this._addressesInStages["WRITEBACK"] = -1
             }
             console.log("after", this._opCodeOperandsInStages)
 
@@ -1816,7 +1837,7 @@ export class CPU extends CPUBase<CPURepr> {
                             break
                     }
 
-                    const fontSize = 14
+                    const fontSize = 12
                     const valueCenterBox = ctx.rotatePoint(valueCenterX + (Orientation.isVertical(this.orient) ? (this.orient == "n") ? -fontSize : fontSize : 0
                     ), valueCenterY + (Orientation.isVertical(this.orient) ? 0 : fontSize))
                     g.fillStyle = stageColorBackground
@@ -1842,7 +1863,7 @@ export class CPU extends CPUBase<CPURepr> {
                         const operandsString = this._showOperands ? this.getInstructionParts(this._opCodeOperandsInStages[eachStage], "operands") : ""
                         const instructionDisplay = (opCodeName == "") ? "" : opCodeName + " " + operandsString
 
-                        const fontSize = 15
+                        const fontSize = 12
                         g.font = `bold ${fontSize}px monospace`
                         g.fillStyle = COLOR_COMPONENT_BORDER
                         g.textAlign = "center"
