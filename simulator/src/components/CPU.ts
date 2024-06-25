@@ -1572,7 +1572,6 @@ export class CPU extends CPUBase<CPURepr> {
             this.CPUeventDispatcher(messageForAssemblerEditor)
         }
 
-
         const false_ = false as LogicValue
 
         let newState : any
