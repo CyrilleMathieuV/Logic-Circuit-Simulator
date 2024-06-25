@@ -53,7 +53,7 @@
     </favorite-branches>
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="ISA_v8" />
+        <entry key="$PROJECT_DIR$" value="ISA_v8_real_pipeline_final" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -80,7 +80,7 @@
     <option name="stateVersion" value="1" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
@@ -168,8 +168,9 @@
       <list>
         <item itemvalue="npm.lint-watch" />
         <item itemvalue="npm.compile-watch" />
-        <item itemvalue="npm.bundle-watch" />
         <item itemvalue="npm.lint-watch" />
+        <item itemvalue="npm.compile-watch" />
+        <item itemvalue="npm.bundle-watch" />
       </list>
     </recent_temporary>
   </component>
@@ -343,6 +344,7 @@
       <workItem from="1719120130865" duration="1925000" />
       <workItem from="1719127759035" duration="8717000" />
       <workItem from="1719151379930" duration="35252000" />
+      <workItem from="1719297275471" duration="4148000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
