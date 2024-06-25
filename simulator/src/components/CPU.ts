@@ -899,37 +899,37 @@ export class CPU extends CPUBase<CPURepr> {
         const _control_HaltState_InternalFlipflopD_outputQ = this._control_HaltState_InternalFlipflopD.outputQ
         const _control_HaltState_InternalFlipflopD_outputQ̅ = this._control_HaltState_InternalFlipflopD.outputQ̅
 
-        const _StackPointer_InternalRegister_outputsQ = this._StackPointer_InternalRegister.outputsQ
-        const _ProgramCounter_InternalRegister_outputsQ = this._ProgramCounter_InternalRegister.outputsQ
+        const _StackPointer_InternalRegister_outputsQ = this._StackPointer_InternalRegister.outputsQ.slice()
+        const _ProgramCounter_InternalRegister_outputsQ = this._ProgramCounter_InternalRegister.outputsQ.slice()
 
-        const _fetchDecodeStage_StackPointer_InternalRegister_outputsQ = this._fetchDecodeStage_StackPointer_InternalRegister.outputsQ
-        const _fetchDecodeStage_StackPointerALUoutputs_InternalRegister_outputsQ = this._fetchDecodeStage_StackPointerALUoutputs_InternalRegister.outputsQ
-        const _fetchDecodeStage_CallStack_InternalRegister_outputsQ = this._fetchDecodeStage_CallStack_InternalRegister.outputsQ
-        const _fetchDecodeStage_ProgramCounter_InternalRegister_outputsQ = this._fetchDecodeStage_ProgramCounter_InternalRegister.outputsQ
-        const _fetchDecodeStage_Instruction_InternalRegister_outputsQ = this._fetchDecodeStage_Instruction_InternalRegister.outputsQ
+        const _fetchDecodeStage_StackPointer_InternalRegister_outputsQ = this._fetchDecodeStage_StackPointer_InternalRegister.outputsQ.slice()
+        const _fetchDecodeStage_StackPointerALUoutputs_InternalRegister_outputsQ = this._fetchDecodeStage_StackPointerALUoutputs_InternalRegister.outputsQ.slice()
+        const _fetchDecodeStage_CallStack_InternalRegister_outputsQ = this._fetchDecodeStage_CallStack_InternalRegister.outputsQ.slice()
+        const _fetchDecodeStage_ProgramCounter_InternalRegister_outputsQ = this._fetchDecodeStage_ProgramCounter_InternalRegister.outputsQ.slice()
+        const _fetchDecodeStage_Instruction_InternalRegister_outputsQ = this._fetchDecodeStage_Instruction_InternalRegister.outputsQ.slice()
 
-        const _CallStack_InternalRAM_outputsQ = this._CallStack_InternalRAM.outputsQ
+        const _CallStack_InternalRAM_outputsQ = this._CallStack_InternalRAM.outputsQ.slice()
         const _StackPointerControlUOflow_InternalFlipflopD_outputQ = this._StackPointerControlUOflow_InternalFlipflopD.outputQ
         const _StackPointerControlUOflow_InternalFlipflopD_outputQ̅ = this._StackPointerControlUOflow_InternalFlipflopD.outputQ̅
         const _StackPointerUOflow_InternalFlipflopD_outputQ = this._StackPointerUOflow_InternalFlipflopD.outputQ
 
-        const _decodeExecuteStage_CallStack_InternalRegister_outputsQ = this._decodeExecuteStage_CallStack_InternalRegister.outputsQ
-        const _decodeExecuteStage_ProgramCounter_InternalRegister_outputsQ = this._decodeExecuteStage_ProgramCounter_InternalRegister.outputsQ
-        const _decodeExecuteStage_DataRAMAddress_InternalRegister_outputsQ = this._decodeExecuteStage_DataRAMAddress_InternalRegister.outputsQ
-        const _Accumulator_InternalRegister_outputsQ = this._Accumulator_InternalRegister.outputsQ
-        const _decodeExecuteStage_DataRAMIn_InternalRegister_outputsQ = this._decodeExecuteStage_DataRAMIn_InternalRegister.outputsQ
-        const _decodeExecuteStage_ALUoperation_InternalRegister_outputsQ = this._decodeExecuteStage_ALUoperation_InternalRegister.outputsQ
-        const _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ
+        const _decodeExecuteStage_CallStack_InternalRegister_outputsQ = this._decodeExecuteStage_CallStack_InternalRegister.outputsQ.slice()
+        const _decodeExecuteStage_ProgramCounter_InternalRegister_outputsQ = this._decodeExecuteStage_ProgramCounter_InternalRegister.outputsQ.slice()
+        const _decodeExecuteStage_DataRAMAddress_InternalRegister_outputsQ = this._decodeExecuteStage_DataRAMAddress_InternalRegister.outputsQ.slice()
+        const _Accumulator_InternalRegister_outputsQ = this._Accumulator_InternalRegister.outputsQ.slice()
+        const _decodeExecuteStage_DataRAMIn_InternalRegister_outputsQ = this._decodeExecuteStage_DataRAMIn_InternalRegister.outputsQ.slice()
+        const _decodeExecuteStage_ALUoperation_InternalRegister_outputsQ = this._decodeExecuteStage_ALUoperation_InternalRegister.outputsQ.slice()
+        const _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ = this._decodeExecuteStage_ControlUnit_InternalRegister.outputsQ.slice()
 
-        const _executeWritebackStage_CallStack_InternalRegister_outputsQ = this._executeWritebackStage_CallStack_InternalRegister.outputsQ
-        const _executeWritebackStage_ProgramCounter_InternalRegister_outputsQ = this._executeWritebackStage_ProgramCounter_InternalRegister.outputsQ
-        const _executeWritebackStage_DataRAMAddress_InternalRegister_outputsQ = this._executeWritebackStage_DataRAMAddress_InternalRegister.outputsQ
-        const _executeWritebackStage_DataRAMOut_InternalRegister_outputsQ = this._executeWritebackStage_DataRAMOut_InternalRegister.outputsQ
-        const _executeWritebackStage_ALUOuputs_InternalRegister_outputsQ = this._executeWritebackStage_ALUOuputs_InternalRegister.outputsQ
-        const _Flags_InternalRegister_outputsQ = this._Flags_InternalRegister.outputsQ
-        const _executeWritebackStage_ControlUnit_InternalRegister_outputsQ = this._executeWritebackStage_ControlUnit_InternalRegister.outputsQ
+        const _executeWritebackStage_CallStack_InternalRegister_outputsQ = this._executeWritebackStage_CallStack_InternalRegister.outputsQ.slice()
+        const _executeWritebackStage_ProgramCounter_InternalRegister_outputsQ = this._executeWritebackStage_ProgramCounter_InternalRegister.outputsQ.slice()
+        const _executeWritebackStage_DataRAMAddress_InternalRegister_outputsQ = this._executeWritebackStage_DataRAMAddress_InternalRegister.outputsQ.slice()
+        const _executeWritebackStage_DataRAMOut_InternalRegister_outputsQ = this._executeWritebackStage_DataRAMOut_InternalRegister.outputsQ.slice()
+        const _executeWritebackStage_ALUOuputs_InternalRegister_outputsQ = this._executeWritebackStage_ALUOuputs_InternalRegister.outputsQ.slice()
+        const _Flags_InternalRegister_outputsQ = this._Flags_InternalRegister.outputsQ.slice()
+        const _executeWritebackStage_ControlUnit_InternalRegister_outputsQ = this._executeWritebackStage_ControlUnit_InternalRegister.outputsQ.slice()
 
-        const _Operations_InternalCounter_outputsQ = this._Operations_InternalCounter.outputsQ
+        const _Operations_InternalCounter_outputsQ = this._Operations_InternalCounter.outputsQ.slice()
 
         // RUN CONTROL LOGIC
         const prevClock= this._lastClock
@@ -1286,9 +1286,9 @@ export class CPU extends CPUBase<CPURepr> {
 
         let _programCounterNonSequentialStep_controlUnitBit_3: LogicValue
         if (this._pipeline) {
-            _programCounterNonSequentialStep_controlUnitBit_3 = (this._Flags_InternalRegister.outputsQ[0] && _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ[1]) || (this._Flags_InternalRegister.outputsQ[1] && _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ[2]) || _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ[4]
+            _programCounterNonSequentialStep_controlUnitBit_3 = (_Flags_InternalRegister_outputsQ[0] && _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ[1]) || (_Flags_InternalRegister_outputsQ[1] && _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ[2]) || _decodeExecuteStage_ControlUnit_InternalRegister_outputsQ[4]
         } else {
-            _programCounterNonSequentialStep_controlUnitBit_3 = (this._Flags_InternalRegister.outputsQ[0] && _branchOnZ_controlUnitBit_1) || (this._Flags_InternalRegister.outputsQ[1] && _branchOnC_controlUnitBit_2) || _jumpCallDetection_controlUnitBit_4
+            _programCounterNonSequentialStep_controlUnitBit_3 = (_Flags_InternalRegister_outputsQ[0] && _branchOnZ_controlUnitBit_1) || (_Flags_InternalRegister_outputsQ[1] && _branchOnC_controlUnitBit_2) || _jumpCallDetection_controlUnitBit_4
         }
 
         if (this._pipeline) {
@@ -1619,10 +1619,10 @@ export class CPU extends CPUBase<CPURepr> {
                 ramwe: ramwevalue,
                 resetsync: resetSignal,
                 sync: clockSync,
-                z: this._Flags_InternalRegister.outputsQ[0],
+                z: _Flags_InternalRegister_outputsQ[0],
                 //v: false_,
-                cout: this._Flags_InternalRegister.outputsQ[1],
-                stackuoflow: this._StackPointerUOflow_InternalFlipflopD.outputQ,
+                cout: _Flags_InternalRegister_outputsQ[1],
+                stackuoflow: _StackPointerUOflow_InternalFlipflopD_outputQ,
                 haltsignal: haltSignal,
                 runningstate: runningState,
             }
