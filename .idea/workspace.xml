@@ -13,9 +13,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/lib/bundle.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/lib/bundle.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/ComponentMenu.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/ComponentMenu.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulator/src/components/CPU_v6.ts" beforeDir="false" afterPath="$PROJECT_DIR$/simulator/src/components/CPU_v6.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -344,7 +342,8 @@
       <workItem from="1719063472573" duration="11198000" />
       <workItem from="1719120130865" duration="1925000" />
       <workItem from="1719127759035" duration="8717000" />
-      <workItem from="1719151379930" duration="51161000" />
+      <workItem from="1719151379930" duration="35252000" />
+      <workItem from="1719297275471" duration="4148000" />
     </task>
     <task id="LOCAL-00001" summary="Added RAM 32x12">
       <created>1676288726521</created>
@@ -471,6 +470,46 @@
       <option name="presentableId" value="LOCAL-00018" />
       <option name="project" value="LOCAL" />
       <updated>1680276504167</updated>
+    </task>
+    <task id="LOCAL-00182" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <option name="closed" value="true" />
+      <created>1698509307215</created>
+      <option name="number" value="00182" />
+      <option name="presentableId" value="LOCAL-00182" />
+      <option name="project" value="LOCAL" />
+      <updated>1698509307215</updated>
+    </task>
+    <task id="LOCAL-00183" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <option name="closed" value="true" />
+      <created>1698511873728</created>
+      <option name="number" value="00183" />
+      <option name="presentableId" value="LOCAL-00183" />
+      <option name="project" value="LOCAL" />
+      <updated>1698511873728</updated>
+    </task>
+    <task id="LOCAL-00184" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <option name="closed" value="true" />
+      <created>1700579729749</created>
+      <option name="number" value="00184" />
+      <option name="presentableId" value="LOCAL-00184" />
+      <option name="project" value="LOCAL" />
+      <updated>1700579729749</updated>
+    </task>
+    <task id="LOCAL-00185" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <option name="closed" value="true" />
+      <created>1700579827844</created>
+      <option name="number" value="00185" />
+      <option name="presentableId" value="LOCAL-00185" />
+      <option name="project" value="LOCAL" />
+      <updated>1700579827845</updated>
+    </task>
+    <task id="LOCAL-00186" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
+      <option name="closed" value="true" />
+      <created>1701452506201</created>
+      <option name="number" value="00186" />
+      <option name="presentableId" value="LOCAL-00186" />
+      <option name="project" value="LOCAL" />
+      <updated>1701452506202</updated>
     </task>
     <task id="LOCAL-00187" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
       <option name="closed" value="true" />
@@ -680,47 +719,7 @@
       <option name="project" value="LOCAL" />
       <updated>1719246832856</updated>
     </task>
-    <task id="LOCAL-00213" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
-      <option name="closed" value="true" />
-      <created>1719248722633</created>
-      <option name="number" value="00213" />
-      <option name="presentableId" value="LOCAL-00213" />
-      <option name="project" value="LOCAL" />
-      <updated>1719248722633</updated>
-    </task>
-    <task id="LOCAL-00214" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
-      <option name="closed" value="true" />
-      <created>1719262673708</created>
-      <option name="number" value="00214" />
-      <option name="presentableId" value="LOCAL-00214" />
-      <option name="project" value="LOCAL" />
-      <updated>1719262673708</updated>
-    </task>
-    <task id="LOCAL-00215" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
-      <option name="closed" value="true" />
-      <created>1719263429921</created>
-      <option name="number" value="00215" />
-      <option name="presentableId" value="LOCAL-00215" />
-      <option name="project" value="LOCAL" />
-      <updated>1719263429921</updated>
-    </task>
-    <task id="LOCAL-00216" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
-      <option name="closed" value="true" />
-      <created>1719265478180</created>
-      <option name="number" value="00216" />
-      <option name="presentableId" value="LOCAL-00216" />
-      <option name="project" value="LOCAL" />
-      <updated>1719265478180</updated>
-    </task>
-    <task id="LOCAL-00217" summary="CMN adds Stack to CPU with AssemblerEditor (undo/redo (DONE), save/restore program(DONE), display/hide (DONE), switch addressing mode (DONE), highlight states (DONE), debug (TO DO), verify adequation ROM/RAM content with programe (TO DO LATER)&#10; ++ Keypad will be done later ++&#10;[CPU_v6 and AssemblerEditor_6 are keeped, but inactives]">
-      <option name="closed" value="true" />
-      <created>1719265637225</created>
-      <option name="number" value="00217" />
-      <option name="presentableId" value="LOCAL-00217" />
-      <option name="project" value="LOCAL" />
-      <updated>1719265637225</updated>
-    </task>
-    <option name="localTasksCounter" value="218" />
+    <option name="localTasksCounter" value="213" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
