@@ -1042,7 +1042,7 @@ export class CPU extends CPUBase<CPURepr> {
 
         if (this._jump) {
             if (this._directAddressingMode) {
-                this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB
+                this._virtualProgramCounterRegister.inputsD = _programCounterALUinputB.slice()
             } else {
                 //console.log(_programCounterALUinputB)
                 let _programCounterALUoutputs = doALUOp(_programCounterALUop, _programCounterALUinputA, _programCounterALUinputB, _stackPointerIncrement)
@@ -1557,13 +1557,14 @@ export class CPU extends CPUBase<CPURepr> {
             this.doSetDirectAddressingMode(false)
         } else {
             if (this._directAddressingMode) {
+                const valueCenterDeltaY = (this.orient == "n") ? 100 : (this.orient == "s") ? -100 : 0
                 const fontSize = 11
                 g.font = `bold ${fontSize}px sans-serif`
                 g.fillStyle = COLOR_DARK_RED
                 g.textAlign = "center"
                 g.textBaseline = "middle"
-                const valueCenter = ctx.rotatePoint(this.outputs.Isaadr.group.posXInParentTransform + (Orientation.isVertical(this.orient)? 15 : 0), this.outputs.Isaadr.group.posYInParentTransform + (Orientation.isVertical(this.orient)? 63 : 35))
-                g.fillText("Adressage direct", ...valueCenter)
+                const valueCenter = ctx.rotatePoint(this.outputs.Isaadr.group.posXInParentTransform + (Orientation.isVertical(this.orient)? 15 : 75), this.outputs.Isaadr.group.posYInParentTransform + (Orientation.isVertical(this.orient)? 63 : 23))
+                g.fillText("Adressage direct !", ...valueCenter)
             }
         }
     }
